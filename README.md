@@ -71,6 +71,7 @@ Expense Tracker helps you take control of your money. Track every rupee, dollar,
 - **Node.js** 18 or later — [Download](https://nodejs.org/)
 - **Expo CLI** — installed automatically via `npx`
 - **Android Studio** (for Android) or **Xcode** (for iOS)
+- **Android SDK** with `ANDROID_HOME` set (see [Android setup](#android-setup) below)
 
 ### Installation
 
@@ -85,6 +86,27 @@ npm install
 # 3. Start the development server
 npx expo start
 ```
+
+### Android Setup
+
+Before building for Android, the SDK location must be configured. Do **one** of the following:
+
+**Option A — Set environment variable (recommended, permanent):**
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+export ANDROID_HOME=$HOME/Android/Sdk
+export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools:$PATH"
+
+# Reload your shell
+source ~/.bashrc
+```
+
+**Option B — Create `local.properties` (per-project):**
+```bash
+echo "sdk.dir=$HOME/Android/Sdk" > android/local.properties
+```
+
+> **Note:** `android/local.properties` is git-ignored (machine-specific). Each developer needs to create it once.
 
 ### Running on a Device
 
@@ -101,13 +123,28 @@ npx expo start
 
 ### Building for Production
 
-```bash
-# Create a production Android APK/AAB
-npx expo run:android --variant release
+Always clear all caches before a production build to ensure fresh assets and code:
 
-# Create a production iOS build
+```bash
+# 1. Clear all caches (Metro, Gradle, node_modules cache)
+rm -rf android/app/build android/.gradle/build-cache node_modules/.cache /tmp/metro-* /tmp/haste-map-*
+cd android && ./gradlew clean && cd ..
+
+# 2. Build release APK for Android
+cd android && ANDROID_HOME=$HOME/Android/Sdk ./gradlew app:assembleRelease -x lint -x test --configure-on-demand --build-cache
+```
+
+The release APK will be at:
+```
+android/app/build/outputs/apk/release/app-release.apk
+```
+
+**iOS release build:**
+```bash
 npx expo run:ios --configuration Release
 ```
+
+> **First build note:** The initial release build compiles native C++ modules (reanimated, gesture-handler) and can take **10–15 minutes**. Subsequent builds use the Gradle cache and are much faster.
 
 ---
 
