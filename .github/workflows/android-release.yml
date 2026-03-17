@@ -178,6 +178,10 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
+      # ── Generate native Android project (not committed to git) ────────
+      - name: Generate Android project via Expo prebuild
+        run: npx expo prebuild --platform android --clean
+
       # ── Inject version into Android build files ───────────────────────
       - name: Update Android versionCode and versionName
         run: |
