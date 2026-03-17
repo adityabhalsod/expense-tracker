@@ -9,7 +9,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
-import { useAppStore } from '../store';
+import { useAppStore, selectCategories } from '../store';
 import { Expense } from '../types';
 import { formatCurrency, formatRelativeDate } from '../utils/helpers';
 
@@ -17,7 +17,8 @@ const SearchScreen = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
   const navigation = useNavigation<any>();
-  const { searchExpenses, categories } = useAppStore();
+  const searchExpenses = useAppStore((s) => s.searchExpenses); // Action — stable reference
+  const categories = useAppStore(selectCategories); // Only subscribe to categories slice
 
   const [query, setQuery] = useState(''); // Search input text
   const [results, setResults] = useState<Expense[]>([]); // Search results

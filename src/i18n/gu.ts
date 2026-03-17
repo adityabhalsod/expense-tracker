@@ -133,6 +133,15 @@ const gu: TranslationKeys = {
     budgets: 'બજેટ',
     data: 'ડેટા',
     exportReports: 'રિપોર્ટ નિકાસ',
+    dangerZone: 'જોખમી વિભાગ',
+    resetData: 'બધો ડેટા સાફ કરો',
+    resetDataDesc: 'બધા ખર્ચ, વૉલેટ, બજેટ અને સૂચનાઓ કાઢી નાખો પરંતુ શ્રેણીઓ અને સેટિંગ્સ રાખો.',
+    resetDataConfirm: 'આ તમારા બધા ખર્ચ, વૉલેટ, બજેટ અને UPI સૂચનાઓ કાયમી રૂપે કાઢી નાખશે. શ્રેણીઓ અને સેટિંગ્સ સુરક્ષિત રહેશે. આ પૂર્વવત કરી શકાશે નહીં.',
+    resetDatabase: 'આખું ડેટાબેઝ રીસેટ કરો',
+    resetDatabaseDesc: 'બધી ટેબલ કાઢી નાખો અને નવેસરથી શરૂ કરો. શ્રેણીઓ સહિત બધો ડેટા ગુમાવશો.',
+    resetDatabaseConfirm: 'આ એપને તેની પ્રારંભિક સ્થિતિમાં સંપૂર્ણ રીસેટ કરશે. શ્રેણીઓ, ખર્ચ, વૉલેટ અને સેટિંગ્સ સહિત બધો ડેટા કાયમી રૂપે કાઢી નાખવામાં આવશે. આ પૂર્વવત કરી શકાશે નહીં.',
+    resetSuccess: 'રીસેટ સફળતાપૂર્વક પૂર્ણ. એપ ફરી લોડ થશે.',
+    resetFailed: 'રીસેટ નિષ્ફળ. કૃપા કરીને ફરી પ્રયાસ કરો.',
     security: 'સુરક્ષા',
     appLock: 'એપ લૉક',
     notifications: 'સૂચનાઓ',
@@ -161,6 +170,9 @@ const gu: TranslationKeys = {
     noCategory: 'કોઈ શ્રેણી નથી',
     noCategoryMsg: 'કૃપા કરીને આ ખર્ચ માટે શ્રેણી પસંદ કરો.',
     saveFailed: 'ખર્ચ સાચવવામાં નિષ્ફળ. કૃપા કરીને ફરી પ્રયાસ કરો.',
+    enterAmount: 'કૃપા કરીને માન્ય રકમ દાખલ કરો',
+    selectCategory: 'કૃપા કરીને શ્રેણી પસંદ કરો',
+    save: 'ખર્ચ સાચવો',
   },
 
   // ખર્ચ વિગત સ્ક્રીન
@@ -196,7 +208,7 @@ const gu: TranslationKeys = {
     deleteMsg: 'શું તમે ખરેખર આ શ્રેણી કાઢી નાખવા માંગો છો? આ શ્રેણીના ખર્ચ પ્રભાવિત થશે નહીં.',
   },
 
-  // વૉલેટ સેટઅપ સ્ક્રીન
+  // વૉલેટ સેટઅપ સ્ક્રીન (ચુકવણી સ્ત્રોત કોન્ફિગ સાથે મર્જ)
   walletSetup: {
     title: 'વૉલેટ સેટઅપ',
     settingUpFor: 'વૉલેટ સેટ થઈ રહ્યું છે',
@@ -206,6 +218,21 @@ const gu: TranslationKeys = {
     balanceHint: 'આ મહિના માટે તમારી શરૂઆતની બેલેન્સ હશે. ખર્ચ આ રકમમાંથી કપાશે.',
     createWallet: 'વૉલેટ બનાવો',
     updateWallet: 'વૉલેટ અપડેટ કરો',
+    deleteConfirm: 'શું તમે આ વૉલેટ કાઢી નાખવા માંગો છો?',
+    default: 'ડિફોલ્ટ',
+    nameRequired: 'કૃપા કરીને નામ દાખલ કરો.',
+    saveFailed: 'સાચવવામાં નિષ્ફળ. કૃપા કરીને ફરી પ્રયાસ કરો.',
+    type: 'પ્રકાર',
+    bankName: 'બેંકનું નામ',
+    bankNamePlaceholder: 'દા.ત., HDFC બેંક',
+    upiId: 'UPI આઈડી',
+    namePlaceholder: 'દા.ત., HDFC બચત',
+    nickname: 'ઉપનામ (વૈકલ્પિક)',
+    nicknamePlaceholder: 'ટૂંકું ઉપનામ',
+    icon: 'આઇકોન',
+    color: 'રંગ',
+    setDefault: 'ડિફોલ્ટ તરીકે સેટ કરો',
+    encryptedNote: 'એન્ક્રિપ્ટેડ સંગ્રહિત',
   },
 
   // રિપોર્ટ નિકાસ સ્ક્રીન
@@ -343,6 +370,27 @@ const gu: TranslationKeys = {
     monthly: 'માસિક',
     quarterly: 'ત્રિમાસિક',
     yearly: 'વાર્ષિક',
+  },
+
+
+
+  // UPI ચુકવણી સ્ક્રીન
+  upiPayments: {
+    title: 'UPI ચુકવણી',
+    all: 'બધા',
+    pendingFilter: 'બાકી',
+    processedFilter: 'પ્રોસેસ થયેલ',
+    processed: 'પ્રોસેસ થયેલ',
+    pending: 'બાકી',
+    emptyTitle: 'કોઈ UPI સૂચનાઓ નથી',
+    emptySubtitle: 'UPI ચુકવણી સૂચનાઓ શોધાયા પછી અહીં દેખાશે',
+    received: 'પ્રાપ્ત',
+    sent: 'મોકલ્યું',
+    addAsExpense: 'ખર્ચ તરીકે ઉમેરો',
+    addAsIncome: 'આવક તરીકે ઉમેરો',
+    addIncome: 'આવક ઉમેરો',
+    source: 'ચુકવણી સ્રોત',
+    saveTransaction: 'વ્યવહાર સાચવો',
   },
 };
 

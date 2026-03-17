@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme';
-import { useAppStore } from '../store';
+import { useAppStore, selectExpenses, selectCategories } from '../store';
 import EmptyState from '../components/common/EmptyState';
 import { formatCurrency, formatRelativeDate } from '../utils/helpers';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format } from 'date-fns';
@@ -16,7 +16,10 @@ import { useLanguage } from '../i18n';
 const ExpensesScreen = () => {
   const { theme } = useTheme();
   const navigation = useNavigation<any>();
-  const { expenses, categories, loadExpenses } = useAppStore();
+  // Subscribe to individual store slices to avoid full-store re-renders
+  const expenses = useAppStore(selectExpenses);
+  const categories = useAppStore(selectCategories);
+  const loadExpenses = useAppStore((s) => s.loadExpenses);
   const { t } = useLanguage();
   const [activeFilter, setActiveFilter] = useState<string>('All'); // Currently selected filter
 

@@ -30,15 +30,24 @@ export interface Category {
   order: number; // Sort order in the category list
 }
 
-// Wallet representing a financial account or fund
+// Supported wallet/payment source types
+export type WalletType = 'cash' | 'bank_account' | 'upi' | 'digital_wallet' | 'credit_card' | 'other';
+
+// Wallet representing a financial account or payment source
 export interface Wallet {
   id: string; // Unique identifier for the wallet
-  name: string; // Display name (e.g., "Main Account")
-  initialBalance: number; // Starting balance set at beginning of period
+  name: string; // Display name (e.g., "HDFC Savings", "Cash")
+  type: WalletType; // Type of payment source (bank, UPI, cash, etc.)
+  initialBalance: number; // Starting balance when wallet was created
   currentBalance: number; // Remaining balance after expenses
   currency: string; // Currency code for this wallet
-  month: number; // Month number (1-12) for this wallet period
-  year: number; // Year for this wallet period
+  bankName?: string; // Bank name for bank accounts (e.g., "HDFC Bank")
+  upiId?: string; // UPI VPA handle (encrypted at rest)
+  nickname?: string; // Short alias for quick identification
+  iconName: string; // MaterialCommunityIcons icon name for display
+  color: string; // Hex color for visual identification in lists
+  isDefault: boolean; // Whether this is the default wallet for new expenses
+  metadata?: string; // Encrypted JSON blob for any extra non-critical data
   createdAt: string; // Timestamp of wallet creation
   updatedAt: string; // Timestamp of last modification
 }
@@ -135,6 +144,7 @@ export type RootStackParamList = {
   CloudBackup: undefined; // Cloud backup settings
   BudgetSetup: undefined; // Budget configuration
   AllExpenses: undefined; // Full expense list view
+  UPIPayments: undefined; // UPI payment notification history
 };
 
 // Bottom tab navigator parameter types
@@ -145,3 +155,23 @@ export type TabParamList = {
   Wallet: undefined; // Wallet management tab
   Settings: undefined; // App settings tab
 };
+
+// ==================== UPI NOTIFICATION TYPES ====================
+
+// Transaction type detected from UPI notification
+export type UPITransactionType = 'credit' | 'debit';
+
+// Parsed UPI payment notification data
+export interface UPINotification {
+  id: string; // Unique identifier for the notification
+  appPackage: string; // Source app package (e.g., "com.google.android.apps.nbu.paisa.user")
+  appName: string; // Human-readable app name (e.g., "Google Pay")
+  transactionType: UPITransactionType; // Whether money was received or sent
+  amount: number; // Parsed transaction amount
+  message: string; // Original notification text
+  timestamp: string; // When the notification was received
+  isProcessed: boolean; // Whether user has added this to expenses/income
+  walletId?: string; // Linked wallet/payment source (if matched)
+}
+
+

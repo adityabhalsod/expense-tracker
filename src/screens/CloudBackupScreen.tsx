@@ -5,14 +5,15 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Switch, Alert, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
-import { useAppStore } from '../store';
+import { useAppStore, selectSettings } from '../store';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { exportAllData } from '../database';
 
 const CloudBackupScreen = () => {
   const { theme } = useTheme();
-  const { settings, updateSettings } = useAppStore();
+  const settings = useAppStore(selectSettings); // Only subscribe to settings slice
+  const updateSettings = useAppStore((s) => s.updateSettings);
 
   const [isBackingUp, setIsBackingUp] = useState(false); // Backup in progress flag
   const [isRestoring, setIsRestoring] = useState(false); // Restore in progress flag

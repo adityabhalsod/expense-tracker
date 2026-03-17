@@ -1,9 +1,9 @@
 {
   "expo": {
     "name": "Expense Tracker",
-    "slug": "personal-expense-tracker",
+    "slug": "expense-tracker",
     "scheme": "expense-tracker",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -16,10 +16,12 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSFaceIDUsageDescription": "Use Face ID to unlock your expense tracker"
-      }
+      },
+      "bundleIdentifier": "com.adityabhalsod.expensetracker"
     },
     "android": {
       "package": "com.adityabhalsod.expensetracker",
+      "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
         "backgroundColor": "#6C63FF",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -28,7 +30,9 @@
       },
       "permissions": [
         "USE_BIOMETRIC",
-        "USE_FINGERPRINT"
+        "USE_FINGERPRINT",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
       ]
     },
     "web": {

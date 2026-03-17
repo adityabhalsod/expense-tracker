@@ -8,8 +8,9 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
-import { useAppStore } from '../store';
+import { useAppStore, selectCategories, selectSettings } from '../store';
 import Button from '../components/common/Button';
+import { formatCurrency } from '../utils/helpers';
 
 // Predefined icon options for category selection
 const ICON_OPTIONS = [
@@ -31,7 +32,12 @@ const COLOR_OPTIONS = [
 const CategoryManagementScreen = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const { categories, addCategory, updateCategory, deleteCategory } = useAppStore();
+  // Subscribe to individual store slices to avoid full-store re-renders
+  const categories = useAppStore(selectCategories);
+  const settings = useAppStore(selectSettings);
+  const addCategory = useAppStore((s) => s.addCategory);
+  const updateCategory = useAppStore((s) => s.updateCategory);
+  const deleteCategory = useAppStore((s) => s.deleteCategory);
 
   // Modal state for add/edit form
   const [modalVisible, setModalVisible] = useState(false); // Whether the modal is shown
@@ -131,7 +137,7 @@ const CategoryManagementScreen = () => {
               <Text style={[styles.categoryName, { color: theme.colors.text }]}>{cat.name}</Text>
               {cat.budget && (
                 <Text style={[styles.categoryBudget, { color: theme.colors.textSecondary }]}>
-                  Budget: ₹{cat.budget.toLocaleString()}
+                  Budget: {formatCurrency(cat.budget, settings.defaultCurrency)}
                 </Text>
               )}
             </View>

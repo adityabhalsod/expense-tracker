@@ -1,20 +1,21 @@
 // Add/Edit expense form screen with category selection, amount input, and smart defaults
 // Handles both creating new expenses and editing existing ones
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform,
+  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, TouchableWithoutFeedback, Alert, Platform, Keyboard,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
-import { useAppStore } from '../store';
+import { useAppStore, selectCategories, selectWallets, selectCurrentWallet, selectExpenses, selectSettings } from '../store';
 import { PaymentMethod, RecurringFrequency } from '../types';
 import { PAYMENT_METHODS } from '../constants';
 import { format, parse } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Button from '../components/common/Button';
+import { formatAmountInput } from '../utils/helpers';
 
 const AddExpenseScreen = () => {
   const { theme } = useTheme();
@@ -23,8 +24,14 @@ const AddExpenseScreen = () => {
   const route = useRoute<any>();
   const expenseId = route.params?.expenseId; // Null for new expense, ID for editing
 
-  // Pull state and actions from global store
-  const { categories, currentWallet, addExpense, updateExpense, expenses, settings } = useAppStore();
+  // Subscribe to individual store slices via selectors to avoid unnecessary re-renders
+  const categories = useAppStore(selectCategories);
+  const wallets = useAppStore(selectWallets);
+  const currentWallet = useAppStore(selectCurrentWallet);
+  const expenses = useAppStore(selectExpenses);
+  const settings = useAppStore(selectSettings);
+  const addExpense = useAppStore((s) => s.addExpense);
+  const updateExpense = useAppStore((s) => s.updateExpense);
 
   // Form field state values
   const [amount, setAmount] = useState(''); // Expense amount as string for input
@@ -37,6 +44,37 @@ const AddExpenseScreen = () => {
   const [recurringFrequency, setRecurringFrequency] = useState<RecurringFrequency>('monthly'); // Recurrence interval
   const [loading, setLoading] = useState(false); // Submission loading state
   const [showDatePicker, setShowDatePicker] = useState(false); // Date picker visibility
+  // Eagerly init wallet selection from store to prevent flash of unselected state
+  const [selectedWalletId, setSelectedWalletId] = useState(() => {
+    const defaultW = wallets.find(w => w.isDefault) || wallets[0];
+    return defaultW?.id || '';
+  });
+
+  // Sanitize amount input: strip commas, only digits & one decimal, max 2 decimal places, max 10 integer digits
+  const handleAmountChange = useCallback((text: string) => {
+    // Strip commas and anything that isn't a digit or decimal point
+    let cleaned = text.replace(/[^0-9.]/g, '');
+    // Allow only one decimal point
+    const parts = cleaned.split('.');
+    if (parts.length > 2) cleaned = parts[0] + '.' + parts.slice(1).join('');
+    // Cap integer part to 10 digits
+    if (parts[0].length > 10) parts[0] = parts[0].slice(0, 10);
+    // Cap decimal part to 2 digits
+    if (parts.length === 2 && parts[1].length > 2) parts[1] = parts[1].slice(0, 2);
+    cleaned = parts.length === 2 ? `${parts[0]}.${parts[1]}` : parts[0];
+    setAmount(cleaned);
+  }, []);
+
+  // Load wallets on mount — removed: wallets already loaded by initialize() and HomeScreen useFocusEffect
+  // No need to call loadWallets() here; it was causing redundant store updates
+
+  // Sync wallet selection if wallets load after initial render (e.g., slow DB)
+  useEffect(() => {
+    if (!selectedWalletId && wallets.length > 0) {
+      const defaultWallet = wallets.find(w => w.isDefault) || wallets[0];
+      setSelectedWalletId(defaultWallet.id);
+    }
+  }, [wallets.length]);
 
   // Deduplicate categories by name to prevent duplicate chips
   const uniqueCategories = useMemo(() => {
@@ -50,17 +88,8 @@ const AddExpenseScreen = () => {
 
   // Ref to the scroll view for programmatic scrolling
   const scrollViewRef = useRef<ScrollView>(null);
-
-  // Scroll the focused input into view above the keyboard
-  const scrollToField = (event: any) => {
-    const { target } = event.nativeEvent;
-    if (scrollViewRef.current && target) {
-      // Delay to allow keyboard to fully appear before measuring
-      setTimeout(() => {
-        scrollViewRef.current?.scrollResponderScrollNativeHandleToKeyboard(target, 150, true);
-      }, 300);
-    }
-  };
+  // Ref to amount TextInput — used by the container Pressable to focus on any tap
+  const amountRef = useRef<TextInput>(null);
 
   // Pre-fill form fields when editing an existing expense
   useEffect(() => {
@@ -75,6 +104,7 @@ const AddExpenseScreen = () => {
         setTags(expense.tags.join(', '));
         setIsRecurring(expense.isRecurring);
         if (expense.recurringFrequency) setRecurringFrequency(expense.recurringFrequency);
+        if (expense.walletId) setSelectedWalletId(expense.walletId); // Restore wallet selection
         // Update header title to indicate edit mode
         navigation.setOptions({ title: t.addExpense.editTitle });
       }
@@ -105,7 +135,7 @@ const AddExpenseScreen = () => {
         currency: settings.defaultCurrency,
         isRecurring,
         recurringFrequency: isRecurring ? recurringFrequency : undefined,
-        walletId: currentWallet?.id || '', // Link to active wallet
+        walletId: selectedWalletId || currentWallet?.id || '', // Link to selected wallet
       };
 
       if (expenseId) {
@@ -134,28 +164,38 @@ const AddExpenseScreen = () => {
   ];
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: theme.colors.background }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // Keyboard avoidance for both platforms
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0} // Offset for header height on iOS
-    >
-      <ScrollView ref={scrollViewRef} style={styles.container} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {/* Amount input with large display for easy data entry */}
-        <View style={[styles.amountContainer, { backgroundColor: theme.colors.primary }]}>
-          <Text style={styles.amountLabel}>{t.addExpense.amount}</Text>
-          <View style={styles.amountRow}>
-            <Text style={styles.currencySymbol}>₹</Text>
-            <TextInput
-              style={styles.amountInput}
-              value={amount}
-              onChangeText={setAmount}
-              placeholder="0.00"
-              placeholderTextColor="rgba(255,255,255,0.5)"
-              keyboardType="decimal-pad" // Numeric keyboard with decimal
-              autoFocus={!expenseId} // Auto-focus for new expenses only
-            />
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="always"
+        keyboardDismissMode="none"
+        nestedScrollEnabled
+      >
+        {/* Amount input — entire purple area is tappable to focus the TextInput */}
+        <TouchableWithoutFeedback onPress={() => amountRef.current?.focus()}>
+          <View style={[styles.amountContainer, { backgroundColor: theme.colors.primary }]}>
+            <Text style={styles.amountLabel}>{t.addExpense.amount}</Text>
+            <View style={styles.amountRow}>
+              <Text style={styles.currencySymbol}>₹</Text>
+              <TextInput
+                ref={amountRef}
+                style={styles.amountInput}
+                value={formatAmountInput(amount)}
+                onChangeText={handleAmountChange}
+                placeholder="0.00"
+                placeholderTextColor="rgba(255,255,255,0.5)"
+                keyboardType="decimal-pad"
+                maxLength={13}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+                selectionColor="rgba(255,255,255,0.5)"
+                caretHidden={false}
+              />
+            </View>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
 
         {/* Date picker field - tap to open native date picker */}
         <View style={styles.section}>
@@ -184,7 +224,7 @@ const AddExpenseScreen = () => {
         {/* Category selection grid with scrollable chips */}
         <View style={styles.section}>
           <Text style={[styles.label, { color: theme.colors.text }]}>{t.addExpense.category}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll} keyboardShouldPersistTaps="always" nestedScrollEnabled>
             {uniqueCategories.map((cat) => (
               <TouchableOpacity
                 key={cat.id}
@@ -215,7 +255,7 @@ const AddExpenseScreen = () => {
         {/* Payment method selector as horizontal chips */}
         <View style={styles.section}>
           <Text style={[styles.label, { color: theme.colors.text }]}>{t.addExpense.paymentMethod}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always" nestedScrollEnabled>
             {PAYMENT_METHODS.map((method) => (
               <TouchableOpacity
                 key={method.value}
@@ -247,6 +287,41 @@ const AddExpenseScreen = () => {
           </ScrollView>
         </View>
 
+        {/* Wallet picker — select which wallet to deduct expense from */}
+        {wallets.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.label, { color: theme.colors.text }]}>{t.wallet.title}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always" nestedScrollEnabled>
+              {wallets.map((w) => (
+                <TouchableOpacity
+                  key={w.id}
+                  style={[
+                    styles.methodChip,
+                    {
+                      backgroundColor: selectedWalletId === w.id ? w.color + '20' : theme.colors.surfaceVariant,
+                      borderColor: selectedWalletId === w.id ? w.color : theme.colors.border,
+                      borderWidth: selectedWalletId === w.id ? 2 : 1,
+                    },
+                  ]}
+                  onPress={() => setSelectedWalletId(w.id)}
+                >
+                  <MaterialCommunityIcons
+                    name={w.iconName as any}
+                    size={18}
+                    color={selectedWalletId === w.id ? w.color : theme.colors.textSecondary}
+                  />
+                  <Text style={[
+                    styles.methodChipText,
+                    { color: selectedWalletId === w.id ? w.color : theme.colors.text },
+                  ]}>
+                    {w.nickname || w.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {/* Notes text area for additional details */}
         <View style={styles.section}>
           <Text style={[styles.label, { color: theme.colors.text }]}>{t.addExpense.notes}</Text>
@@ -259,7 +334,6 @@ const AddExpenseScreen = () => {
             multiline
             numberOfLines={3}
             textAlignVertical="top" // Align text to top of multiline input
-            onFocus={scrollToField} // Scroll field into view above keyboard
           />
         </View>
 
@@ -272,7 +346,6 @@ const AddExpenseScreen = () => {
             onChangeText={setTags}
             placeholder={t.addExpense.tagsPlaceholder}
             placeholderTextColor={theme.colors.textTertiary}
-            onFocus={scrollToField} // Scroll field into view above keyboard
           />
           <Text style={[styles.hint, { color: theme.colors.textTertiary }]}>{t.addExpense.tagsHint}</Text>
         </View>
@@ -335,7 +408,7 @@ const AddExpenseScreen = () => {
         {/* Bottom spacer - extra space so keyboard doesn't cover last fields */}
         <View style={{ height: 120 }} />
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 
@@ -354,8 +427,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 48, // Large font for easy amount entry
     fontWeight: '700',
-    minWidth: 100,
+    minWidth: 120,
     textAlign: 'center',
+    paddingVertical: 8, // Sufficient tap target height on Android
+    paddingHorizontal: 4,
   },
   section: { paddingHorizontal: 16, marginTop: 20 },
   label: { fontSize: 15, fontWeight: '600', marginBottom: 8 },

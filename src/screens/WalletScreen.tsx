@@ -1,5 +1,5 @@
-// Wallet management screen displaying monthly balance, income tracking, and wallet history
-// Shows starting balance, total expenses, and remaining balance prominently
+// Wallet management screen displaying all wallets as payment sources
+// Shows wallet cards with balance, type badge, icon, and color-coded visuals
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
@@ -8,16 +8,31 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
-import { useAppStore } from '../store';
+import { useAppStore, selectWallets, selectCurrentWallet } from '../store';
 import Card from '../components/common/Card';
-import Button from '../components/common/Button';
 import { formatCurrency } from '../utils/helpers';
+import { Wallet, WalletType } from '../types';
+
+// Map wallet type to display label and icon
+const WALLET_TYPE_META: Record<WalletType, { icon: string; label: string }> = {
+  cash: { icon: 'cash', label: 'Cash' },
+  bank_account: { icon: 'bank', label: 'Bank' },
+  upi: { icon: 'cellphone-nfc', label: 'UPI' },
+  digital_wallet: { icon: 'wallet-outline', label: 'Digital' },
+  credit_card: { icon: 'credit-card-outline', label: 'Card' },
+  other: { icon: 'dots-horizontal-circle-outline', label: 'Other' },
+};
 
 const WalletScreen = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
   const navigation = useNavigation<any>();
-  const { currentWallet, wallets, loadWallets, loadCurrentWallet } = useAppStore();
+  // Subscribe to individual store slices to avoid full-store re-renders
+  const wallets = useAppStore(selectWallets);
+  const currentWallet = useAppStore(selectCurrentWallet);
+  const loadWallets = useAppStore((s) => s.loadWallets);
+  const loadCurrentWallet = useAppStore((s) => s.loadCurrentWallet);
+  const deleteWallet = useAppStore((s) => s.deleteWallet);
 
   // Refresh wallet data when screen gains focus
   useFocusEffect(
@@ -27,29 +42,49 @@ const WalletScreen = () => {
     }, [])
   );
 
-  // Get current month and year for display
-  const now = new Date();
-  const currentMonth = now.getMonth() + 1; // 1-indexed month
-  const currentYear = now.getFullYear();
-
-  // Calculate wallet metrics for the progress indicator (memoized)
-  const totalSpent = useMemo(
-    () => currentWallet ? currentWallet.initialBalance - currentWallet.currentBalance : 0,
-    [currentWallet]
+  // Aggregate total balance across all wallets
+  const totalBalance = useMemo(
+    () => wallets.reduce((sum, w) => sum + w.currentBalance, 0),
+    [wallets]
   );
+
+  // Aggregate total initial balance across all wallets
+  const totalInitial = useMemo(
+    () => wallets.reduce((sum, w) => sum + w.initialBalance, 0),
+    [wallets]
+  );
+
+  // Calculate total spent across all wallets
+  const totalSpent = useMemo(() => totalInitial - totalBalance, [totalInitial, totalBalance]);
+
+  // Calculate spending percentage for progress bar
   const spentPercentage = useMemo(
-    () => currentWallet && currentWallet.initialBalance > 0
-      ? Math.min((totalSpent / currentWallet.initialBalance) * 100, 100)
-      : 0,
-    [currentWallet, totalSpent]
+    () => totalInitial > 0 ? Math.min((totalSpent / totalInitial) * 100, 100) : 0,
+    [totalSpent, totalInitial]
   );
 
-  // Determine color based on spending level (memoized callback)
+  // Determine progress bar color based on percentage
   const getProgressColor = useCallback(() => {
     if (spentPercentage < 50) return theme.colors.success;
     if (spentPercentage < 80) return theme.colors.warning;
     return theme.colors.error;
   }, [spentPercentage, theme.colors]);
+
+  // Confirm and delete a wallet by ID
+  const handleDelete = (wallet: Wallet) => {
+    Alert.alert(
+      t.common.delete,
+      `${t.walletSetup?.deleteConfirm || 'Are you sure you want to delete this wallet?'}`,
+      [
+        { text: t.common.cancel, style: 'cancel' },
+        {
+          text: t.common.delete,
+          style: 'destructive',
+          onPress: () => deleteWallet(wallet.id),
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -58,85 +93,66 @@ const WalletScreen = () => {
         <View style={styles.header}>
           <Text style={[styles.title, { color: theme.colors.text }]}>{t.wallet.title}</Text>
           <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-            {t.months[currentMonth - 1]} {currentYear}
+            {wallets.length} {wallets.length === 1 ? 'wallet' : 'wallets'}
           </Text>
         </View>
 
-        {currentWallet ? (
+        {wallets.length > 0 ? (
           <>
-            {/* Main wallet balance card */}
-            <View style={[styles.walletCard, { backgroundColor: theme.colors.primary }]}>
-              {/* Wallet name and edit button */}
-              <View style={styles.walletHeader}>
-                <Text style={styles.walletName}>{currentWallet.name}</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('WalletSetup', { walletId: currentWallet.id })}>
-                  <MaterialCommunityIcons name="pencil" size={20} color="rgba(255,255,255,0.7)" />
-                </TouchableOpacity>
-              </View>
+            {/* Aggregate balance summary card */}
+            <View style={[styles.summaryCard, { backgroundColor: theme.colors.primary }]}>
+              {/* Total remaining balance (large emphasis) */}
+              <Text style={styles.summaryLabel}>{t.wallet.remainingBalance}</Text>
+              <Text style={styles.summaryBalance}>{formatCurrency(totalBalance)}</Text>
 
-              {/* Large remaining balance display */}
-              <Text style={styles.balanceLabel}>{t.wallet.remainingBalance}</Text>
-              <Text style={styles.balanceAmount}>
-                {formatCurrency(currentWallet.currentBalance, currentWallet.currency)}
-              </Text>
-
-              {/* Visual progress bar showing spent percentage */}
+              {/* Spending progress bar */}
               <View style={styles.progressContainer}>
                 <View style={[styles.progressBar, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
                   <View
-                    style={[
-                      styles.progressFill,
-                      { width: `${spentPercentage}%`, backgroundColor: getProgressColor() },
-                    ]}
+                    style={[styles.progressFill, { width: `${spentPercentage}%`, backgroundColor: getProgressColor() }]}
                   />
                 </View>
                 <Text style={styles.progressText}>{spentPercentage.toFixed(0)}% {t.wallet.spent}</Text>
               </View>
 
-              {/* Income and expense summary at bottom of card */}
+              {/* Income / Expense summary row */}
               <View style={styles.summaryRow}>
-                {/* Starting balance (income) */}
                 <View style={styles.summaryItem}>
                   <View style={styles.summaryIcon}>
                     <MaterialCommunityIcons name="arrow-down" size={16} color={theme.colors.success} />
                   </View>
                   <View>
-                    <Text style={styles.summaryLabel}>{t.wallet.startingBalance}</Text>
-                    <Text style={styles.summaryAmount}>
-                      {formatCurrency(currentWallet.initialBalance, currentWallet.currency)}
-                    </Text>
+                    <Text style={styles.summaryItemLabel}>{t.wallet.startingBalance}</Text>
+                    <Text style={styles.summaryItemAmount}>{formatCurrency(totalInitial)}</Text>
                   </View>
                 </View>
-                {/* Total spent (expenses) */}
                 <View style={styles.summaryItem}>
                   <View style={styles.summaryIcon}>
                     <MaterialCommunityIcons name="arrow-up" size={16} color={theme.colors.error} />
                   </View>
                   <View>
-                    <Text style={styles.summaryLabel}>{t.wallet.totalSpent}</Text>
-                    <Text style={[styles.summaryAmount, { color: '#FFB4B4' }]}>
-                      {formatCurrency(totalSpent, currentWallet.currency)}
-                    </Text>
+                    <Text style={styles.summaryItemLabel}>{t.wallet.totalSpent}</Text>
+                    <Text style={[styles.summaryItemAmount, { color: '#FFB4B4' }]}>{formatCurrency(totalSpent)}</Text>
                   </View>
                 </View>
               </View>
             </View>
 
-            {/* Quick action buttons */}
+            {/* Quick action row */}
             <View style={styles.actionRow}>
               <TouchableOpacity
                 style={[styles.actionButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
                 onPress={() => navigation.navigate('AddExpense', {})}
               >
-                <MaterialCommunityIcons name="plus-circle" size={28} color={theme.colors.primary} />
+                <MaterialCommunityIcons name="minus-circle" size={28} color={theme.colors.error} />
                 <Text style={[styles.actionText, { color: theme.colors.text }]}>{t.wallet.addExpense}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-                onPress={() => navigation.navigate('WalletSetup', { walletId: currentWallet.id })}
+                onPress={() => navigation.navigate('WalletSetup')}
               >
-                <MaterialCommunityIcons name="wallet-plus" size={28} color={theme.colors.success} />
-                <Text style={[styles.actionText, { color: theme.colors.text }]}>{t.wallet.editWallet}</Text>
+                <MaterialCommunityIcons name="plus-circle" size={28} color={theme.colors.success} />
+                <Text style={[styles.actionText, { color: theme.colors.text }]}>{t.wallet.createWallet}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
@@ -146,68 +162,107 @@ const WalletScreen = () => {
                 <Text style={[styles.actionText, { color: theme.colors.text }]}>{t.wallet.budgets}</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Wallet list section header */}
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t.wallet.walletHistory}</Text>
+            </View>
+
+            {/* Individual wallet cards */}
+            {wallets.map((wallet) => {
+              const typeMeta = WALLET_TYPE_META[wallet.type] || WALLET_TYPE_META.other;
+              const walletSpent = wallet.initialBalance - wallet.currentBalance;
+              const walletPct = wallet.initialBalance > 0
+                ? Math.min((walletSpent / wallet.initialBalance) * 100, 100) : 0;
+              return (
+                <TouchableOpacity
+                  key={wallet.id}
+                  onPress={() => navigation.navigate('WalletSetup', { walletId: wallet.id })}
+                  onLongPress={() => handleDelete(wallet)}
+                  activeOpacity={0.7}
+                >
+                  <Card style={styles.walletCard}>
+                    <View style={styles.walletRow}>
+                      {/* Wallet icon with color background */}
+                      <View style={[styles.walletIcon, { backgroundColor: wallet.color + '20' }]}>
+                        <MaterialCommunityIcons name={wallet.iconName as any} size={26} color={wallet.color} />
+                      </View>
+
+                      {/* Wallet details: name, type badge, balance */}
+                      <View style={styles.walletInfo}>
+                        <View style={styles.walletNameRow}>
+                          <Text style={[styles.walletName, { color: theme.colors.text }]} numberOfLines={1}>
+                            {wallet.nickname || wallet.name}
+                          </Text>
+                          {/* Default badge */}
+                          {wallet.isDefault && (
+                            <View style={[styles.defaultBadge, { backgroundColor: theme.colors.primary + '20' }]}>
+                              <Text style={[styles.defaultBadgeText, { color: theme.colors.primary }]}>
+                                {t.walletSetup?.default || 'Default'}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        {/* Type badge with icon */}
+                        <View style={styles.typeBadge}>
+                          <MaterialCommunityIcons name={typeMeta.icon as any} size={12} color={theme.colors.textTertiary} />
+                          <Text style={[styles.typeText, { color: theme.colors.textTertiary }]}>
+                            {typeMeta.label}
+                            {wallet.bankName ? ` · ${wallet.bankName}` : ''}
+                          </Text>
+                        </View>
+                        {/* Mini progress bar */}
+                        <View style={[styles.miniProgress, { backgroundColor: theme.colors.border }]}>
+                          <View style={[styles.miniProgressFill, { width: `${walletPct}%`, backgroundColor: wallet.color }]} />
+                        </View>
+                      </View>
+
+                      {/* Balance and spent amount on the right */}
+                      <View style={styles.walletRight}>
+                        <Text style={[styles.walletBalance, { color: theme.colors.text }]}>
+                          {formatCurrency(wallet.currentBalance, wallet.currency)}
+                        </Text>
+                        <Text style={[styles.walletSpent, { color: theme.colors.expense }]}>
+                          -{formatCurrency(walletSpent, wallet.currency)}
+                        </Text>
+                      </View>
+                    </View>
+                  </Card>
+                </TouchableOpacity>
+              );
+            })}
           </>
         ) : (
-          // Setup prompt when no wallet exists for current month
+          // Empty state — prompt to create first wallet
           <Card style={styles.setupCard}>
             <View style={styles.setupContent}>
               <MaterialCommunityIcons name="wallet-plus" size={64} color={theme.colors.primary} />
               <Text style={[styles.setupTitle, { color: theme.colors.text }]}>{t.wallet.setupTitle}</Text>
               <Text style={[styles.setupSubtitle, { color: theme.colors.textSecondary }]}>
-                {t.wallet.setupSubtitle} {t.months[currentMonth - 1]}.
+                {t.wallet.setupSubtitle}
               </Text>
-              <Button
-                title={t.wallet.createWallet}
+              <TouchableOpacity
+                style={[styles.createBtn, { backgroundColor: theme.colors.primary }]}
                 onPress={() => navigation.navigate('WalletSetup')}
-                variant="primary"
-                size="large"
-              />
+              >
+                <MaterialCommunityIcons name="plus" size={20} color="#FFF" />
+                <Text style={styles.createBtnText}>{t.wallet.createWallet}</Text>
+              </TouchableOpacity>
             </View>
-          </Card>
-        )}
-
-        {/* Wallet history section showing past months */}
-        <View style={styles.historyHeader}>
-          <Text style={[styles.historyTitle, { color: theme.colors.text }]}>{t.wallet.walletHistory}</Text>
-        </View>
-
-        {wallets.length > 0 ? (
-          wallets.map((wallet) => (
-            <Card key={wallet.id} style={styles.historyCard}>
-              <View style={styles.historyRow}>
-                <View>
-                  {/* Month and year label */}
-                  <Text style={[styles.historyMonth, { color: theme.colors.text }]}>
-                    {t.months[wallet.month - 1]} {wallet.year}
-                  </Text>
-                  {/* Balance ratio display */}
-                  <Text style={[styles.historyBalance, { color: theme.colors.textSecondary }]}>
-                    {formatCurrency(wallet.currentBalance, wallet.currency)} / {formatCurrency(wallet.initialBalance, wallet.currency)}
-                  </Text>
-                </View>
-                {/* Spent amount and percentage */}
-                <View style={styles.historyRight}>
-                  <Text style={[styles.historySpent, { color: theme.colors.expense }]}>
-                    -{formatCurrency(wallet.initialBalance - wallet.currentBalance, wallet.currency)}
-                  </Text>
-                  <Text style={[styles.historyPercent, { color: theme.colors.textTertiary }]}>
-                    {wallet.initialBalance > 0
-                      ? ((wallet.initialBalance - wallet.currentBalance) / wallet.initialBalance * 100).toFixed(0)
-                      : 0}% {t.wallet.spent}
-                  </Text>
-                </View>
-              </View>
-            </Card>
-          ))
-        ) : (
-          <Card>
-            <Text style={[styles.noHistory, { color: theme.colors.textSecondary }]}>{t.wallet.noHistory}</Text>
           </Card>
         )}
 
         {/* Bottom spacer for tab bar clearance */}
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Floating action button to add new wallet */}
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+        onPress={() => navigation.navigate('WalletSetup')}
+      >
+        <MaterialCommunityIcons name="wallet-plus" size={26} color="#FFFFFF" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -217,80 +272,91 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
   title: { fontSize: 28, fontWeight: '700' },
   subtitle: { fontSize: 14, marginTop: 2 },
-  walletCard: {
+  // Aggregate summary card
+  summaryCard: {
     marginHorizontal: 16,
     padding: 24,
     borderRadius: 24,
     marginBottom: 16,
   },
-  walletHeader: {
-    flexDirection: 'row', // Name and edit button side by side
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  walletName: { color: 'rgba(255,255,255,0.8)', fontSize: 15, fontWeight: '600' },
-  balanceLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 13, textAlign: 'center' },
-  balanceAmount: {
+  summaryLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 13, textAlign: 'center' },
+  summaryBalance: {
     color: '#FFFFFF',
-    fontSize: 40, // Prominent balance display
+    fontSize: 38,
     fontWeight: '700',
     textAlign: 'center',
     marginVertical: 8,
   },
-  progressContainer: { marginVertical: 16 },
+  progressContainer: { marginVertical: 12 },
   progressBar: { height: 8, borderRadius: 4, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 4 },
   progressText: { color: 'rgba(255,255,255,0.7)', fontSize: 12, textAlign: 'center', marginTop: 6 },
   summaryRow: {
-    flexDirection: 'row', // Income and expense side by side
+    flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 8,
   },
   summaryItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   summaryIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 28, height: 28, borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
   },
-  summaryLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 11 },
-  summaryAmount: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+  summaryItemLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 11 },
+  summaryItemAmount: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+  // Action buttons
   actionRow: {
-    flexDirection: 'row', // Three action buttons in a row
+    flexDirection: 'row',
     paddingHorizontal: 16,
     gap: 8,
     marginBottom: 20,
   },
   actionButton: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 16,
-    alignItems: 'center',
-    borderWidth: 0.5,
-    gap: 6,
+    flex: 1, padding: 14, borderRadius: 16,
+    alignItems: 'center', borderWidth: 0.5, gap: 6,
   },
   actionText: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
-  setupCard: { marginTop: 8 },
+  // Section header
+  sectionHeader: { paddingHorizontal: 20, marginBottom: 8 },
+  sectionTitle: { fontSize: 18, fontWeight: '700' },
+  // Individual wallet cards
+  walletCard: { paddingVertical: 12, paddingHorizontal: 4 },
+  walletRow: { flexDirection: 'row', alignItems: 'center' },
+  walletIcon: {
+    width: 48, height: 48, borderRadius: 14,
+    justifyContent: 'center', alignItems: 'center', marginRight: 12,
+  },
+  walletInfo: { flex: 1, marginRight: 8 },
+  walletNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  walletName: { fontSize: 15, fontWeight: '600', flexShrink: 1 },
+  defaultBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  defaultBadgeText: { fontSize: 10, fontWeight: '700' },
+  typeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  typeText: { fontSize: 11 },
+  miniProgress: { height: 3, borderRadius: 2, marginTop: 6, overflow: 'hidden' },
+  miniProgressFill: { height: '100%', borderRadius: 2 },
+  walletRight: { alignItems: 'flex-end' },
+  walletBalance: { fontSize: 15, fontWeight: '700' },
+  walletSpent: { fontSize: 12, marginTop: 2 },
+  // Empty state
+  setupCard: { marginTop: 40 },
   setupContent: { alignItems: 'center', paddingVertical: 32, gap: 12 },
   setupTitle: { fontSize: 22, fontWeight: '700' },
   setupSubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 20, paddingHorizontal: 16 },
-  historyHeader: { paddingHorizontal: 20, marginBottom: 8 },
-  historyTitle: { fontSize: 18, fontWeight: '700' },
-  historyCard: { paddingVertical: 12 },
-  historyRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  createBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 24, paddingVertical: 14, borderRadius: 14, marginTop: 8,
   },
-  historyMonth: { fontSize: 15, fontWeight: '600' },
-  historyBalance: { fontSize: 12, marginTop: 2 },
-  historyRight: { alignItems: 'flex-end' },
-  historySpent: { fontSize: 15, fontWeight: '700' },
-  historyPercent: { fontSize: 11, marginTop: 2 },
-  noHistory: { textAlign: 'center', paddingVertical: 20, fontSize: 14 },
+  createBtnText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
+  // FAB
+  fab: {
+    position: 'absolute', bottom: 20, right: 20,
+    width: 56, height: 56, borderRadius: 28,
+    justifyContent: 'center', alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3, shadowRadius: 6,
+  },
 });
 
 export default WalletScreen;

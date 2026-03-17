@@ -18,6 +18,23 @@ export const formatCurrency = (amount: number, currencyCode: string = 'INR'): st
   return `${symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+// Format a raw numeric string with Indian-style commas for input field display
+// Preserves partial input (e.g., "28000." stays as "28,000." without adding trailing zeros)
+export const formatAmountInput = (value: string): string => {
+  if (!value) return ''; // Return empty for empty input
+  const parts = value.split('.');
+  let intPart = parts[0];
+  const decPart = parts.length > 1 ? '.' + parts[1] : ''; // Keep decimal as typed
+  // Apply Indian grouping: last 3 digits, then groups of 2
+  if (intPart.length > 3) {
+    const last3 = intPart.slice(-3); // Last three digits stay ungrouped
+    const remaining = intPart.slice(0, -3); // Remaining digits grouped in pairs
+    const groups = remaining.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+    intPart = `${groups},${last3}`;
+  }
+  return intPart + decPart; // Combine integer and decimal parts
+};
+
 // Format number using Indian numbering system (lakhs, crores)
 const formatIndianNumber = (num: number): string => {
   const isNegative = num < 0; // Track sign separately

@@ -6,7 +6,7 @@ import { View, Text, StyleSheet, ScrollView, Switch, TextInput, Alert } from 're
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
-import { useAppStore } from '../store';
+import { useAppStore, selectSettings } from '../store';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -14,7 +14,8 @@ import * as LocalAuthentication from 'expo-local-authentication';
 const SecurityScreen = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const { settings, updateSettings } = useAppStore();
+  const settings = useAppStore(selectSettings); // Only subscribe to settings slice
+  const updateSettings = useAppStore((s) => s.updateSettings);
 
   const [showPinSetup, setShowPinSetup] = useState(false); // Whether PIN setup form is visible
   const [pin, setPin] = useState(''); // PIN input value

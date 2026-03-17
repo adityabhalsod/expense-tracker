@@ -9,17 +9,25 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
-import { useAppStore } from '../store';
+import { useAppStore, selectBudgets, selectCategories, selectSettings, selectExpenses } from '../store';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import EmptyState from '../components/common/EmptyState';
-import { formatCurrency, getCurrencySymbol } from '../utils/helpers';
+import { formatCurrency, getCurrencySymbol, formatAmountInput } from '../utils/helpers';
 import { Budget } from '../types';
 
 const BudgetSetupScreen = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const { budgets, categories, settings, loadBudgets, addBudget, updateBudget, deleteBudget, expenses } = useAppStore();
+  // Subscribe to individual store slices to avoid full-store re-renders
+  const budgets = useAppStore(selectBudgets);
+  const categories = useAppStore(selectCategories);
+  const settings = useAppStore(selectSettings);
+  const expenses = useAppStore(selectExpenses);
+  const loadBudgets = useAppStore((s) => s.loadBudgets);
+  const addBudget = useAppStore((s) => s.addBudget);
+  const updateBudget = useAppStore((s) => s.updateBudget);
+  const deleteBudget = useAppStore((s) => s.deleteBudget);
 
   const [showModal, setShowModal] = useState(false); // Budget edit modal visibility
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null); // Budget being edited
@@ -62,6 +70,17 @@ const BudgetSetupScreen = () => {
     setAmount(budget.amount.toString());
     setShowModal(true);
   };
+
+  // Sanitize budget amount input: strip commas, only digits & one decimal, cap at 10 int + 2 decimal
+  const handleAmountChange = useCallback((text: string) => {
+    let cleaned = text.replace(/[^0-9.]/g, '');
+    const parts = cleaned.split('.');
+    if (parts.length > 2) cleaned = parts[0] + '.' + parts.slice(1).join('');
+    if (parts[0].length > 10) parts[0] = parts[0].slice(0, 10);
+    if (parts.length === 2 && parts[1].length > 2) parts[1] = parts[1].slice(0, 2);
+    cleaned = parts.length === 2 ? `${parts[0]}.${parts[1]}` : parts[0];
+    setAmount(cleaned);
+  }, []);
 
   // Save new or updated budget
   const handleSave = async () => {
@@ -299,8 +318,8 @@ const BudgetSetupScreen = () => {
               <Text style={[styles.currencySymbol, { color: theme.colors.textSecondary }]}>{currency}</Text>
               <TextInput
                 style={[styles.amountField, { color: theme.colors.text }]}
-                value={amount}
-                onChangeText={setAmount}
+                value={formatAmountInput(amount)}
+                onChangeText={handleAmountChange}
                 placeholder="0.00"
                 placeholderTextColor={theme.colors.textTertiary}
                 keyboardType="decimal-pad"

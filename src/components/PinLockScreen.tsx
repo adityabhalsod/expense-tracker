@@ -7,7 +7,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Vibration, Alert } from 'reac
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
-import { useAppStore } from '../store';
+import { useAppStore, selectSettings } from '../store';
 import * as LocalAuthentication from 'expo-local-authentication';
 
 interface Props {
@@ -17,7 +17,7 @@ interface Props {
 const PinLockScreen = ({ onAuthenticated }: Props) => {
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const { settings } = useAppStore();
+  const settings = useAppStore(selectSettings); // Only subscribe to settings slice
 
   const [pin, setPin] = useState(''); // Current PIN input
   const [error, setError] = useState(''); // Error message for wrong PIN

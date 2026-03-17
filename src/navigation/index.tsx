@@ -28,6 +28,7 @@ const SearchScreen = React.lazy(() => import('../screens/SearchScreen'));
 const SecurityScreen = React.lazy(() => import('../screens/SecurityScreen'));
 const BudgetSetupScreen = React.lazy(() => import('../screens/BudgetSetupScreen'));
 const AllExpensesScreen = React.lazy(() => import('../screens/AllExpensesScreen'));
+const UPIPaymentsScreen = React.lazy(() => import('../screens/UPIPaymentsScreen'));
 
 // Minimal fallback spinner shown while a lazy screen loads
 const LazyFallback = () => (
@@ -183,6 +184,8 @@ const AppNavigator = () => {
         <Stack.Screen name="BudgetSetup" component={withSuspense(BudgetSetupScreen)} options={{ title: t.budget.title }} />
         {/* All expenses view with full list */}
         <Stack.Screen name="AllExpenses" component={withSuspense(AllExpensesScreen)} options={{ title: t.allExpenses.title }} />
+        {/* UPI payment notification history */}
+        <Stack.Screen name="UPIPayments" component={withSuspense(UPIPaymentsScreen)} options={{ title: t.upiPayments?.title || 'UPI Payments' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

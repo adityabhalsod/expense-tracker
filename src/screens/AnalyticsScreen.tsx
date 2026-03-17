@@ -10,7 +10,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { PieChart, BarChart, LineChart } from 'react-native-chart-kit';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
-import { useAppStore } from '../store';
+import { useAppStore, selectCategories } from '../store';
 import Card from '../components/common/Card';
 import { formatCurrency, getDateRange, calculatePercentage, formatCompactNumber } from '../utils/helpers';
 import { TimeRange } from '../types';
@@ -25,7 +25,7 @@ const TIME_RANGE_VALUES: TimeRange[] = ['daily', 'weekly', 'monthly', 'quarterly
 const AnalyticsScreen = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const { categories } = useAppStore();
+  const categories = useAppStore(selectCategories); // Only subscribe to categories slice
 
   // Translated time range labels
   const TIME_RANGES = TIME_RANGE_VALUES.map(value => ({

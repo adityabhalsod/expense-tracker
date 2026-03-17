@@ -2,22 +2,78 @@
 // Central hub for all app configuration options
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Modal, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Modal, FlatList, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme';
-import { useAppStore } from '../store';
+import { useAppStore, selectSettings } from '../store';
 import { CURRENCIES } from '../constants';
 import { useLanguage, LANGUAGES } from '../i18n';
 
 const SettingsScreen = () => {
   const { theme, themeMode, setThemeMode, isDark } = useTheme();
   const navigation = useNavigation<any>();
-  const { settings, updateSettings } = useAppStore();
+  const settings = useAppStore(selectSettings); // Only subscribe to settings slice
+  const updateSettings = useAppStore((s) => s.updateSettings);
+  const clearAllData = useAppStore((s) => s.clearAllData);
+  const resetDatabase = useAppStore((s) => s.resetDatabase);
   const { t, language, setLanguage } = useLanguage();
   const [showCurrencyModal, setShowCurrencyModal] = useState(false); // Currency picker modal visibility
   const [showLanguageModal, setShowLanguageModal] = useState(false); // Language picker modal visibility
+  const [isResetting, setIsResetting] = useState(false); // Prevent double-tap during reset
+
+  // Handle clearing all transactional data while keeping categories/settings
+  const handleClearAllData = () => {
+    Alert.alert(
+      t.settings.resetData,
+      t.settings.resetDataConfirm,
+      [
+        { text: t.common.cancel, style: 'cancel' },
+        {
+          text: t.common.delete,
+          style: 'destructive',
+          onPress: async () => {
+            setIsResetting(true);
+            try {
+              await clearAllData();
+              Alert.alert(t.common.success || 'Success', t.settings.resetSuccess);
+            } catch {
+              Alert.alert(t.common.error, t.settings.resetFailed);
+            } finally {
+              setIsResetting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Handle full database reset — drops all tables, recreates schema
+  const handleResetDatabase = () => {
+    Alert.alert(
+      t.settings.resetDatabase,
+      t.settings.resetDatabaseConfirm,
+      [
+        { text: t.common.cancel, style: 'cancel' },
+        {
+          text: t.common.delete,
+          style: 'destructive',
+          onPress: async () => {
+            setIsResetting(true);
+            try {
+              await resetDatabase();
+              Alert.alert(t.common.success || 'Success', t.settings.resetSuccess);
+            } catch {
+              Alert.alert(t.common.error, t.settings.resetFailed);
+            } finally {
+              setIsResetting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   // Toggle between light, dark, and system theme modes
   const cycleTheme = () => {
@@ -110,6 +166,7 @@ const SettingsScreen = () => {
           />
           <SettingsRow icon="shape" label={t.settings.categories} onPress={() => navigation.navigate('CategoryManagement')} />
           <SettingsRow icon="target" label={t.settings.budgets} onPress={() => navigation.navigate('BudgetSetup')} />
+          <SettingsRow icon="cellphone-nfc" label={t.upiPayments?.title || 'UPI Payments'} onPress={() => navigation.navigate('UPIPayments')} />
         </View>
 
         {/* Data management section */}
@@ -141,7 +198,54 @@ const SettingsScreen = () => {
         {/* About section */}
         <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>{t.settings.about}</Text>
         <View style={[styles.section, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <SettingsRow icon="information" label={t.settings.version} value="1.0.0" />
+          <SettingsRow icon="information" label={t.settings.version} value="1.1.0" />
+        </View>
+
+        {/* Danger zone — reset actions */}
+        <Text style={[styles.sectionTitle, { color: '#EF4444' }]}>{t.settings.dangerZone}</Text>
+        <View style={[styles.section, { backgroundColor: theme.colors.surface, borderColor: '#EF444430' }]}>
+          {/* Clear transactional data only (expenses, wallets, budgets, notifications) */}
+          <TouchableOpacity
+            style={styles.dangerRow}
+            onPress={handleClearAllData}
+            disabled={isResetting}
+          >
+            <View style={styles.dangerRowLeft}>
+              <View style={[styles.dangerIconBg, { backgroundColor: '#FEF2F2' }]}>
+                <MaterialCommunityIcons name="delete-sweep" size={20} color="#EF4444" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.dangerLabel, { color: theme.colors.text }]}>
+                  {t.settings.resetData}
+                </Text>
+                <Text style={[styles.dangerDesc, { color: theme.colors.textSecondary }]}>
+                  {t.settings.resetDataDesc}
+                </Text>
+              </View>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={theme.colors.textSecondary} />
+          </TouchableOpacity>
+          {/* Full factory reset — drop all tables and start from scratch */}
+          <TouchableOpacity
+            style={styles.dangerRow}
+            onPress={handleResetDatabase}
+            disabled={isResetting}
+          >
+            <View style={styles.dangerRowLeft}>
+              <View style={[styles.dangerIconBg, { backgroundColor: '#FEF2F2' }]}>
+                <MaterialCommunityIcons name="database-remove" size={20} color="#EF4444" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.dangerLabel, { color: theme.colors.text }]}>
+                  {t.settings.resetDatabase}
+                </Text>
+                <Text style={[styles.dangerDesc, { color: theme.colors.textSecondary }]}>
+                  {t.settings.resetDatabaseDesc}
+                </Text>
+              </View>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={theme.colors.textSecondary} />
+          </TouchableOpacity>
         </View>
 
         {/* Bottom spacer */}
@@ -318,6 +422,36 @@ const styles = StyleSheet.create({
   currencyInfo: { flex: 1 },
   currencyName: { fontSize: 15, fontWeight: '500' },
   currencyCode: { fontSize: 12, marginTop: 2 },
+  // Danger zone row layout
+  dangerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  dangerRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  // Red-tinted icon background for danger actions
+  dangerIconBg: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dangerLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  dangerDesc: {
+    fontSize: 12,
+    marginTop: 2,
+  },
 });
 
 export default SettingsScreen;

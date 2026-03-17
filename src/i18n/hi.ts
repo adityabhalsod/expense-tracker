@@ -133,6 +133,15 @@ const hi: TranslationKeys = {
     budgets: 'बजट',
     data: 'डेटा',
     exportReports: 'रिपोर्ट निर्यात',
+    dangerZone: 'खतरनाक क्षेत्र',
+    resetData: 'सारा डेटा मिटाएं',
+    resetDataDesc: 'सभी खर्चे, वॉलेट, बजट और सूचनाएँ हटाएं लेकिन श्रेणियां और सेटिंग्स रखें।',
+    resetDataConfirm: 'यह आपके सभी खर्चे, वॉलेट, बजट और UPI सूचनाएँ स्थायी रूप से हटा देगा। श्रेणियां और सेटिंग्स सुरक्षित रहेंगी। यह पूर्ववत नहीं किया जा सकता।',
+    resetDatabase: 'पूरा डेटाबेस रीसेट करें',
+    resetDatabaseDesc: 'सभी टेबल हटाएं और नए सिरे से शुरू करें। श्रेणियों सहित सारा डेटा खो जाएगा।',
+    resetDatabaseConfirm: 'यह ऐप को उसकी प्रारंभिक स्थिति में पूरी तरह रीसेट करेगा। श्रेणियों, खर्चों, वॉलेट और सेटिंग्स सहित सारा डेटा स्थायी रूप से हटा दिया जाएगा। यह पूर्ववत नहीं किया जा सकता।',
+    resetSuccess: 'रीसेट सफलतापूर्वक पूरा हुआ। ऐप पुनः लोड होगा।',
+    resetFailed: 'रीसेट विफल। कृपया पुनः प्रयास करें।',
     security: 'सुरक्षा',
     appLock: 'ऐप लॉक',
     notifications: 'सूचनाएं',
@@ -160,8 +169,9 @@ const hi: TranslationKeys = {
     invalidAmountMsg: 'कृपया 0 से अधिक मान्य राशि दर्ज करें।',
     noCategory: 'कोई श्रेणी नहीं',
     noCategoryMsg: 'कृपया इस खर्च के लिए एक श्रेणी चुनें।',
-    saveFailed: 'खर्च सहेजने में विफल। कृपया पुनः प्रयास करें।',
-  },
+    saveFailed: 'खर्च सहेजने में विफल। कृपया पुनः प्रयास करें।',    enterAmount: 'कृपया एक वैध राशि दर्ज करें',
+    selectCategory: 'कृपया एक श्रेणी चुनें',
+    save: 'खर्च सहेजें',  },
 
   // खर्च विवरण स्क्रीन
   expenseDetail: {
@@ -196,7 +206,7 @@ const hi: TranslationKeys = {
     deleteMsg: 'क्या आप वाकई इस श्रेणी को हटाना चाहते हैं? इस श्रेणी के खर्चे प्रभावित नहीं होंगे।',
   },
 
-  // वॉलेट सेटअप स्क्रीन
+  // वॉलेट सेटअप स्क्रीन (भुगतान स्रोत कॉन्फ़िग के साथ मर्ज किया गया)
   walletSetup: {
     title: 'वॉलेट सेटअप',
     settingUpFor: 'वॉलेट सेट हो रहा है',
@@ -206,6 +216,21 @@ const hi: TranslationKeys = {
     balanceHint: 'यह महीने के लिए आपका शुरुआती शेष होगा। खर्चे इस राशि से काटे जाएंगे।',
     createWallet: 'वॉलेट बनाएं',
     updateWallet: 'वॉलेट अपडेट करें',
+    deleteConfirm: 'क्या आप इस वॉलेट को हटाना चाहते हैं?',
+    default: 'डिफ़ॉल्ट',
+    nameRequired: 'कृपया एक नाम दर्ज करें।',
+    saveFailed: 'सहेजने में विफल। कृपया पुनः प्रयास करें।',
+    type: 'प्रकार',
+    bankName: 'बैंक का नाम',
+    bankNamePlaceholder: 'जैसे, HDFC बैंक',
+    upiId: 'UPI आईडी',
+    namePlaceholder: 'जैसे, HDFC बचत',
+    nickname: 'उपनाम (वैकल्पिक)',
+    nicknamePlaceholder: 'छोटा उपनाम',
+    icon: 'आइकन',
+    color: 'रंग',
+    setDefault: 'डिफ़ॉल्ट के रूप में सेट करें',
+    encryptedNote: 'एन्क्रिप्टेड संग्रहित',
   },
 
   // रिपोर्ट निर्यात स्क्रीन
@@ -343,6 +368,27 @@ const hi: TranslationKeys = {
     monthly: 'मासिक',
     quarterly: 'तिमाही',
     yearly: 'वार्षिक',
+  },
+
+
+
+  // UPI भुगतान स्क्रीन
+  upiPayments: {
+    title: 'UPI भुगतान',
+    all: 'सभी',
+    pendingFilter: 'लंबित',
+    processedFilter: 'संसाधित',
+    processed: 'संसाधित',
+    pending: 'लंबित',
+    emptyTitle: 'कोई UPI सूचनाएँ नहीं',
+    emptySubtitle: 'पता लगने पर UPI भुगतान सूचनाएँ यहाँ दिखाई देंगी',
+    received: 'प्राप्त',
+    sent: 'भेजा',
+    addAsExpense: 'खर्च के रूप में जोड़ें',
+    addAsIncome: 'आय के रूप में जोड़ें',
+    addIncome: 'आय जोड़ें',
+    source: 'भुगतान स्रोत',
+    saveTransaction: 'लेनदेन सहेजें',
   },
 };
 
