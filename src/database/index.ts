@@ -2,41 +2,38 @@
 // Uses expo-sqlite for local storage on the device
 
 import * as SQLite from 'expo-sqlite';
-import { Paths, Directory, File } from 'expo-file-system';
 import { Expense, Category, Wallet, Budget } from '../types';
 import { DEFAULT_CATEGORIES } from '../constants';
 import * as Crypto from 'expo-crypto';
 
 // Singleton database instance shared across the app
 let db: SQLite.SQLiteDatabase | null = null;
+// Promise lock to prevent concurrent initialization races
+let dbInitPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 // Generate a UUID v4 string using expo-crypto for unique record IDs
 const generateId = (): string => {
   return Crypto.randomUUID();
 };
 
-// Fix corrupted SQLite directory: if a regular file exists where the directory should be, remove it
-const ensureSQLiteDirectory = async (): Promise<void> => {
-  try {
-    const sqlitePath = new Directory(Paths.document, 'SQLite').uri;
-    const info = Paths.info(sqlitePath);
-    if (info.exists && info.isDirectory === false) {
-      // A file is blocking the directory path — remove it so expo-sqlite can create the directory
-      const blocker = new File(Paths.document, 'SQLite');
-      blocker.delete();
-    }
-  } catch (e) {
-    console.warn('SQLite directory check failed:', e);
-  }
-};
-
-// Initialize and return the SQLite database connection
+// Initialize and return the SQLite database connection (serialized to prevent race conditions)
 export const getDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
   if (db) return db; // Return existing connection if already open
-  await ensureSQLiteDirectory(); // Fix path conflict before opening DB
-  db = await SQLite.openDatabaseAsync('expense_tracker.db');
-  await initializeDatabase(db); // Create tables on first open
-  return db;
+  if (dbInitPromise) return dbInitPromise; // Wait for in-progress init instead of racing
+
+  dbInitPromise = (async () => {
+    try {
+      const database = await SQLite.openDatabaseAsync('expense_tracker.db');
+      await initializeDatabase(database); // Create tables on first open
+      db = database;
+      return database;
+    } catch (e) {
+      dbInitPromise = null; // Allow retry on failure
+      throw e;
+    }
+  })();
+
+  return dbInitPromise;
 };
 
 // Create all required tables and seed default data if tables are empty
