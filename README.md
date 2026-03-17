@@ -131,11 +131,14 @@ npx expo start
 Always clear all caches before a production build to ensure fresh assets and code:
 
 ```bash
-# 1. Clear all caches (Metro, Gradle, node_modules cache)
+# 1. expo prebuild for android.
+npx expo prebuild --platform android --no-install
+
+# 2. Clear all caches (Metro, Gradle, node_modules cache)
 rm -rf android/app/build android/.gradle/build-cache node_modules/.cache /tmp/metro-* /tmp/haste-map-*
 cd android && ./gradlew clean && cd ..
 
-# 2. Build release APK for Android
+# 3. Build release APK for Android
 cd android && ANDROID_HOME=$HOME/Android/Sdk ./gradlew app:assembleRelease -x lint -x test --configure-on-demand --build-cache
 ```
 
