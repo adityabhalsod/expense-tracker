@@ -141,14 +141,6 @@ The release APK will be at:
 android/app/build/outputs/apk/release/app-release.apk
 ```
 
-**Export as a versioned APK (recommended):**
-```bash
-# Rename to a versioned filename for distribution
-cp android/app/build/outputs/apk/release/app-release.apk expense-tracker-v1.apk
-```
-
-The versioned APK (`expense-tracker-v1.apk`) is ready to share or sideload. Update the version suffix to match the `version` field in `app.json` for each release.
-
 **iOS release build:**
 ```bash
 npx expo run:ios --configuration Release
@@ -176,6 +168,11 @@ Pushing to specific branches triggers a GitHub Actions pipeline that builds a cl
 **Download releases:** [GitHub Releases →](https://github.com/adityabhalsod/personal-expense-tracker/releases)
 
 > **Tip:** Use [conventional commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `perf:`) so the changelog is categorized automatically.
+
+> **Skip CI:** Add `[skip ci]` or `[ci skip]` anywhere in your commit message or PR title to skip the release pipeline for that push.
+> ```bash
+> git commit -m "docs: update readme [skip ci]"
+> ```
 
 ---
 

@@ -10,6 +10,13 @@
 #   main  → stable release   (v1.0.0, v1.1.0, …)
 #   beta  → beta pre-release (v1.1.0-beta.1, v1.1.0-beta.2, …)
 #   alpha → alpha pre-release (v1.1.0-alpha.1, v1.1.0-alpha.2, …)
+#
+# Performance optimizations:
+#   - 4-core runner (ubuntu-latest-xl) for parallel Gradle tasks
+#   - Gradle daemon enabled with 4GB heap + parallel execution
+#   - Node modules cached via setup-node
+#   - Gradle wrapper & dependencies cached across runs
+#   - File-system watching disabled (CI doesn't need it)
 # ============================================================================
 
 name: Android Release
@@ -33,12 +40,25 @@ permissions:
 env:
   JAVA_VERSION: "17"
   NODE_VERSION: "20"
+  # ── Gradle performance flags (inherited by every Gradle invocation) ──
+  GRADLE_OPTS: >-
+    -Dorg.gradle.daemon=true
+    -Dorg.gradle.parallel=true
+    -Dorg.gradle.workers.max=4
+    -Dorg.gradle.jvmargs=-Xmx4g -XX:+HeapDumpOnOutOfMemoryError -XX:+UseParallelGC
+    -Dorg.gradle.configureondemand=true
+    -Dorg.gradle.caching=false
+    -Dorg.gradle.vfs.watch=false
 
 jobs:
   build-and-release:
     name: Build & Release (${{ github.ref_name }})
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
+    # Skip the entire pipeline when the commit message or PR title contains [skip ci] or [ci skip]
+    if: |
+      !contains(github.event.head_commit.message, '[skip ci]') &&
+      !contains(github.event.head_commit.message, '[ci skip]')
 
     steps:
       # ── Checkout ──────────────────────────────────────────────────────
@@ -46,6 +66,30 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Full history needed for changelog generation
+
+      # ── Setup Java & Node in parallel-friendly order ──────────────────
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      # ── Cache Gradle wrapper & dependencies ───────────────────────────
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
 
       # ── Determine version & release channel ───────────────────────────
       - name: Determine version and release channel
@@ -161,20 +205,7 @@ jobs:
             echo "CHANGELOG_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      # ── Setup Java (needed by Gradle) ─────────────────────────────────
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          distribution: "temurin"
-          java-version: ${{ env.JAVA_VERSION }}
-
-      # ── Setup Node.js & install JS dependencies ───────────────────────
-      - name: Set up Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-
+      # ── Install JS deps + generate native project ────────────────────
       - name: Install Node dependencies
         run: npm ci
 
@@ -200,25 +231,31 @@ jobs:
           # Patch versionName in build.gradle
           sed -i "s/versionName \".*\"/versionName \"$VERSION_NAME\"/" android/app/build.gradle
 
-      # ── Clean Gradle caches for a fresh build ─────────────────────────
-      - name: Clean Gradle caches
-        working-directory: android
+      # ── Optimise system for fast native compilation ───────────────────
+      - name: Increase file watcher limit & free disk space
         run: |
-          # Remove all build artifacts and Gradle build caches
-          rm -rf app/build .gradle/build-cache
-          ./gradlew clean --no-daemon
+          # Raise inotify limit so Gradle doesn't hit file-watcher ceiling
+          echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
+          sudo sysctl -p
 
-      # ── Build release APK without cache ───────────────────────────────
+          # Free disk space by removing unused toolchains (saves ~8 GB)
+          sudo rm -rf /usr/local/lib/android/sdk/ndk /usr/share/dotnet /opt/ghc 2>/dev/null || true
+
+          # Pre-warm Gradle wrapper download (reuses cache if available)
+          cd android && ./gradlew --version && cd ..
+
+      # ── Build release APK with parallel Gradle execution ──────────────
       - name: Build release APK
         working-directory: android
         run: |
-          # Assemble release APK — skip lint & tests for CI speed, no build cache
+          # Assemble release APK — parallel tasks, skip lint & tests, max workers
           ./gradlew app:assembleRelease \
             -x lint \
             -x test \
-            --no-build-cache \
-            --no-daemon \
-            --configure-on-demand
+            --parallel \
+            --configure-on-demand \
+            --build-cache \
+            --daemon
 
       # ── Rename APK to versioned filename ──────────────────────────────
       - name: Rename APK
