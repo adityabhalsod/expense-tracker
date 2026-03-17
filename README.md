@@ -50,11 +50,17 @@ Expense Tracker helps you take control of your money. Track every rupee, dollar,
 
 ## Screenshots
 
-> _Coming soon — add your own screenshots to the `assets/` folder and reference them here._
+### Light Mode
 
 | Home | Expenses | Analytics | Wallet | Settings |
 |------|----------|-----------|--------|----------|
-| <!-- ![Home](assets/screenshots/home.png) --> | <!-- ![Expenses](assets/screenshots/expenses.png) --> | <!-- ![Analytics](assets/screenshots/analytics.png) --> | <!-- ![Wallet](assets/screenshots/wallet.png) --> | <!-- ![Settings](assets/screenshots/settings.png) --> |
+| <img src="screenshots/light/light_home.jpg" width="160" /> | <img src="screenshots/light/light_expenses.jpg" width="160" /> | <img src="screenshots/light/light_analytics.jpg" width="160" /> | <img src="screenshots/light/light_wallet.jpg" width="160" /> | <img src="screenshots/light/light_settings.jpg" width="160" /> |
+
+### Dark Mode
+
+| Home | Expenses | Analytics | Wallet | Settings |
+|------|----------|-----------|--------|----------|
+| <img src="screenshots/dark/dark_home.jpg" width="160" /> | <img src="screenshots/dark/dark_expenses.jpg" width="160" /> | <img src="screenshots/dark/dark_analytics.jpg" width="160" /> | <img src="screenshots/dark/dark_wallet.jpg" width="160" /> | <img src="screenshots/dark/dark_settings.jpg" width="160" /> |
 
 ---
 
