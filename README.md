@@ -139,6 +139,14 @@ The release APK will be at:
 android/app/build/outputs/apk/release/app-release.apk
 ```
 
+**Export as a versioned APK (recommended):**
+```bash
+# Rename to a versioned filename for distribution
+cp android/app/build/outputs/apk/release/app-release.apk expense-tracker-v1.apk
+```
+
+The versioned APK (`expense-tracker-v1.apk`) is ready to share or sideload. Update the version suffix to match the `version` field in `app.json` for each release.
+
 **iOS release build:**
 ```bash
 npx expo run:ios --configuration Release
