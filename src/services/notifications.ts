@@ -1,23 +1,39 @@
 // Budget notification service using expo-notifications
 // Sends alerts when spending approaches or exceeds budget limits
+// Uses dynamic import to avoid loading expo-notifications in Expo Go (crashes since SDK 53)
 
-import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { getDatabase } from '../database';
 import { Budget, Category } from '../types';
 
-// Configure how notifications appear when app is in foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// Expo Go does not support push notifications since SDK 53 — avoid importing the module entirely
+const isExpoGo = Constants.appOwnership === 'expo';
+
+// Lazily load expo-notifications only in development builds / standalone apps
+let _notifications: typeof import('expo-notifications') | null = null;
+const getNotifications = async () => {
+  if (isExpoGo) return null;
+  if (!_notifications) {
+    _notifications = await import('expo-notifications');
+    // Configure foreground notification display after first load
+    _notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  }
+  return _notifications;
+};
 
 // Request notification permissions from the user
 export const requestNotificationPermissions = async (): Promise<boolean> => {
+  const Notifications = await getNotifications();
+  if (!Notifications) return false;
+
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
@@ -31,6 +47,9 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
 
 // Check all budgets and send notifications for any that exceed their threshold
 export const checkBudgetNotifications = async (): Promise<void> => {
+  const Notifications = await getNotifications();
+  if (!Notifications) return;
+
   const database = await getDatabase();
   const now = new Date();
   const month = now.getMonth() + 1;

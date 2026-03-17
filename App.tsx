@@ -36,11 +36,19 @@ const AppContent = () => {
     const boot = async () => {
       await initialize();
       // Process any due recurring expenses after data is loaded
-      await processRecurringExpenses();
+      try {
+        await processRecurringExpenses();
+      } catch (e) {
+        console.warn('Recurring expenses processing failed:', e);
+      }
       // Request notification permissions and check budget thresholds
-      const hasPermission = await requestNotificationPermissions();
-      if (hasPermission) {
-        await checkBudgetNotifications();
+      try {
+        const hasPermission = await requestNotificationPermissions();
+        if (hasPermission) {
+          await checkBudgetNotifications();
+        }
+      } catch (e) {
+        console.warn('Notification setup skipped:', e);
       }
     };
     boot();

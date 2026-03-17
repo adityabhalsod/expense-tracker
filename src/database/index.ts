@@ -2,6 +2,7 @@
 // Uses expo-sqlite for local storage on the device
 
 import * as SQLite from 'expo-sqlite';
+import { Paths, Directory, File } from 'expo-file-system';
 import { Expense, Category, Wallet, Budget } from '../types';
 import { DEFAULT_CATEGORIES } from '../constants';
 import * as Crypto from 'expo-crypto';
@@ -14,9 +15,25 @@ const generateId = (): string => {
   return Crypto.randomUUID();
 };
 
+// Fix corrupted SQLite directory: if a regular file exists where the directory should be, remove it
+const ensureSQLiteDirectory = async (): Promise<void> => {
+  try {
+    const sqlitePath = new Directory(Paths.document, 'SQLite').uri;
+    const info = Paths.info(sqlitePath);
+    if (info.exists && info.isDirectory === false) {
+      // A file is blocking the directory path — remove it so expo-sqlite can create the directory
+      const blocker = new File(Paths.document, 'SQLite');
+      blocker.delete();
+    }
+  } catch (e) {
+    console.warn('SQLite directory check failed:', e);
+  }
+};
+
 // Initialize and return the SQLite database connection
 export const getDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
   if (db) return db; // Return existing connection if already open
+  await ensureSQLiteDirectory(); // Fix path conflict before opening DB
   db = await SQLite.openDatabaseAsync('expense_tracker.db');
   await initializeDatabase(db); // Create tables on first open
   return db;
