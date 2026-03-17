@@ -280,6 +280,8 @@ const en = {
     tooManyAttemptsMsg: 'Please try again later.',
     unlockPrompt: 'Unlock Expense Tracker',
     usePin: 'Use PIN',
+    biometricFailed: 'Authentication failed. Try again.',
+    tapToUnlock: 'Tap to Unlock',
   },
 
   // Budget Setup screen

@@ -57,7 +57,8 @@ const AppContent = () => {
   }, []);
 
   // Determine if security gate should show
-  const needsAuth = (settings.enablePin || settings.enableBiometric) && !isAuthenticated;
+  // PIN requires both the toggle AND a stored PIN hash; biometric just needs the toggle
+  const needsAuth = ((settings.enablePin && !!settings.pinHash) || settings.enableBiometric) && !isAuthenticated;
 
   return (
     <>

@@ -1,5 +1,6 @@
 // PIN/Biometric authentication gate screen
 // Shown on app launch when security is enabled, before granting access
+// Supports three modes: biometric-only, PIN-only, or both
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Vibration, Alert } from 'react-native';
@@ -21,26 +22,53 @@ const PinLockScreen = ({ onAuthenticated }: Props) => {
   const [pin, setPin] = useState(''); // Current PIN input
   const [error, setError] = useState(''); // Error message for wrong PIN
   const [attempts, setAttempts] = useState(0); // Failed attempt counter
+  const [showPinPad, setShowPinPad] = useState(false); // Controls PIN pad visibility
+  const [biometricFailed, setBiometricFailed] = useState(false); // Tracks biometric failure
 
-  // Try biometric authentication on mount if enabled
-  useEffect(() => {
-    if (settings.enableBiometric) {
-      handleBiometric();
-    }
-  }, []);
+  // Determine the authentication mode
+  const hasPinEnabled = settings.enablePin && settings.pinHash;
+  const hasBiometricEnabled = settings.enableBiometric;
 
   // Attempt biometric authentication
   const handleBiometric = useCallback(async () => {
-    const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: t.pinLock.unlockPrompt,
-      cancelLabel: t.pinLock.usePin,
-      disableDeviceFallback: true,
-    });
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: t.pinLock.unlockPrompt,
+        cancelLabel: hasPinEnabled ? t.pinLock.usePin : t.common.cancel,
+        disableDeviceFallback: true,
+      });
 
-    if (result.success) {
+      if (result.success) {
+        onAuthenticated();
+      } else {
+        // Biometric failed or was cancelled
+        setBiometricFailed(true);
+        if (hasPinEnabled) {
+          // Fall back to PIN pad if PIN is also enabled
+          setShowPinPad(true);
+        }
+      }
+    } catch {
+      setBiometricFailed(true);
+      if (hasPinEnabled) {
+        setShowPinPad(true);
+      }
+    }
+  }, [onAuthenticated, hasPinEnabled, t]);
+
+  // On mount, decide what to show first
+  useEffect(() => {
+    if (hasBiometricEnabled) {
+      // Start with biometric prompt (PIN pad hidden until biometric fails)
+      handleBiometric();
+    } else if (hasPinEnabled) {
+      // No biometric — show PIN pad immediately
+      setShowPinPad(true);
+    } else {
+      // Neither enabled — should not reach here, but skip the lock
       onAuthenticated();
     }
-  }, [onAuthenticated]);
+  }, []);
 
   // Handle number pad key press
   const handleKeyPress = (digit: string) => {
@@ -50,7 +78,8 @@ const PinLockScreen = ({ onAuthenticated }: Props) => {
     setError('');
 
     // Auto-verify once PIN reaches expected length
-    if (newPin.length === (settings.pinHash?.length || 4)) {
+    const expectedLength = settings.pinHash?.length || 4;
+    if (newPin.length === expectedLength) {
       if (newPin === settings.pinHash) {
         onAuthenticated(); // Correct PIN
       } else {
@@ -74,9 +103,56 @@ const PinLockScreen = ({ onAuthenticated }: Props) => {
     setError('');
   };
 
-  // Number pad layout (1-9, biometric, 0, delete)
+  // Biometric-only screen (no PIN pad) — shown when only biometric is enabled
+  if (hasBiometricEnabled && !hasPinEnabled && !showPinPad) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.header}>
+          <View style={[styles.lockIcon, { backgroundColor: theme.colors.primary + '15' }]}>
+            <MaterialCommunityIcons name="fingerprint" size={48} color={theme.colors.primary} />
+          </View>
+          <Text style={[styles.title, { color: theme.colors.text }]}>{t.pinLock.unlockPrompt}</Text>
+          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+            {t.pinLock.subtitle}
+          </Text>
+        </View>
+
+        {biometricFailed && (
+          <Text style={[styles.error, { color: theme.colors.error, marginBottom: 16 }]}>
+            {t.pinLock.biometricFailed || 'Authentication failed. Try again.'}
+          </Text>
+        )}
+
+        {/* Retry biometric button */}
+        <TouchableOpacity
+          style={[styles.biometricRetryBtn, { backgroundColor: theme.colors.primary }]}
+          onPress={handleBiometric}
+        >
+          <MaterialCommunityIcons name="fingerprint" size={28} color="#FFFFFF" />
+          <Text style={styles.biometricRetryText}>{t.pinLock.tapToUnlock || 'Tap to Unlock'}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Wait for biometric to finish before showing PIN pad
+  if (hasBiometricEnabled && hasPinEnabled && !showPinPad) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.header}>
+          <View style={[styles.lockIcon, { backgroundColor: theme.colors.primary + '15' }]}>
+            <MaterialCommunityIcons name="lock" size={40} color={theme.colors.primary} />
+          </View>
+          <Text style={[styles.title, { color: theme.colors.text }]}>{t.pinLock.unlockPrompt}</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Number pad layout (1-9, biometric/spacer, 0, delete)
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'biometric', '0', 'delete'];
 
+  // PIN pad screen (shown for PIN-only or after biometric fallback)
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Lock icon and title */}
@@ -117,8 +193,8 @@ const PinLockScreen = ({ onAuthenticated }: Props) => {
       <View style={styles.keypad}>
         {keys.map((key) => {
           if (key === 'biometric') {
-            // Show biometric button only if enabled
-            return settings.enableBiometric ? (
+            // Show biometric button only if biometric is enabled
+            return hasBiometricEnabled ? (
               <TouchableOpacity
                 key={key}
                 style={[styles.key, { backgroundColor: theme.colors.inputBackground }]}
@@ -199,6 +275,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   keyText: { fontSize: 28, fontWeight: '600' },
+  biometricRetryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+  },
+  biometricRetryText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '600',
+  },
 });
 
 export default PinLockScreen;

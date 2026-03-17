@@ -282,6 +282,8 @@ const hi: TranslationKeys = {
     tooManyAttemptsMsg: 'कृपया बाद में पुनः प्रयास करें।',
     unlockPrompt: 'खर्च ट्रैकर अनलॉक करें',
     usePin: 'PIN उपयोग करें',
+    biometricFailed: 'प्रमाणीकरण विफल। पुनः प्रयास करें।',
+    tapToUnlock: 'अनलॉक करने के लिए टैप करें',
   },
 
   // बजट सेटअप स्क्रीन

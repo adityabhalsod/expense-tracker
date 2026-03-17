@@ -282,6 +282,8 @@ const gu: TranslationKeys = {
     tooManyAttemptsMsg: 'કૃપા કરીને પછી ફરી પ્રયાસ કરો.',
     unlockPrompt: 'ખર્ચ ટ્રેકર અનલૉક કરો',
     usePin: 'PIN વાપરો',
+    biometricFailed: 'પ્રમાણીકરણ નિષ્ફળ. ફરી પ્રયાસ કરો.',
+    tapToUnlock: 'અનલૉક કરવા ટેપ કરો',
   },
 
   // બજેટ સેટઅપ સ્ક્રીન
