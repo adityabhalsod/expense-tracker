@@ -1,7 +1,7 @@
 // Wallet management screen displaying monthly balance, income tracking, and wallet history
 // Shows starting balance, total expenses, and remaining balance prominently
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -32,18 +32,24 @@ const WalletScreen = () => {
   const currentMonth = now.getMonth() + 1; // 1-indexed month
   const currentYear = now.getFullYear();
 
-  // Calculate wallet metrics for the progress indicator
-  const totalSpent = currentWallet ? currentWallet.initialBalance - currentWallet.currentBalance : 0;
-  const spentPercentage = currentWallet && currentWallet.initialBalance > 0
-    ? Math.min((totalSpent / currentWallet.initialBalance) * 100, 100) // Cap at 100%
-    : 0;
+  // Calculate wallet metrics for the progress indicator (memoized)
+  const totalSpent = useMemo(
+    () => currentWallet ? currentWallet.initialBalance - currentWallet.currentBalance : 0,
+    [currentWallet]
+  );
+  const spentPercentage = useMemo(
+    () => currentWallet && currentWallet.initialBalance > 0
+      ? Math.min((totalSpent / currentWallet.initialBalance) * 100, 100)
+      : 0,
+    [currentWallet, totalSpent]
+  );
 
-  // Determine color based on spending level (green/yellow/red)
-  const getProgressColor = () => {
-    if (spentPercentage < 50) return theme.colors.success; // Under half spent
-    if (spentPercentage < 80) return theme.colors.warning; // Approaching limit
-    return theme.colors.error; // Over budget
-  };
+  // Determine color based on spending level (memoized callback)
+  const getProgressColor = useCallback(() => {
+    if (spentPercentage < 50) return theme.colors.success;
+    if (spentPercentage < 80) return theme.colors.warning;
+    return theme.colors.error;
+  }, [spentPercentage, theme.colors]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>

@@ -105,8 +105,11 @@ const AllExpensesScreen = () => {
     }
   };
 
-  // Calculate total of all visible expenses
-  const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+  // Calculate total of all visible expenses (memoized)
+  const totalAmount = useMemo(
+    () => expenses.reduce((sum, e) => sum + e.amount, 0),
+    [expenses]
+  );
 
   // Render a single expense row
   const renderExpenseItem = (expense: Expense) => {
@@ -170,6 +173,10 @@ const AllExpensesScreen = () => {
         <FlatList
           data={groupedExpenses}
           keyExtractor={item => item.date}
+          windowSize={10}
+          maxToRenderPerBatch={8}
+          removeClippedSubviews={true}
+          initialNumToRender={10}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.primary} />
           }

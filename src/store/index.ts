@@ -222,3 +222,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
     await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
   },
 }));
+
+// Granular selectors to avoid unnecessary re-renders
+// Components should use these instead of subscribing to the full store
+export const selectExpenses = (state: AppStore) => state.expenses;
+export const selectCategories = (state: AppStore) => state.categories;
+export const selectCurrentWallet = (state: AppStore) => state.currentWallet;
+export const selectWallets = (state: AppStore) => state.wallets;
+export const selectBudgets = (state: AppStore) => state.budgets;
+export const selectSettings = (state: AppStore) => state.settings;
+export const selectIsLoading = (state: AppStore) => state.isLoading;
+export const selectIsInitialized = (state: AppStore) => state.isInitialized;

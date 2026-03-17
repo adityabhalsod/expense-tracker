@@ -1,85 +1,189 @@
-# Personal Expense Tracker
+<p align="center">
+  <img src="assets/icon.png" alt="Expense Tracker" width="100" height="100" />
+</p>
 
-A modern, feature-rich personal expense tracker mobile application built with **React Native (Expo)** and an **offline-first architecture** using **SQLite**.
+<h1 align="center">Expense Tracker</h1>
+
+<p align="center">
+  <strong>A beautiful, offline-first personal finance app built with React Native & Expo</strong>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Expo-SDK_55-4630EB?logo=expo&logoColor=white" alt="Expo SDK 55" />
+  <img src="https://img.shields.io/badge/React_Native-0.83-61DAFB?logo=react&logoColor=black" alt="React Native" />
+  <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Platform-Android_|_iOS-green" alt="Platform" />
+  <img src="https://img.shields.io/badge/License-Private-lightgrey" alt="License" />
+</p>
+
+---
+
+## What is Expense Tracker?
+
+Expense Tracker helps you take control of your money. Track every rupee, dollar, or euro you spend — all from your phone, no internet required.
+
+- **No account needed** — your data stays on your device
+- **Works offline** — powered by a local SQLite database
+- **Fast & lightweight** — optimized for smooth performance on any device
+
+---
 
 ## Features
 
-### Core
-- **Expense CRUD** — Add, edit, delete expenses with categories, payment methods, notes, and tags
-- **Wallet Management** — Monthly wallets with initial balance, auto-deduction on expense entry
-- **Category Management** — 15 default categories + custom categories with icons and colors
-- **Multi-Currency Support** — 10 currencies (INR, USD, EUR, GBP, JPY, CAD, AUD, CNY, SGD, AED)
+| | Feature | Description |
+|---|---|---|
+| 💰 | **Expense Tracking** | Add, edit, and delete expenses with categories, payment methods, notes, and tags |
+| 👛 | **Monthly Wallets** | Set a starting balance each month — expenses auto-deduct in real time |
+| 📊 | **Analytics Dashboard** | Pie charts, bar charts, and line charts to visualize spending patterns |
+| 🏷️ | **15+ Categories** | Pre-loaded categories + create your own with custom icons and colors |
+| 💱 | **Multi-Currency** | Supports 10 currencies — INR, USD, EUR, GBP, JPY, CAD, AUD, CNY, SGD, AED |
+| 🔄 | **Recurring Expenses** | Auto-generate daily, weekly, biweekly, monthly, quarterly, or yearly entries |
+| 🎯 | **Budgets** | Set per-category monthly limits with visual progress bars |
+| 🔔 | **Budget Alerts** | Get notified at 80% and 100% of your budget limits |
+| 🔍 | **Search** | Full-text search across notes, categories, and tags |
+| 📤 | **Export Reports** | Export to JSON, CSV, Excel (XML), or HTML/PDF and share instantly |
+| 🔒 | **PIN & Biometric Lock** | Protect your data with a 4–6 digit PIN or fingerprint/Face ID |
+| 🌙 | **Dark Mode** | Automatic (follows system) or manual toggle |
+| 🌐 | **Multi-Language** | English, हिन्दी (Hindi), ગુજરાતી (Gujarati) |
 
-### Analytics & Reports
-- **Analytics Dashboard** — Pie chart, bar chart, line chart with time range filters
-- **Category Breakdown** — See spending distribution by category
-- **Daily/Weekly/Monthly Trends** — Visual spending trend analysis
-- **Export Reports** — JSON, CSV, Excel (XML), and HTML/PDF formats with sharing
+---
 
-### Advanced
-- **Recurring Expenses** — Auto-generate daily/weekly/biweekly/monthly/quarterly/yearly recurring entries
-- **Budget Management** — Per-category monthly budget limits with progress bars
-- **Budget Notifications** — Alerts when spending reaches 80% or exceeds budget limits
-- **Search & Filter** — Full-text search across notes, categories, and tags
+## Screenshots
 
-### Security & Backup
-- **PIN Lock** — 4-6 digit PIN to protect the app
-- **Biometric Authentication** — Fingerprint/Face ID support
-- **Cloud Backup** — Local backup/restore with export of all data
-- **Auto Backup** — Toggle for automatic data backup
+> _Coming soon — add your own screenshots to the `assets/` folder and reference them here._
 
-### UI/UX
-- **Light/Dark Mode** — Automatic (system) + manual toggle
-- **Modern Material Design** — Clean UI with react-native-paper and MaterialCommunityIcons
-- **Pull-to-Refresh** — Refresh data on all list screens
-- **Smooth Navigation** — Bottom tabs (5 tabs) + stack navigation for detail views
+| Home | Expenses | Analytics | Wallet | Settings |
+|------|----------|-----------|--------|----------|
+| <!-- ![Home](assets/screenshots/home.png) --> | <!-- ![Expenses](assets/screenshots/expenses.png) --> | <!-- ![Analytics](assets/screenshots/analytics.png) --> | <!-- ![Wallet](assets/screenshots/wallet.png) --> | <!-- ![Settings](assets/screenshots/settings.png) --> |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- **Node.js** 18 or later — [Download](https://nodejs.org/)
+- **Expo CLI** — installed automatically via `npx`
+- **Android Studio** (for Android) or **Xcode** (for iOS)
+
+### Installation
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/adityabhalsod/personal-expense-tracker.git
+cd personal-expense-tracker
+
+# 2. Install dependencies
+npm install
+
+# 3. Start the development server
+npx expo start
+```
+
+### Running on a Device
+
+```bash
+# Android (requires Android Studio or connected device)
+npx expo run:android
+
+# iOS (requires Xcode on macOS)
+npx expo run:ios
+
+# Scan QR code with Expo Go app for quick preview
+npx expo start
+```
+
+### Building for Production
+
+```bash
+# Create a production Android APK/AAB
+npx expo run:android --variant release
+
+# Create a production iOS build
+npx expo run:ios --configuration Release
+```
+
+---
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | Expo SDK 55, React Native 0.83, React 19 |
-| Database | expo-sqlite (WAL mode) |
-| State | Zustand 5 |
-| Navigation | @react-navigation 7 (bottom-tabs + stack) |
-| UI | react-native-paper, MaterialCommunityIcons |
-| Charts | react-native-chart-kit, react-native-svg |
-| Dates | date-fns 4 |
-| Export | expo-file-system, expo-sharing |
-| Security | expo-local-authentication, expo-secure-store |
-| Notifications | expo-notifications |
-| Storage | @react-native-async-storage |
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Framework** | Expo SDK 55, React Native 0.83, React 19 | Cross-platform mobile runtime |
+| **Language** | TypeScript 5.9 | Type-safe development |
+| **Database** | expo-sqlite (WAL mode) | Fast local storage, offline-first |
+| **State** | Zustand 5 | Lightweight reactive state management |
+| **Navigation** | React Navigation 7 | Bottom tabs + native stack transitions |
+| **UI** | react-native-paper, MaterialCommunityIcons | Material Design components |
+| **Charts** | react-native-chart-kit, react-native-svg | Data visualization |
+| **Dates** | date-fns 4 | Date formatting and range calculations |
+| **Export** | expo-file-system, expo-sharing | File generation and sharing |
+| **Security** | expo-local-authentication, expo-secure-store | Biometrics and encrypted storage |
+| **Notifications** | expo-notifications | Budget alert push notifications |
+
+---
 
 ## Project Structure
 
 ```
-src/
-├── components/         # Reusable UI components
-│   ├── common/         # Card, Button, EmptyState
-│   └── PinLockScreen   # Security gate for app lock
-├── constants/          # App constants, default categories, currencies
-├── database/           # SQLite database service (CRUD operations)
-├── navigation/         # React Navigation config (tabs + stack)
-├── screens/            # 15 app screens
-├── services/           # Background services (recurring, notifications)
-├── store/              # Zustand state management
-├── theme/              # Light/dark theme system
-├── types/              # TypeScript type definitions
-└── utils/              # Helpers, formatters, export service
+personal-expense-tracker/
+├── App.tsx                  # Root component with providers
+├── src/
+│   ├── components/          # Reusable UI components
+│   │   ├── common/          #   Card, Button, EmptyState
+│   │   └── PinLockScreen    #   Security lock gate
+│   ├── constants/           # App constants, default categories, currencies
+│   ├── database/            # SQLite service (all CRUD operations)
+│   ├── i18n/                # Translations (en, hi, gu) + LanguageProvider
+│   ├── navigation/          # Tab navigator + stack screens
+│   ├── screens/             # 14 app screens
+│   │   ├── HomeScreen       #   Dashboard with wallet summary
+│   │   ├── ExpensesScreen   #   Filtered expense list
+│   │   ├── AnalyticsScreen  #   Charts and insights
+│   │   ├── WalletScreen     #   Balance and history
+│   │   ├── SettingsScreen   #   Theme, language, security
+│   │   └── ...              #   Add, Detail, Search, Export, Budget, etc.
+│   ├── services/            # Recurring expenses, notifications
+│   ├── store/               # Zustand global state
+│   ├── theme/               # Light & dark theme definitions
+│   ├── types/               # TypeScript interfaces
+│   └── utils/               # Formatters, helpers, export service
+├── android/                 # Native Android project
+└── assets/                  # App icons and images
 ```
 
-## Getting Started
+---
 
-```bash
-# Install dependencies
-npm install
+## Multi-Language Support
 
-# Start Expo dev server
-npx expo start
+The app supports **3 languages** out of the box. Change the language anytime from **Settings > Language**.
 
-# Run on Android
-npx expo run:android
+| Language | Code | Status |
+|----------|------|--------|
+| English | `en` | ✅ Complete |
+| हिन्दी (Hindi) | `hi` | ✅ Complete |
+| ગુજરાતી (Gujarati) | `gu` | ✅ Complete |
 
-# Run on iOS
-npx expo run:ios
-```
+Translation files are in `src/i18n/`. To add a new language, create a new translation file and register it in `src/i18n/index.tsx`.
+
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## License
+
+This project is private. All rights reserved.
+
+---
+
+<p align="center">
+  Built with ❤️ by <a href="https://github.com/adityabhalsod">Aditya Bhalsod</a>
+</p>

@@ -1,7 +1,7 @@
 // Analytics dashboard screen with pie charts, bar charts, and spending trends
 // Provides visual insights into spending patterns across different time periods
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator,
 } from 'react-native';
@@ -90,38 +90,38 @@ const AnalyticsScreen = () => {
     }
   };
 
-  // Prepare pie chart data from category breakdown
-  const pieChartData = categoryData.slice(0, 6).map((cat) => ({
+  // Prepare pie chart data from category breakdown (memoized)
+  const pieChartData = useMemo(() => categoryData.slice(0, 6).map((cat) => ({
     name: cat.name,
     amount: cat.amount,
     color: cat.color,
     legendFontColor: theme.colors.text,
     legendFontSize: 11,
-  }));
+  })), [categoryData, theme.colors.text]);
 
-  // Prepare bar chart data for top 5 categories
-  const barChartData = {
-    labels: categoryData.slice(0, 5).map(c => c.name.substring(0, 6)), // Truncated labels
+  // Prepare bar chart data for top 5 categories (memoized)
+  const barChartData = useMemo(() => ({
+    labels: categoryData.slice(0, 5).map(c => c.name.substring(0, 6)),
     datasets: [{ data: categoryData.slice(0, 5).map(c => c.amount) }],
-  };
+  }), [categoryData]);
 
-  // Prepare line chart data for daily spending trends
-  const lineChartData = {
-    labels: dailyData.slice(-7).map(d => d.date.substring(8, 10)), // Last 7 days, show day number
+  // Prepare line chart data for daily spending trends (memoized)
+  const lineChartData = useMemo(() => ({
+    labels: dailyData.slice(-7).map(d => d.date.substring(8, 10)),
     datasets: [{ data: dailyData.slice(-7).map(d => d.amount) }],
-  };
+  }), [dailyData]);
 
-  // Chart configuration for consistent styling across all charts
-  const chartConfig = {
+  // Chart configuration for consistent styling across all charts (memoized)
+  const chartConfig = useMemo(() => ({
     backgroundColor: theme.colors.surface,
     backgroundGradientFrom: theme.colors.surface,
     backgroundGradientTo: theme.colors.surface,
-    decimalPlaces: 0, // No decimal places for cleaner display
+    decimalPlaces: 0,
     color: () => theme.colors.primary,
     labelColor: () => theme.colors.textSecondary,
     propsForLabels: { fontSize: 10 },
     propsForBackgroundLines: { strokeDasharray: '', stroke: theme.colors.border },
-  };
+  }), [theme.colors]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>

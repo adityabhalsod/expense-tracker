@@ -1,34 +1,49 @@
 // Main navigation configuration with bottom tabs and stack navigator
 // Combines tab-based main navigation with stack-based modal screens
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { View, ActivityIndicator } from 'react-native';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
 import { RootStackParamList, TabParamList } from '../types';
 
-// Screen imports for tab navigation
+// Tab screens loaded eagerly (always visible)
 import HomeScreen from '../screens/HomeScreen';
 import ExpensesScreen from '../screens/ExpensesScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
 import WalletScreen from '../screens/WalletScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 
-// Screen imports for stack navigation (modals and detail views)
-import AddExpenseScreen from '../screens/AddExpenseScreen';
-import ExpenseDetailScreen from '../screens/ExpenseDetailScreen';
-import CategoryManagementScreen from '../screens/CategoryManagementScreen';
-import WalletSetupScreen from '../screens/WalletSetupScreen';
-import ExportReportScreen from '../screens/ExportReportScreen';
-import SearchScreen from '../screens/SearchScreen';
-import SecurityScreen from '../screens/SecurityScreen';
-// Cloud Backup feature commented out for now
-// import CloudBackupScreen from '../screens/CloudBackupScreen';
-import BudgetSetupScreen from '../screens/BudgetSetupScreen';
-import AllExpensesScreen from '../screens/AllExpensesScreen';
+// Stack screens lazy-loaded to reduce initial bundle size
+const AddExpenseScreen = React.lazy(() => import('../screens/AddExpenseScreen'));
+const ExpenseDetailScreen = React.lazy(() => import('../screens/ExpenseDetailScreen'));
+const CategoryManagementScreen = React.lazy(() => import('../screens/CategoryManagementScreen'));
+const WalletSetupScreen = React.lazy(() => import('../screens/WalletSetupScreen'));
+const ExportReportScreen = React.lazy(() => import('../screens/ExportReportScreen'));
+const SearchScreen = React.lazy(() => import('../screens/SearchScreen'));
+const SecurityScreen = React.lazy(() => import('../screens/SecurityScreen'));
+const BudgetSetupScreen = React.lazy(() => import('../screens/BudgetSetupScreen'));
+const AllExpensesScreen = React.lazy(() => import('../screens/AllExpensesScreen'));
+
+// Minimal fallback spinner shown while a lazy screen loads
+const LazyFallback = () => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <ActivityIndicator size="large" />
+  </View>
+);
+
+// Wrap a lazy component with Suspense for safe rendering
+const withSuspense = (Component: React.LazyExoticComponent<React.ComponentType<any>>) => {
+  return (props: any) => (
+    <Suspense fallback={<LazyFallback />}>
+      <Component {...props} />
+    </Suspense>
+  );
+};
 
 // Create typed navigators for type-safe route parameters
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -149,25 +164,25 @@ const AppNavigator = () => {
         {/* Main tab navigator as the home screen */}
         <Stack.Screen name="MainTabs" component={TabNavigator} options={{ headerShown: false }} />
         {/* Add/Edit expense form */}
-        <Stack.Screen name="AddExpense" component={AddExpenseScreen} options={{ title: t.addExpense.title }} />
+        <Stack.Screen name="AddExpense" component={withSuspense(AddExpenseScreen)} options={{ title: t.addExpense.title }} />
         {/* Single expense detail view */}
-        <Stack.Screen name="ExpenseDetail" component={ExpenseDetailScreen} options={{ title: t.expenseDetail.title }} />
+        <Stack.Screen name="ExpenseDetail" component={withSuspense(ExpenseDetailScreen)} options={{ title: t.expenseDetail.title }} />
         {/* Category management CRUD screen */}
-        <Stack.Screen name="CategoryManagement" component={CategoryManagementScreen} options={{ title: t.categoryManagement.title }} />
+        <Stack.Screen name="CategoryManagement" component={withSuspense(CategoryManagementScreen)} options={{ title: t.categoryManagement.title }} />
         {/* Wallet creation/edit form */}
-        <Stack.Screen name="WalletSetup" component={WalletSetupScreen} options={{ title: t.walletSetup.title }} />
+        <Stack.Screen name="WalletSetup" component={withSuspense(WalletSetupScreen)} options={{ title: t.walletSetup.title }} />
         {/* Export report configuration */}
-        <Stack.Screen name="ExportReport" component={ExportReportScreen} options={{ title: t.exportReport.title }} />
+        <Stack.Screen name="ExportReport" component={withSuspense(ExportReportScreen)} options={{ title: t.exportReport.title }} />
         {/* Search and filter screen */}
-        <Stack.Screen name="Search" component={SearchScreen} options={{ title: t.search.title }} />
+        <Stack.Screen name="Search" component={withSuspense(SearchScreen)} options={{ title: t.search.title }} />
         {/* Security settings (PIN/Biometric) */}
-        <Stack.Screen name="Security" component={SecurityScreen} options={{ title: t.security.title }} />
+        <Stack.Screen name="Security" component={withSuspense(SecurityScreen)} options={{ title: t.security.title }} />
         {/* Cloud Backup feature commented out for now */}
         {/* <Stack.Screen name="CloudBackup" component={CloudBackupScreen} options={{ title: 'Cloud Backup' }} /> */}
         {/* Budget setup and management */}
-        <Stack.Screen name="BudgetSetup" component={BudgetSetupScreen} options={{ title: t.budget.title }} />
+        <Stack.Screen name="BudgetSetup" component={withSuspense(BudgetSetupScreen)} options={{ title: t.budget.title }} />
         {/* All expenses view with full list */}
-        <Stack.Screen name="AllExpenses" component={AllExpensesScreen} options={{ title: t.allExpenses.title }} />
+        <Stack.Screen name="AllExpenses" component={withSuspense(AllExpensesScreen)} options={{ title: t.allExpenses.title }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

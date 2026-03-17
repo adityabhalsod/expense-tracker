@@ -1,7 +1,7 @@
 // Expenses list screen with filtering tabs (All, Today, This Week, This Month)
 // Provides a scrollable list of expenses grouped by date
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -35,14 +35,14 @@ const ExpensesScreen = () => {
     }, [])
   );
 
-  // Filter expenses based on selected time range
-  const getFilteredExpenses = () => {
+  // Filter expenses based on selected time range (memoized to avoid recalculation every render)
+  const filteredExpenses = useMemo(() => {
     const now = new Date();
     const todayStr = format(now, 'yyyy-MM-dd');
 
     switch (activeFilter) {
       case 'Today':
-        return expenses.filter(e => e.date === todayStr); // Exact date match
+        return expenses.filter(e => e.date === todayStr);
       case 'This Week': {
         const weekStart = format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
         const weekEnd = format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
@@ -54,20 +54,21 @@ const ExpensesScreen = () => {
         return expenses.filter(e => e.date >= monthStart && e.date <= monthEnd);
       }
       default:
-        return expenses; // Return all expenses
+        return expenses;
     }
-  };
+  }, [expenses, activeFilter]);
 
-  const filteredExpenses = getFilteredExpenses();
+  // Calculate total for the filtered set of expenses (memoized)
+  const totalFiltered = useMemo(
+    () => filteredExpenses.reduce((sum, e) => sum + e.amount, 0),
+    [filteredExpenses]
+  );
 
-  // Calculate total for the filtered set of expenses
-  const totalFiltered = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
-
-  // Get category info (icon and color) for display
-  const getCategoryInfo = (categoryName: string) => {
+  // Get category info (icon and color) for display (memoized callback)
+  const getCategoryInfo = useCallback((categoryName: string) => {
     const cat = categories.find(c => c.name === categoryName);
     return { icon: cat?.icon || 'help-circle', color: cat?.color || '#999' };
-  };
+  }, [categories]);
 
   // Render a single expense item in the list
   const renderExpenseItem = ({ item }: { item: typeof expenses[0] }) => {
@@ -152,6 +153,10 @@ const ExpensesScreen = () => {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        windowSize={10}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
+        initialNumToRender={15}
         ListEmptyComponent={
           <EmptyState
             icon="receipt"

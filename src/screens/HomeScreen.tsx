@@ -1,7 +1,7 @@
 // Home dashboard screen showing wallet summary, recent expenses, and quick actions
 // Serves as the main entry point after app launch
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
 } from 'react-native';
@@ -38,20 +38,21 @@ const HomeScreen = () => {
     setRefreshing(false);
   };
 
-  // Get the 5 most recent expenses for the dashboard preview
-  const recentExpenses = expenses.slice(0, 5);
+  // Get the 5 most recent expenses for the dashboard preview (memoized)
+  const recentExpenses = useMemo(() => expenses.slice(0, 5), [expenses]);
 
-  // Calculate today's total spending from expenses
+  // Calculate today's total spending from expenses (memoized)
   const todayStr = new Date().toISOString().split('T')[0];
-  const todayTotal = expenses
-    .filter(e => e.date === todayStr)
-    .reduce((sum, e) => sum + e.amount, 0);
+  const todayTotal = useMemo(
+    () => expenses.filter(e => e.date === todayStr).reduce((sum, e) => sum + e.amount, 0),
+    [expenses, todayStr]
+  );
 
-  // Find icon and color for a category name from the categories list
-  const getCategoryInfo = (categoryName: string) => {
+  // Find icon and color for a category name from the categories list (memoized)
+  const getCategoryInfo = useCallback((categoryName: string) => {
     const cat = categories.find(c => c.name === categoryName);
     return { icon: cat?.icon || 'help-circle', color: cat?.color || '#999' };
-  };
+  }, [categories]);
 
   // Get time-based greeting using translations
   const getLocalizedGreeting = () => {
