@@ -169,6 +169,11 @@ Pushing to specific branches triggers a GitHub Actions pipeline that builds a cl
 
 > **Tip:** Use [conventional commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `perf:`) so the changelog is categorized automatically.
 
+> **Skip CI:** Add `[skip ci]` or `[ci skip]` anywhere in your commit message or PR title to skip the release pipeline for that push.
+> ```bash
+> git commit -m "docs: update readme [skip ci]"
+> ```
+
 ---
 
 ## Tech Stack
