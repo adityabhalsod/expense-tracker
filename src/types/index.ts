@@ -139,6 +139,7 @@ export type RootStackParamList = {
   CloudBackup: undefined; // Cloud backup settings
   BudgetSetup: undefined; // Budget configuration
   AllExpenses: undefined; // Full expense list view
+  QuickAdd: { type: 'expense' | 'income' }; // Widget quick-add modal (expense or income)
 };
 
 // Bottom tab navigator parameter types

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Thin horizontal divider between widget header row and action buttons -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!-- Subtle white line at 15% opacity to separate sections -->
+    <solid android:color="#26FFFFFF" />
+    <size android:height="1dp" />
+</shape>

@@ -1,0 +1,8 @@
+<resources>
+  <string name="app_name">Expense Tracker</string>
+  <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>
+  <!-- Widget label shown in the launcher's widget picker dialog -->
+  <string name="widget_label">Expense Tracker Quick Add</string>
+  <!-- Widget description shown on Android 12+ in the widget picker preview -->
+  <string name="widget_description">Quickly log expenses or record received payments from your home screen without opening the app.</string>
+</resources>

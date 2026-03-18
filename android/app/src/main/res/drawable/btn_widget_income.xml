@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Income button background: semi-transparent green pill shape -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!-- Semi-transparent green tint — contrasts nicely against expense button -->
+    <solid android:color="#2A10B981" />
+    <!-- Rounded pill corners for modern button appearance -->
+    <corners android:radius="12dp" />
+</shape>

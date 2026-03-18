@@ -2,7 +2,7 @@
 // Combines tab-based main navigation with stack-based modal screens
 
 import React, { Suspense } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -28,6 +28,8 @@ const SearchScreen = React.lazy(() => import('../screens/SearchScreen'));
 const SecurityScreen = React.lazy(() => import('../screens/SecurityScreen'));
 const BudgetSetupScreen = React.lazy(() => import('../screens/BudgetSetupScreen'));
 const AllExpensesScreen = React.lazy(() => import('../screens/AllExpensesScreen'));
+// QuickAdd is lazy-loaded — only needed when app is opened via widget deep link
+const QuickAddScreen = React.lazy(() => import('../screens/QuickAddScreen'));
 
 // Minimal fallback spinner shown while a lazy screen loads
 const LazyFallback = () => (
@@ -48,6 +50,32 @@ const withSuspense = (Component: React.LazyExoticComponent<React.ComponentType<a
 // Create typed navigators for type-safe route parameters
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+/**
+ * Deep-link / URL mapping for React Navigation.
+ * Handles the expense-tracker:// scheme used by the home screen widget.
+ *
+ * Widget deep links:
+ *   expense-tracker://quick-add?type=expense  →  QuickAdd { type: 'expense' }
+ *   expense-tracker://quick-add?type=income   →  QuickAdd { type: 'income' }
+ */
+const linking: LinkingOptions<RootStackParamList> = {
+  // URL prefixes this config should handle
+  prefixes: ['expense-tracker://'],
+  config: {
+    screens: {
+      MainTabs: '', // default route
+      // QuickAdd maps to the /quick-add path; the "type" query param becomes a route param
+      QuickAdd: {
+        path: 'quick-add',
+        parse: {
+          // Ensure type is always 'expense' or 'income' — default to expense if unexpected
+          type: (value: string) => (value === 'income' ? 'income' : 'expense'),
+        },
+      },
+    },
+  },
+};
 
 // Bottom tab navigator with 5 main sections of the app
 const TabNavigator = () => {
@@ -144,7 +172,7 @@ const AppNavigator = () => {
   const { t } = useLanguage();
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <Stack.Navigator
         screenOptions={{
           headerStyle: {
@@ -183,6 +211,20 @@ const AppNavigator = () => {
         <Stack.Screen name="BudgetSetup" component={withSuspense(BudgetSetupScreen)} options={{ title: t.budget.title }} />
         {/* All expenses view with full list */}
         <Stack.Screen name="AllExpenses" component={withSuspense(AllExpensesScreen)} options={{ title: t.allExpenses.title }} />
+        {/*
+            QuickAdd — transparent modal launched from the widget deep link.
+            presentation='transparentModal' lets the dimmed backdrop show the screen behind.
+            animation='fade' matches a bottom-sheet slide-up feel (slide handled inside the screen).
+        */}
+        <Stack.Screen
+          name="QuickAdd"
+          component={withSuspense(QuickAddScreen)}
+          options={{
+            headerShown: false,         // no header — card has its own colored header strip
+            presentation: 'transparentModal', // show screen background as semi-transparent
+            animation: 'fade',          // fade-in overlay; card slides up via Animated.spring
+          }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

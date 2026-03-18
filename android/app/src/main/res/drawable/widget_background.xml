@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget card background: dark gradient with rounded corners matching dark theme -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!-- Deep dark gradient from #1A1A2E to #16213E to match app dark theme -->
+    <gradient
+        android:startColor="#1A1A2E"
+        android:centerColor="#16213E"
+        android:endColor="#0F0F1A"
+        android:angle="135"
+        android:type="linear" />
+    <!-- Rounded corners for modern card look -->
+    <corners android:radius="20dp" />
+</shape>
