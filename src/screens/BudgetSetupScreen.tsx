@@ -1,5 +1,5 @@
-// Budget setup screen for creating and managing monthly budgets per category
-// Users can set spending limits and track budget utilization
+// Budget setup screen for creating and managing budgets per category
+// Supports daily, weekly, monthly, quarterly, yearly periods and wallet association
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -9,12 +9,12 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
-import { useAppStore, selectBudgets, selectCategories, selectSettings, selectExpenses } from '../store';
+import { useAppStore, selectBudgets, selectCategories, selectSettings, selectExpenses, selectWallets } from '../store';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import EmptyState from '../components/common/EmptyState';
 import { formatCurrency, getCurrencySymbol, formatAmountInput } from '../utils/helpers';
-import { Budget } from '../types';
+import { Budget, BudgetPeriod } from '../types';
 
 const BudgetSetupScreen = () => {
   const { theme } = useTheme();
@@ -24,6 +24,7 @@ const BudgetSetupScreen = () => {
   const categories = useAppStore(selectCategories);
   const settings = useAppStore(selectSettings);
   const expenses = useAppStore(selectExpenses);
+  const wallets = useAppStore(selectWallets);
   const loadBudgets = useAppStore((s) => s.loadBudgets);
   const addBudget = useAppStore((s) => s.addBudget);
   const updateBudget = useAppStore((s) => s.updateBudget);
@@ -31,11 +32,24 @@ const BudgetSetupScreen = () => {
 
   const [showModal, setShowModal] = useState(false); // Budget edit modal visibility
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null); // Budget being edited
-  const [selectedCategory, setSelectedCategory] = useState(''); // Selected category ID
+  // Default category selection: use the category marked as default (e.g., Food & Dining)
+  const defaultCategory = categories.find(c => c.isDefault);
+  const [selectedCategory, setSelectedCategory] = useState(defaultCategory?.id || '');
   const [amount, setAmount] = useState(''); // Budget amount input
+  const [selectedPeriod, setSelectedPeriod] = useState<BudgetPeriod>('monthly'); // Budget period type
+  const [selectedWalletId, setSelectedWalletId] = useState(''); // Optional wallet association
   const now = new Date();
   const [currentMonth] = useState(now.getMonth() + 1); // 1-indexed month number
   const [currentYear] = useState(now.getFullYear());
+
+  // Available budget period options
+  const PERIOD_OPTIONS: { value: BudgetPeriod; label: string }[] = [
+    { value: 'daily', label: t.frequencies.daily },
+    { value: 'weekly', label: t.frequencies.weekly },
+    { value: 'monthly', label: t.frequencies.monthly },
+    { value: 'quarterly', label: t.frequencies.quarterly },
+    { value: 'yearly', label: t.frequencies.yearly },
+  ];
 
   // Load budgets for the current month on mount
   useEffect(() => {
@@ -55,11 +69,13 @@ const BudgetSetupScreen = () => {
       .reduce((sum, e) => sum + e.amount, 0);
   }, [expenses, currentMonth, currentYear, categories]);
 
-  // Open modal for adding a new budget
+  // Open modal for adding a new budget with default category pre-selected
   const handleAddBudget = () => {
     setEditingBudget(null);
-    setSelectedCategory('');
+    setSelectedCategory(defaultCategory?.id || ''); // Pre-select default category
     setAmount('');
+    setSelectedPeriod('monthly'); // Default to monthly period
+    setSelectedWalletId(''); // No wallet by default
     setShowModal(true);
   };
 
@@ -68,6 +84,8 @@ const BudgetSetupScreen = () => {
     setEditingBudget(budget);
     setSelectedCategory(budget.categoryId || '');
     setAmount(budget.amount.toString());
+    setSelectedPeriod(budget.period || 'monthly'); // Restore saved period
+    setSelectedWalletId(budget.walletId || ''); // Restore saved wallet
     setShowModal(true);
   };
 
@@ -102,9 +120,17 @@ const BudgetSetupScreen = () => {
     }
 
     if (editingBudget) {
-      await updateBudget(editingBudget.id, { amount: numAmount, categoryId: selectedCategory });
+      await updateBudget(editingBudget.id, { amount: numAmount, categoryId: selectedCategory, period: selectedPeriod, walletId: selectedWalletId || undefined });
     } else {
-      await addBudget({ categoryId: selectedCategory, amount: numAmount, period: 'monthly', month: currentMonth, year: currentYear, notifyAt: 80 });
+      await addBudget({
+        categoryId: selectedCategory,
+        amount: numAmount,
+        period: selectedPeriod, // User-selected period (daily/weekly/monthly/etc.)
+        month: currentMonth,
+        year: currentYear,
+        notifyAt: 80,
+        walletId: selectedWalletId || undefined, // Optional wallet association
+      });
     }
 
     setShowModal(false);
@@ -143,6 +169,18 @@ const BudgetSetupScreen = () => {
   // Find category icon by ID
   const getCategoryIcon = (categoryId: string) => {
     return categories.find(c => c.id === categoryId)?.icon || 'tag';
+  };
+
+  // Get display label for a budget period
+  const getPeriodLabel = (period: string) => {
+    return PERIOD_OPTIONS.find(p => p.value === period)?.label || period;
+  };
+
+  // Find wallet name by ID for display
+  const getWalletName = (walletId?: string) => {
+    if (!walletId) return null;
+    const w = wallets.find(w => w.id === walletId);
+    return w ? (w.nickname || w.name) : null;
   };
 
   // Calculate aggregate totals across all budgets
@@ -230,9 +268,22 @@ const BudgetSetupScreen = () => {
                         color={getProgressColor(progress)}
                       />
                     </View>
-                    <Text style={[styles.budgetCategory, { color: theme.colors.text }]}>
-                      {getCategoryName(budget.categoryId || '')}
-                    </Text>
+                    <View>
+                      <Text style={[styles.budgetCategory, { color: theme.colors.text }]}>
+                        {getCategoryName(budget.categoryId || '')}
+                      </Text>
+                      {/* Period and wallet labels */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                        <Text style={{ fontSize: 11, color: theme.colors.textTertiary }}>
+                          {getPeriodLabel(budget.period)}
+                        </Text>
+                        {getWalletName(budget.walletId) && (
+                          <Text style={{ fontSize: 11, color: theme.colors.textTertiary }}>
+                            • {getWalletName(budget.walletId)}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
                   </View>
                   <TouchableOpacity onPress={() => handleDelete(budget)}>
                     <MaterialCommunityIcons name="delete-outline" size={20} color={theme.colors.error} />
@@ -282,61 +333,143 @@ const BudgetSetupScreen = () => {
               {editingBudget ? t.budget.editBudget : t.budget.newBudget}
             </Text>
 
-            {/* Category selection grid */}
-            <Text style={[styles.fieldLabel, { color: theme.colors.textSecondary }]}>{t.budget.category}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-              {categories
-                .map(cat => (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Category selection grid */}
+              <Text style={[styles.fieldLabel, { color: theme.colors.textSecondary }]}>{t.budget.category}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
+                {categories
+                  .map(cat => (
+                    <TouchableOpacity
+                      key={cat.id}
+                      style={[
+                        styles.categoryChip,
+                        {
+                          backgroundColor: selectedCategory === cat.id ? theme.colors.primary : theme.colors.inputBackground,
+                          borderColor: selectedCategory === cat.id ? theme.colors.primary : theme.colors.border,
+                        },
+                      ]}
+                      onPress={() => setSelectedCategory(cat.id)}
+                    >
+                      <MaterialCommunityIcons
+                        name={cat.icon as any}
+                        size={16}
+                        color={selectedCategory === cat.id ? '#FFF' : theme.colors.text}
+                      />
+                      <Text style={[styles.categoryChipText, { color: selectedCategory === cat.id ? '#FFF' : theme.colors.text }]}>
+                        {cat.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+              </ScrollView>
+
+              {/* Budget period selector — daily, weekly, monthly, quarterly, yearly */}
+              <Text style={[styles.fieldLabel, { color: theme.colors.textSecondary, marginTop: 16 }]}>
+                Budget Period
+              </Text>
+              <View style={styles.periodRow}>
+                {PERIOD_OPTIONS.map((opt) => (
                   <TouchableOpacity
-                    key={cat.id}
+                    key={opt.value}
                     style={[
-                      styles.categoryChip,
+                      styles.periodChip,
                       {
-                        backgroundColor: selectedCategory === cat.id ? theme.colors.primary : theme.colors.inputBackground,
-                        borderColor: selectedCategory === cat.id ? theme.colors.primary : theme.colors.border,
+                        backgroundColor: selectedPeriod === opt.value ? theme.colors.primary : theme.colors.inputBackground,
+                        borderColor: selectedPeriod === opt.value ? theme.colors.primary : theme.colors.border,
                       },
                     ]}
-                    onPress={() => setSelectedCategory(cat.id)}
+                    onPress={() => setSelectedPeriod(opt.value)} // Set selected period
                   >
-                    <MaterialCommunityIcons
-                      name={cat.icon as any}
-                      size={16}
-                      color={selectedCategory === cat.id ? '#FFF' : theme.colors.text}
-                    />
-                    <Text style={[styles.categoryChipText, { color: selectedCategory === cat.id ? '#FFF' : theme.colors.text }]}>
-                      {cat.name}
+                    <Text style={{
+                      color: selectedPeriod === opt.value ? '#FFF' : theme.colors.text,
+                      fontSize: 12, fontWeight: '600',
+                    }}>
+                      {opt.label}
                     </Text>
                   </TouchableOpacity>
                 ))}
+              </View>
+
+              {/* Wallet/payment source selector — optional */}
+              {wallets.length > 0 && (
+                <>
+                  <Text style={[styles.fieldLabel, { color: theme.colors.textSecondary, marginTop: 16 }]}>
+                    Wallet (Optional)
+                  </Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {/* "All Wallets" option to track without wallet filter */}
+                    <TouchableOpacity
+                      style={[
+                        styles.categoryChip,
+                        {
+                          backgroundColor: selectedWalletId === '' ? theme.colors.primary : theme.colors.inputBackground,
+                          borderColor: selectedWalletId === '' ? theme.colors.primary : theme.colors.border,
+                        },
+                      ]}
+                      onPress={() => setSelectedWalletId('')}
+                    >
+                      <MaterialCommunityIcons
+                        name="wallet-outline"
+                        size={16}
+                        color={selectedWalletId === '' ? '#FFF' : theme.colors.text}
+                      />
+                      <Text style={[styles.categoryChipText, { color: selectedWalletId === '' ? '#FFF' : theme.colors.text }]}>
+                        All Wallets
+                      </Text>
+                    </TouchableOpacity>
+                    {wallets.map((w) => (
+                      <TouchableOpacity
+                        key={w.id}
+                        style={[
+                          styles.categoryChip,
+                          {
+                            backgroundColor: selectedWalletId === w.id ? w.color + '20' : theme.colors.inputBackground,
+                            borderColor: selectedWalletId === w.id ? w.color : theme.colors.border,
+                          },
+                        ]}
+                        onPress={() => setSelectedWalletId(w.id)} // Assign wallet to budget
+                      >
+                        <MaterialCommunityIcons
+                          name={w.iconName as any}
+                          size={16}
+                          color={selectedWalletId === w.id ? w.color : theme.colors.text}
+                        />
+                        <Text style={[styles.categoryChipText, { color: selectedWalletId === w.id ? w.color : theme.colors.text }]}>
+                          {w.nickname || w.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </>
+              )}
+
+              {/* Budget amount input */}
+              <Text style={[styles.fieldLabel, { color: theme.colors.textSecondary, marginTop: 16 }]}>
+                {t.budget.monthlyBudgetAmount}
+              </Text>
+              <View style={[styles.amountInput, { backgroundColor: theme.colors.inputBackground, borderColor: theme.colors.border }]}>
+                <Text style={[styles.currencySymbol, { color: theme.colors.textSecondary }]}>{currency}</Text>
+                <TextInput
+                  style={[styles.amountField, { color: theme.colors.text }]}
+                  value={formatAmountInput(amount)}
+                  onChangeText={handleAmountChange}
+                  placeholder="0.00"
+                  placeholderTextColor={theme.colors.textTertiary}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+
+              {/* Save and cancel actions */}
+              <View style={styles.modalActions}>
+                <Button title={t.common.save} onPress={handleSave} size="large" style={{ flex: 1 }} />
+                <Button
+                  title={t.common.cancel}
+                  onPress={() => setShowModal(false)}
+                  variant="outline"
+                  size="large"
+                  style={{ flex: 1 }}
+                />
+              </View>
             </ScrollView>
-
-            {/* Budget amount input */}
-            <Text style={[styles.fieldLabel, { color: theme.colors.textSecondary, marginTop: 16 }]}>
-              {t.budget.monthlyBudgetAmount}
-            </Text>
-            <View style={[styles.amountInput, { backgroundColor: theme.colors.inputBackground, borderColor: theme.colors.border }]}>
-              <Text style={[styles.currencySymbol, { color: theme.colors.textSecondary }]}>{currency}</Text>
-              <TextInput
-                style={[styles.amountField, { color: theme.colors.text }]}
-                value={formatAmountInput(amount)}
-                onChangeText={handleAmountChange}
-                placeholder="0.00"
-                placeholderTextColor={theme.colors.textTertiary}
-                keyboardType="decimal-pad"
-              />
-            </View>
-
-            {/* Save and cancel actions */}
-            <View style={styles.modalActions}>
-              <Button title={t.common.save} onPress={handleSave} size="large" style={{ flex: 1 }} />
-              <Button
-                title={t.common.cancel}
-                onPress={() => setShowModal(false)}
-                variant="outline"
-                size="large"
-                style={{ flex: 1 }}
-              />
-            </View>
           </View>
         </View>
       </Modal>
@@ -391,6 +524,12 @@ const styles = StyleSheet.create({
     borderRadius: 20, borderWidth: 1, marginRight: 8,
   },
   categoryChipText: { fontSize: 13, fontWeight: '500' },
+  // Period selector row with wrapping chips
+  periodRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  periodChip: {
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 20, borderWidth: 1,
+  },
   amountInput: {
     flexDirection: 'row', alignItems: 'center',
     borderWidth: 1, borderRadius: 12, paddingHorizontal: 16,

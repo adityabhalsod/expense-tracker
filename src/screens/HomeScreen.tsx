@@ -1,9 +1,10 @@
 // Home dashboard screen showing wallet summary, recent expenses, and quick actions
 // Serves as the main entry point after app launch with modern shortcut widgets
+// Supports multi-select mode for batch-deleting recent expenses
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -29,6 +30,46 @@ const HomeScreen = () => {
   const loadExpenses = useAppStore((s) => s.loadExpenses);
   const loadCurrentWallet = useAppStore((s) => s.loadCurrentWallet);
   const loadWallets = useAppStore((s) => s.loadWallets);
+  const deleteMultipleExpenses = useAppStore((s) => s.deleteMultipleExpenses);
+
+  // Multi-select state for batch deleting recent expenses
+  const [isSelectMode, setIsSelectMode] = useState(false); // Whether multi-select is active
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set()); // Selected expense IDs
+
+  // Toggle an expense in the selection set
+  const toggleSelection = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); // Deselect if already selected
+      else next.add(id); // Add to selection
+      return next;
+    });
+  }, []);
+
+  // Exit multi-select mode and clear selections
+  const exitSelectMode = useCallback(() => {
+    setIsSelectMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
+  // Confirm and batch-delete selected expenses
+  const handleBatchDelete = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    Alert.alert(
+      'Delete Expenses',
+      `Delete ${selectedIds.size} selected expense${selectedIds.size === 1 ? '' : 's'}? Amounts will be restored to wallets.`,
+      [
+        { text: t.common.cancel, style: 'cancel' },
+        {
+          text: t.common.delete, style: 'destructive',
+          onPress: async () => {
+            await deleteMultipleExpenses([...selectedIds]);
+            exitSelectMode(); // Clear selection after deletion
+          },
+        },
+      ],
+    );
+  }, [selectedIds, deleteMultipleExpenses, exitSelectMode, t]);
 
   // Refresh data whenever this screen comes into focus
   useFocusEffect(
@@ -245,23 +286,62 @@ const HomeScreen = () => {
         {/* Recent expenses list section */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t.home.recentExpenses}</Text>
-          {/* View All link navigates to full expense list */}
-          <TouchableOpacity onPress={() => navigation.navigate('AllExpenses')}>
-            <Text style={[styles.viewAll, { color: theme.colors.primary }]}>{t.home.viewAll}</Text>
-          </TouchableOpacity>
+          {/* Show delete controls in select mode, otherwise show View All */}
+          {isSelectMode ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Text style={{ color: theme.colors.text, fontWeight: '600', fontSize: 13 }}>
+                {selectedIds.size} selected
+              </Text>
+              <TouchableOpacity onPress={handleBatchDelete}>
+                <MaterialCommunityIcons name="delete" size={22} color={theme.colors.expense} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={exitSelectMode}>
+                <MaterialCommunityIcons name="close" size={22} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => navigation.navigate('AllExpenses')}>
+              <Text style={[styles.viewAll, { color: theme.colors.primary }]}>{t.home.viewAll}</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {recentExpenses.length > 0 ? (
-          // Render each recent expense as a touchable card row
+          // Render each recent expense as a touchable card row with multi-select support
           recentExpenses.map((expense) => {
             const catInfo = getCategoryInfo(expense.category);
+            const isSelected = selectedIds.has(expense.id); // Check if this expense is selected
             return (
               <TouchableOpacity
                 key={expense.id}
-                onPress={() => navigation.navigate('ExpenseDetail', { expenseId: expense.id })}
+                onPress={() => {
+                  if (isSelectMode) {
+                    toggleSelection(expense.id); // Toggle selection in multi-select mode
+                  } else {
+                    navigation.navigate('ExpenseDetail', { expenseId: expense.id });
+                  }
+                }}
+                onLongPress={() => {
+                  if (!isSelectMode) {
+                    setIsSelectMode(true); // Enter select mode on long press
+                    setSelectedIds(new Set([expense.id])); // Pre-select the long-pressed item
+                  }
+                }}
               >
-                <Card style={styles.expenseCard}>
+                <Card style={[
+                  styles.expenseCard,
+                  isSelected && { backgroundColor: theme.colors.primary + '10', borderColor: theme.colors.primary, borderWidth: 1 },
+                ]}>
                   <View style={styles.expenseRow}>
+                    {/* Checkbox shown only in multi-select mode */}
+                    {isSelectMode && (
+                      <MaterialCommunityIcons
+                        name={isSelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                        size={22}
+                        color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
+                        style={{ marginRight: 8 }}
+                      />
+                    )}
                     {/* Category icon circle */}
                     <View style={[styles.expenseIcon, { backgroundColor: catInfo.color + '20' }]}>
                       <MaterialCommunityIcons name={catInfo.icon as any} size={24} color={catInfo.color} />

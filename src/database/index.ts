@@ -188,6 +188,13 @@ const initializeDatabase = async (database: SQLite.SQLiteDatabase): Promise<void
     // Column already exists — ignore
   }
 
+  // Migration: add walletId column to budgets for wallet-specific budget tracking
+  try {
+    await database.execAsync('ALTER TABLE budgets ADD COLUMN walletId TEXT');
+  } catch {
+    // Column already exists — ignore
+  }
+
   // Create indexes for common query patterns to optimize performance
   // Safe to run now because all columns (including migrated ones) exist
   await database.execAsync(`
@@ -244,6 +251,7 @@ export const updateCategory = async (id: string, category: Partial<Category>): P
   if (category.name !== undefined) { fields.push('name = ?'); values.push(category.name); }
   if (category.icon !== undefined) { fields.push('icon = ?'); values.push(category.icon); }
   if (category.color !== undefined) { fields.push('color = ?'); values.push(category.color); }
+  if (category.isDefault !== undefined) { fields.push('isDefault = ?'); values.push(category.isDefault ? 1 : 0); }
   if (category.budget !== undefined) { fields.push('budget = ?'); values.push(category.budget); }
   if (category.order !== undefined) { fields.push('"order" = ?'); values.push(category.order); }
 
@@ -256,6 +264,24 @@ export const updateCategory = async (id: string, category: Partial<Category>): P
 export const deleteCategory = async (id: string): Promise<void> => {
   const database = await getDatabase();
   await database.runAsync('DELETE FROM categories WHERE id = ?', [id]);
+};
+
+// Set a category as the default and clear previous default flags
+export const setDefaultCategory = async (id: string): Promise<void> => {
+  const database = await getDatabase();
+  // Clear isDefault from all categories first
+  await database.runAsync('UPDATE categories SET isDefault = 0 WHERE isDefault = 1');
+  // Set the new default category
+  await database.runAsync('UPDATE categories SET isDefault = 1 WHERE id = ?', [id]);
+};
+
+// Delete multiple categories by their IDs in a single batch
+export const deleteMultipleCategories = async (ids: string[]): Promise<void> => {
+  if (ids.length === 0) return;
+  const database = await getDatabase();
+  // Build parameterized placeholders for IN clause
+  const placeholders = ids.map(() => '?').join(',');
+  await database.runAsync(`DELETE FROM categories WHERE id IN (${placeholders})`, ids);
 };
 
 // ==================== EXPENSE OPERATIONS ====================
@@ -394,6 +420,32 @@ export const deleteExpense = async (id: string): Promise<void> => {
   }
 };
 
+// Delete multiple expenses by IDs and restore each amount to its wallet
+export const deleteMultipleExpenses = async (ids: string[]): Promise<void> => {
+  if (ids.length === 0) return;
+  const database = await getDatabase();
+  const now = new Date().toISOString();
+  const placeholders = ids.map(() => '?').join(',');
+
+  // Fetch all targeted expenses to restore wallet balances
+  const rows = await database.getAllAsync<any>(
+    `SELECT id, amount, walletId FROM expenses WHERE id IN (${placeholders})`, ids
+  );
+
+  // Delete all matching expenses in one query
+  await database.runAsync(`DELETE FROM expenses WHERE id IN (${placeholders})`, ids);
+
+  // Restore each expense amount back to its respective wallet
+  for (const row of rows) {
+    if (row.walletId) {
+      await database.runAsync(
+        'UPDATE wallets SET currentBalance = currentBalance + ?, updatedAt = ? WHERE id = ?',
+        [row.amount, now, row.walletId]
+      );
+    }
+  }
+};
+
 // Get a single expense by its ID
 export const getExpenseById = async (id: string): Promise<Expense | null> => {
   const database = await getDatabase();
@@ -514,18 +566,18 @@ export const getBudgetsByMonth = async (month: number, year: number): Promise<Bu
   );
 };
 
-// Create a new budget rule
+// Create a new budget rule with optional wallet association
 export const addBudget = async (budget: Omit<Budget, 'id'>): Promise<Budget> => {
   const database = await getDatabase();
   const id = generateId();
   await database.runAsync(
-    'INSERT INTO budgets (id, categoryId, amount, period, month, year, notifyAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [id, budget.categoryId || null, budget.amount, budget.period, budget.month, budget.year, budget.notifyAt]
+    'INSERT INTO budgets (id, categoryId, amount, period, month, year, notifyAt, walletId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [id, budget.categoryId || null, budget.amount, budget.period, budget.month, budget.year, budget.notifyAt, budget.walletId || null]
   );
   return { id, ...budget };
 };
 
-// Update an existing budget rule
+// Update an existing budget rule including period and wallet
 export const updateBudget = async (id: string, updates: Partial<Budget>): Promise<void> => {
   const database = await getDatabase();
   const fields: string[] = [];
@@ -534,6 +586,8 @@ export const updateBudget = async (id: string, updates: Partial<Budget>): Promis
   if (updates.amount !== undefined) { fields.push('amount = ?'); values.push(updates.amount); }
   if (updates.notifyAt !== undefined) { fields.push('notifyAt = ?'); values.push(updates.notifyAt); }
   if (updates.categoryId !== undefined) { fields.push('categoryId = ?'); values.push(updates.categoryId); }
+  if (updates.period !== undefined) { fields.push('period = ?'); values.push(updates.period); }
+  if (updates.walletId !== undefined) { fields.push('walletId = ?'); values.push(updates.walletId || null); }
 
   if (fields.length === 0) return;
   values.push(id);

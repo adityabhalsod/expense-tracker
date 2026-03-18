@@ -59,13 +59,14 @@ export interface Budget {
   month: number; // Month number for monthly budgets
   year: number; // Year for the budget period
   notifyAt: number; // Percentage threshold to trigger notification (e.g., 80)
+  walletId?: string; // Optional wallet/payment source association
 }
 
 // Frequency options for recurring expenses
 export type RecurringFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly';
 
-// Time periods for budget tracking
-export type BudgetPeriod = 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+// Time periods for budget tracking (daily through yearly)
+export type BudgetPeriod = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
 
 // Time range filter options for analytics and reports
 export type TimeRange = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'half_yearly' | 'yearly' | 'custom';

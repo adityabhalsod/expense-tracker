@@ -1,10 +1,12 @@
 // Budget notification service using expo-notifications
 // Sends alerts when spending approaches or exceeds budget limits
+// Supports daily, weekly, monthly, quarterly, yearly budgets and wallet-specific tracking
 // Uses dynamic import to avoid loading expo-notifications in Expo Go (crashes since SDK 53)
 
 import Constants from 'expo-constants';
 import { getDatabase } from '../database';
 import { Budget, Category } from '../types';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, format } from 'date-fns';
 
 // Expo Go does not support push notifications since SDK 53 — avoid importing the module entirely
 const isExpoGo = Constants.appOwnership === 'expo';
@@ -45,6 +47,42 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
   return finalStatus === 'granted';
 };
 
+// Calculate the date range for a budget period based on the current date
+const getDateRangeForPeriod = (period: string): { startDate: string; endDate: string } => {
+  const now = new Date();
+  switch (period) {
+    case 'daily':
+      // Today only
+      const todayStr = format(now, 'yyyy-MM-dd');
+      return { startDate: todayStr, endDate: todayStr };
+    case 'weekly':
+      return {
+        startDate: format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+        endDate: format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+      };
+    case 'quarterly':
+      return {
+        startDate: format(startOfQuarter(now), 'yyyy-MM-dd'),
+        endDate: format(endOfQuarter(now), 'yyyy-MM-dd'),
+      };
+    case 'yearly':
+      return {
+        startDate: format(startOfYear(now), 'yyyy-MM-dd'),
+        endDate: format(endOfYear(now), 'yyyy-MM-dd'),
+      };
+    case 'monthly':
+    default: {
+      // Default to current month range
+      const month = now.getMonth() + 1;
+      const year = now.getFullYear();
+      const start = `${year}-${String(month).padStart(2, '0')}-01`;
+      const lastDay = new Date(year, month, 0).getDate();
+      const end = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+      return { startDate: start, endDate: end };
+    }
+  }
+};
+
 // Check all budgets and send notifications for any that exceed their threshold
 export const checkBudgetNotifications = async (): Promise<void> => {
   const Notifications = await getNotifications();
@@ -69,29 +107,34 @@ export const checkBudgetNotifications = async (): Promise<void> => {
   );
   const categoryMap = new Map(categories.map(c => [c.id, c]));
 
-  // Build date range for current month
-  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-  const lastDay = new Date(year, month, 0).getDate();
-  const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-
   for (const budget of budgets) {
     if (!budget.categoryId) continue;
 
     const category = categoryMap.get(budget.categoryId);
     if (!category) continue;
 
-    // Calculate spending for this budget's category
-    const result = await database.getFirstAsync<{ total: number }>(
-      `SELECT COALESCE(SUM(amount), 0) as total FROM expenses
-       WHERE category = ? AND date >= ? AND date <= ?`,
-      [category.name, startDate, endDate]
-    );
+    // Get the date range based on the budget's period type
+    const { startDate, endDate } = getDateRangeForPeriod(budget.period);
+
+    // Build query with optional wallet filter
+    let query = `SELECT COALESCE(SUM(amount), 0) as total FROM expenses
+       WHERE category = ? AND date >= ? AND date <= ?`;
+    const params: any[] = [category.name, startDate, endDate];
+
+    // Filter by wallet if budget is wallet-specific
+    if (budget.walletId) {
+      query += ' AND walletId = ?';
+      params.push(budget.walletId);
+    }
+
+    // Calculate spending for this budget's category and period
+    const result = await database.getFirstAsync<{ total: number }>(query, params);
 
     const spent = result?.total || 0;
     const percentage = (spent / budget.amount) * 100;
     const threshold = budget.notifyAt || 80;
 
-    // Send notification if spending exceeds the budget's alert threshold
+    // Send warning notification when spending is between threshold and 100%
     if (percentage >= threshold && percentage < 100) {
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -102,6 +145,7 @@ export const checkBudgetNotifications = async (): Promise<void> => {
         trigger: null, // Send immediately
       });
     } else if (percentage >= 100) {
+      // Send exceeded notification when budget is fully consumed
       await Notifications.scheduleNotificationAsync({
         content: {
           title: `Budget Exceeded: ${category.name}`,

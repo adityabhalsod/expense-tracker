@@ -30,6 +30,7 @@ interface AppStore {
   addExpense: (expense: Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Expense>; // Create new expense
   updateExpense: (id: string, updates: Partial<Expense>) => Promise<void>; // Modify existing expense
   deleteExpense: (id: string) => Promise<void>; // Remove expense record
+  deleteMultipleExpenses: (ids: string[]) => Promise<void>; // Batch delete expenses
   searchExpenses: (query: string) => Promise<Expense[]>; // Search by keyword
 
   // Category actions
@@ -37,6 +38,8 @@ interface AppStore {
   addCategory: (category: Omit<Category, 'id'>) => Promise<Category>; // Create new category
   updateCategory: (id: string, updates: Partial<Category>) => Promise<void>; // Modify category
   deleteCategory: (id: string) => Promise<void>; // Remove custom category
+  setDefaultCategory: (id: string) => Promise<void>; // Set a category as the single default
+  deleteMultipleCategories: (ids: string[]) => Promise<void>; // Batch delete categories
 
   // Wallet actions
   loadWallets: () => Promise<void>; // Refresh all wallets from database
@@ -126,6 +129,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
     await get().loadWallets();
   },
 
+  // Delete multiple expenses at once and restore their wallet balances
+  deleteMultipleExpenses: async (ids) => {
+    await db.deleteMultipleExpenses(ids);
+    const idSet = new Set(ids); // Convert to Set for O(1) lookups
+    set((state) => ({ expenses: state.expenses.filter((e) => !idSet.has(e.id)) }));
+    await get().loadCurrentWallet(); // Refresh wallet after batch restoration
+    await get().loadWallets();
+  },
+
   // Search expenses by keyword across notes, categories, and tags
   searchExpenses: async (query) => {
     return db.searchExpenses(query);
@@ -154,6 +166,19 @@ export const useAppStore = create<AppStore>((set, get) => ({
   deleteCategory: async (id) => {
     await db.deleteCategory(id);
     set((state) => ({ categories: state.categories.filter((c) => c.id !== id) }));
+  },
+
+  // Set a single category as the default and clear the rest
+  setDefaultCategory: async (id) => {
+    await db.setDefaultCategory(id);
+    await get().loadCategories(); // Reload to reflect updated isDefault flags
+  },
+
+  // Delete multiple categories at once
+  deleteMultipleCategories: async (ids) => {
+    await db.deleteMultipleCategories(ids);
+    const idSet = new Set(ids); // Set for efficient membership checks
+    set((state) => ({ categories: state.categories.filter((c) => !idSet.has(c.id)) }));
   },
 
   // Load all wallet records from database

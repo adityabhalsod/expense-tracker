@@ -1,8 +1,8 @@
 // Expenses list screen with filtering tabs (All, Today, This Week, This Month)
-// Provides a scrollable list of expenses grouped by date
+// Supports multi-select mode for batch-deleting expenses
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -20,8 +20,48 @@ const ExpensesScreen = () => {
   const expenses = useAppStore(selectExpenses);
   const categories = useAppStore(selectCategories);
   const loadExpenses = useAppStore((s) => s.loadExpenses);
+  const deleteMultipleExpenses = useAppStore((s) => s.deleteMultipleExpenses);
   const { t } = useLanguage();
   const [activeFilter, setActiveFilter] = useState<string>('All'); // Currently selected filter
+
+  // Multi-select state for batch deleting expenses
+  const [isSelectMode, setIsSelectMode] = useState(false); // Whether multi-select is active
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set()); // Selected expense IDs
+
+  // Toggle an expense in the selection set
+  const toggleSelection = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); // Deselect if already selected
+      else next.add(id); // Add to selection
+      return next;
+    });
+  }, []);
+
+  // Exit multi-select mode and clear all selections
+  const exitSelectMode = useCallback(() => {
+    setIsSelectMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
+  // Confirm and batch-delete selected expenses
+  const handleBatchDelete = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    Alert.alert(
+      'Delete Expenses',
+      `Delete ${selectedIds.size} selected expense${selectedIds.size === 1 ? '' : 's'}? Amounts will be restored to wallets.`,
+      [
+        { text: t.common.cancel, style: 'cancel' },
+        {
+          text: t.common.delete, style: 'destructive',
+          onPress: async () => {
+            await deleteMultipleExpenses([...selectedIds]);
+            exitSelectMode(); // Clear selection after deletion
+          },
+        },
+      ],
+    );
+  }, [selectedIds, deleteMultipleExpenses, exitSelectMode, t]);
 
   // Filter label keys for translation
   const FILTERS = [
@@ -73,15 +113,43 @@ const ExpensesScreen = () => {
     return { icon: cat?.icon || 'help-circle', color: cat?.color || '#999' };
   }, [categories]);
 
-  // Render a single expense item in the list
+  // Render a single expense item with multi-select support
   const renderExpenseItem = ({ item }: { item: typeof expenses[0] }) => {
     const catInfo = getCategoryInfo(item.category);
+    const isSelected = selectedIds.has(item.id); // Check if this item is selected
     return (
       <TouchableOpacity
-        style={[styles.expenseItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-        onPress={() => navigation.navigate('ExpenseDetail', { expenseId: item.id })}
+        style={[
+          styles.expenseItem,
+          {
+            backgroundColor: isSelected ? theme.colors.primary + '10' : theme.colors.surface,
+            borderColor: isSelected ? theme.colors.primary : theme.colors.border,
+          },
+        ]}
+        onPress={() => {
+          if (isSelectMode) {
+            toggleSelection(item.id); // Toggle selection in multi-select mode
+          } else {
+            navigation.navigate('ExpenseDetail', { expenseId: item.id });
+          }
+        }}
+        onLongPress={() => {
+          if (!isSelectMode) {
+            setIsSelectMode(true); // Enter select mode on long press
+            setSelectedIds(new Set([item.id])); // Pre-select the long-pressed item
+          }
+        }}
       >
         <View style={styles.expenseRow}>
+          {/* Checkbox shown only in multi-select mode */}
+          {isSelectMode && (
+            <MaterialCommunityIcons
+              name={isSelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
+              size={22}
+              color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
+              style={{ marginRight: 8 }}
+            />
+          )}
           {/* Category icon with background color */}
           <View style={[styles.iconCircle, { backgroundColor: catInfo.color + '20' }]}>
             <MaterialCommunityIcons name={catInfo.icon as any} size={22} color={catInfo.color} />
@@ -105,12 +173,27 @@ const ExpensesScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Screen header with title and search button */}
+      {/* Screen header with title, search, and multi-select controls */}
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.colors.text }]}>{t.expenses.title}</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Search')}>
-          <MaterialCommunityIcons name="magnify" size={24} color={theme.colors.text} />
-        </TouchableOpacity>
+        {isSelectMode ? (
+          // Multi-select controls: count, delete, close
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Text style={{ color: theme.colors.text, fontWeight: '600', fontSize: 13 }}>
+              {selectedIds.size} selected
+            </Text>
+            <TouchableOpacity onPress={handleBatchDelete}>
+              <MaterialCommunityIcons name="delete" size={24} color={theme.colors.expense} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={exitSelectMode}>
+              <MaterialCommunityIcons name="close" size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity onPress={() => navigation.navigate('Search')}>
+            <MaterialCommunityIcons name="magnify" size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Filter tabs row */}

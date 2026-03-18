@@ -1,11 +1,12 @@
 // Category management screen for creating, editing, and deleting expense categories
-// Provides a grid of categories with color-coded icons
+// Supports multi-select for batch deletion and setting a single default category
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
 import { useAppStore, selectCategories, selectSettings } from '../store';
@@ -32,12 +33,15 @@ const COLOR_OPTIONS = [
 const CategoryManagementScreen = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const navigation = useNavigation<any>();
   // Subscribe to individual store slices to avoid full-store re-renders
   const categories = useAppStore(selectCategories);
   const settings = useAppStore(selectSettings);
   const addCategory = useAppStore((s) => s.addCategory);
   const updateCategory = useAppStore((s) => s.updateCategory);
   const deleteCategory = useAppStore((s) => s.deleteCategory);
+  const setDefaultCategory = useAppStore((s) => s.setDefaultCategory);
+  const deleteMultipleCategories = useAppStore((s) => s.deleteMultipleCategories);
 
   // Modal state for add/edit form
   const [modalVisible, setModalVisible] = useState(false); // Whether the modal is shown
@@ -46,6 +50,79 @@ const CategoryManagementScreen = () => {
   const [selectedIcon, setSelectedIcon] = useState('food'); // Selected icon
   const [selectedColor, setSelectedColor] = useState('#FF6B6B'); // Selected color
   const [budget, setBudget] = useState(''); // Optional budget limit
+
+  // Multi-select state for batch operations
+  const [isSelectMode, setIsSelectMode] = useState(false); // Whether multi-select is active
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set()); // Set of selected category IDs
+
+  // Toggle a category in the selection set
+  const toggleSelection = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); // Deselect if already selected
+      else next.add(id); // Add to selection
+      return next;
+    });
+  }, []);
+
+  // Exit multi-select mode and clear selections
+  const exitSelectMode = useCallback(() => {
+    setIsSelectMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
+  // Confirm and delete all selected categories (skip default ones)
+  const handleBatchDelete = useCallback(() => {
+    const nonDefaultIds = [...selectedIds].filter(id => {
+      const cat = categories.find(c => c.id === id);
+      return cat && !cat.isDefault; // Only delete non-default categories
+    });
+    if (nonDefaultIds.length === 0) {
+      Alert.alert('Cannot Delete', 'Default categories cannot be deleted.');
+      return;
+    }
+    Alert.alert(
+      'Delete Categories',
+      `Delete ${nonDefaultIds.length} selected categor${nonDefaultIds.length === 1 ? 'y' : 'ies'}?`,
+      [
+        { text: t.common.cancel, style: 'cancel' },
+        {
+          text: t.common.delete, style: 'destructive',
+          onPress: async () => {
+            await deleteMultipleCategories(nonDefaultIds);
+            exitSelectMode(); // Clear selection after deletion
+          },
+        },
+      ],
+    );
+  }, [selectedIds, categories, deleteMultipleCategories, exitSelectMode, t]);
+
+  // Set header options for select mode with delete button
+  React.useEffect(() => {
+    if (isSelectMode) {
+      navigation.setOptions({
+        headerRight: () => (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginRight: 8 }}>
+            {/* Selected count indicator */}
+            <Text style={{ color: theme.colors.text, fontWeight: '600', fontSize: 14 }}>
+              {selectedIds.size} selected
+            </Text>
+            {/* Batch delete button */}
+            <TouchableOpacity onPress={handleBatchDelete}>
+              <MaterialCommunityIcons name="delete" size={24} color={theme.colors.error} />
+            </TouchableOpacity>
+            {/* Cancel selection button */}
+            <TouchableOpacity onPress={exitSelectMode}>
+              <MaterialCommunityIcons name="close" size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+          </View>
+        ),
+      });
+    } else {
+      // Reset header when exiting select mode
+      navigation.setOptions({ headerRight: undefined });
+    }
+  }, [isSelectMode, selectedIds.size, navigation, theme, handleBatchDelete, exitSelectMode]);
 
   // Open modal for creating a new category with default values
   const openAddModal = () => {
@@ -123,11 +200,37 @@ const CategoryManagementScreen = () => {
       {categories.map((cat) => (
         <TouchableOpacity
           key={cat.id}
-          style={[styles.categoryItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-          onPress={() => openEditModal(cat)}
-          onLongPress={() => handleDelete(cat.id, cat.isDefault)} // Long press to delete
+          style={[
+            styles.categoryItem,
+            {
+              backgroundColor: selectedIds.has(cat.id) ? theme.colors.primary + '15' : theme.colors.surface,
+              borderColor: selectedIds.has(cat.id) ? theme.colors.primary : theme.colors.border,
+            },
+          ]}
+          onPress={() => {
+            if (isSelectMode) {
+              toggleSelection(cat.id); // Toggle selection in multi-select mode
+            } else {
+              openEditModal(cat); // Open edit modal in normal mode
+            }
+          }}
+          onLongPress={() => {
+            if (!isSelectMode) {
+              setIsSelectMode(true); // Enter select mode on long press
+              setSelectedIds(new Set([cat.id])); // Pre-select the long-pressed item
+            }
+          }}
         >
           <View style={styles.categoryRow}>
+            {/* Checkbox shown only in multi-select mode */}
+            {isSelectMode && (
+              <MaterialCommunityIcons
+                name={selectedIds.has(cat.id) ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                size={24}
+                color={selectedIds.has(cat.id) ? theme.colors.primary : theme.colors.textSecondary}
+                style={{ marginRight: 10 }}
+              />
+            )}
             {/* Color-coded category icon */}
             <View style={[styles.iconCircle, { backgroundColor: cat.color + '20' }]}>
               <MaterialCommunityIcons name={cat.icon as any} size={24} color={cat.color} />
@@ -147,14 +250,37 @@ const CategoryManagementScreen = () => {
                 <Text style={[styles.defaultText, { color: theme.colors.chipText }]}>{t.categoryManagement.defaultLabel}</Text>
               </View>
             )}
-            <MaterialCommunityIcons name="chevron-right" size={20} color={theme.colors.textTertiary} />
+            {/* Set as default button — only shown for non-default categories when not in select mode */}
+            {!isSelectMode && !cat.isDefault && (
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert(
+                    'Set Default',
+                    `Set "${cat.name}" as the default category?`,
+                    [
+                      { text: t.common.cancel, style: 'cancel' },
+                      {
+                        text: t.common.ok,
+                        onPress: () => setDefaultCategory(cat.id), // Update default in DB
+                      },
+                    ],
+                  );
+                }}
+                style={{ marginRight: 4, padding: 4 }}
+              >
+                <MaterialCommunityIcons name="star-outline" size={20} color={theme.colors.textTertiary} />
+              </TouchableOpacity>
+            )}
+            {!isSelectMode && (
+              <MaterialCommunityIcons name="chevron-right" size={20} color={theme.colors.textTertiary} />
+            )}
           </View>
         </TouchableOpacity>
       ))}
 
-      {/* Hint for long-press deletion */}
+      {/* Hint for interactions */}
       <Text style={[styles.hint, { color: theme.colors.textTertiary }]}>
-        Tap to edit • Long press to delete custom categories
+        Tap to edit • Long press to select • ☆ to set default
       </Text>
 
       {/* Add/Edit Category Modal */}

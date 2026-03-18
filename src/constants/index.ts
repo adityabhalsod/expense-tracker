@@ -3,22 +3,23 @@
 import { Category, Currency } from '../types';
 
 // Default expense categories with icons and colors for initial app setup
+// Only 'Food & Dining' is marked as default — used as the pre-selected category across the app
 export const DEFAULT_CATEGORIES: Omit<Category, 'id'>[] = [
   { name: 'Food & Dining', icon: 'food', color: '#FF6B6B', isDefault: true, order: 1 },
-  { name: 'Transport', icon: 'car', color: '#4ECDC4', isDefault: true, order: 2 },
-  { name: 'Shopping', icon: 'shopping', color: '#45B7D1', isDefault: true, order: 3 },
-  { name: 'Entertainment', icon: 'movie-open', color: '#96CEB4', isDefault: true, order: 4 },
-  { name: 'Bills & Utilities', icon: 'flash', color: '#FFEAA7', isDefault: true, order: 5 },
-  { name: 'Health', icon: 'hospital-box', color: '#DDA0DD', isDefault: true, order: 6 },
-  { name: 'Education', icon: 'school', color: '#98D8C8', isDefault: true, order: 7 },
-  { name: 'Travel', icon: 'airplane', color: '#F7DC6F', isDefault: true, order: 8 },
-  { name: 'Groceries', icon: 'cart', color: '#82E0AA', isDefault: true, order: 9 },
-  { name: 'Rent', icon: 'home', color: '#F0B27A', isDefault: true, order: 10 },
-  { name: 'Insurance', icon: 'shield-check', color: '#85C1E9', isDefault: true, order: 11 },
-  { name: 'Personal Care', icon: 'face-man-shimmer', color: '#D7BDE2', isDefault: true, order: 12 },
-  { name: 'Gifts & Donations', icon: 'gift', color: '#F5B7B1', isDefault: true, order: 13 },
-  { name: 'Subscriptions', icon: 'repeat', color: '#AED6F1', isDefault: true, order: 14 },
-  { name: 'Other', icon: 'dots-horizontal', color: '#BDC3C7', isDefault: true, order: 15 },
+  { name: 'Transport', icon: 'car', color: '#4ECDC4', isDefault: false, order: 2 },
+  { name: 'Shopping', icon: 'shopping', color: '#45B7D1', isDefault: false, order: 3 },
+  { name: 'Entertainment', icon: 'movie-open', color: '#96CEB4', isDefault: false, order: 4 },
+  { name: 'Bills & Utilities', icon: 'flash', color: '#FFEAA7', isDefault: false, order: 5 },
+  { name: 'Health', icon: 'hospital-box', color: '#DDA0DD', isDefault: false, order: 6 },
+  { name: 'Education', icon: 'school', color: '#98D8C8', isDefault: false, order: 7 },
+  { name: 'Travel', icon: 'airplane', color: '#F7DC6F', isDefault: false, order: 8 },
+  { name: 'Groceries', icon: 'cart', color: '#82E0AA', isDefault: false, order: 9 },
+  { name: 'Rent', icon: 'home', color: '#F0B27A', isDefault: false, order: 10 },
+  { name: 'Insurance', icon: 'shield-check', color: '#85C1E9', isDefault: false, order: 11 },
+  { name: 'Personal Care', icon: 'face-man-shimmer', color: '#D7BDE2', isDefault: false, order: 12 },
+  { name: 'Gifts & Donations', icon: 'gift', color: '#F5B7B1', isDefault: false, order: 13 },
+  { name: 'Subscriptions', icon: 'repeat', color: '#AED6F1', isDefault: false, order: 14 },
+  { name: 'Other', icon: 'dots-horizontal', color: '#BDC3C7', isDefault: false, order: 15 },
 ];
 
 // Supported currencies with their symbols and names

@@ -34,7 +34,11 @@ const AddExpenseScreen = () => {
 
   // Form field state values
   const [amount, setAmount] = useState(''); // Expense amount as string for input
-  const [selectedCategory, setSelectedCategory] = useState(''); // Selected category name
+  // Pre-select the default category (isDefault=true) or empty for new expenses
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+    const defaultCat = categories.find(c => c.isDefault);
+    return defaultCat?.name || ''; // Use default category name if available
+  });
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd')); // Selected date
   const [notes, setNotes] = useState(''); // Optional description
   const [tags, setTags] = useState(''); // Comma-separated tags string
