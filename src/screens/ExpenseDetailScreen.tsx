@@ -10,7 +10,7 @@ import { useLanguage } from '../i18n';
 import { useAppStore, selectExpenses, selectCategories } from '../store';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import { formatCurrency, formatDate, getPaymentMethodLabel } from '../utils/helpers';
+import { formatCurrency, formatDate } from '../utils/helpers';
 
 const ExpenseDetailScreen = () => {
   const { theme } = useTheme();
@@ -79,13 +79,6 @@ const ExpenseDetailScreen = () => {
 
       {/* Detail rows showing all expense fields */}
       <Card style={styles.detailCard}>
-        {/* Payment method detail row */}
-        <DetailRow
-          icon="credit-card"
-          label={t.expenseDetail.paymentMethod}
-          value={getPaymentMethodLabel(expense.paymentMethod)}
-          theme={theme}
-        />
         {/* Currency detail row */}
         <DetailRow icon="currency-usd" label={t.expenseDetail.currency} value={expense.currency} theme={theme} />
         {/* Notes detail row (if present) */}

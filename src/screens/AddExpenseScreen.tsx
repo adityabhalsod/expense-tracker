@@ -10,8 +10,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
 import { useAppStore, selectCategories, selectWallets, selectCurrentWallet, selectExpenses, selectSettings } from '../store';
-import { PaymentMethod, RecurringFrequency } from '../types';
-import { PAYMENT_METHODS } from '../constants';
+import { RecurringFrequency } from '../types';
 import { format, parse } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Button from '../components/common/Button';
@@ -37,7 +36,6 @@ const AddExpenseScreen = () => {
   const [amount, setAmount] = useState(''); // Expense amount as string for input
   const [selectedCategory, setSelectedCategory] = useState(''); // Selected category name
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd')); // Selected date
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(settings.defaultPaymentMethod); // Payment type
   const [notes, setNotes] = useState(''); // Optional description
   const [tags, setTags] = useState(''); // Comma-separated tags string
   const [isRecurring, setIsRecurring] = useState(false); // Recurring toggle
@@ -99,7 +97,6 @@ const AddExpenseScreen = () => {
         setAmount(expense.amount.toString());
         setSelectedCategory(expense.category);
         setDate(expense.date);
-        setPaymentMethod(expense.paymentMethod);
         setNotes(expense.notes || '');
         setTags(expense.tags.join(', '));
         setIsRecurring(expense.isRecurring);
@@ -129,7 +126,6 @@ const AddExpenseScreen = () => {
         amount: parseFloat(amount), // Convert string to number
         category: selectedCategory,
         date,
-        paymentMethod,
         notes: notes.trim(),
         tags: tags.split(',').map(t => t.trim()).filter(Boolean), // Parse comma-separated tags
         currency: settings.defaultCurrency,
@@ -246,41 +242,6 @@ const AddExpenseScreen = () => {
                   ]}
                 >
                   {cat.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Payment method selector as horizontal chips */}
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: theme.colors.text }]}>{t.addExpense.paymentMethod}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always" nestedScrollEnabled>
-            {PAYMENT_METHODS.map((method) => (
-              <TouchableOpacity
-                key={method.value}
-                style={[
-                  styles.methodChip,
-                  {
-                    backgroundColor: paymentMethod === method.value ? theme.colors.primary + '20' : theme.colors.surfaceVariant,
-                    borderColor: paymentMethod === method.value ? theme.colors.primary : theme.colors.border,
-                    borderWidth: paymentMethod === method.value ? 2 : 1,
-                  },
-                ]}
-                onPress={() => setPaymentMethod(method.value)} // Set payment method on tap
-              >
-                <MaterialCommunityIcons
-                  name={method.icon as any}
-                  size={18}
-                  color={paymentMethod === method.value ? theme.colors.primary : theme.colors.textSecondary}
-                />
-                <Text
-                  style={[
-                    styles.methodChipText,
-                    { color: paymentMethod === method.value ? theme.colors.primary : theme.colors.text },
-                  ]}
-                >
-                  {(t.paymentMethods as Record<string, string>)[method.value] || method.label}
                 </Text>
               </TouchableOpacity>
             ))}

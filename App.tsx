@@ -1,7 +1,7 @@
 // Main application entry point
 // Wraps the app with ThemeProvider and initializes the store on startup
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StatusBar, View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -12,9 +12,6 @@ import { useAppStore, selectIsInitialized, selectSettings } from './src/store';
 import { processRecurringExpenses } from './src/services/recurringExpenses';
 import { requestNotificationPermissions, checkBudgetNotifications } from './src/services/notifications';
 import PinLockScreen from './src/components/PinLockScreen';
-import { useUPINotificationListener } from './src/hooks/useUPINotificationListener';
-import UPIPaymentPopup from './src/components/expense/UPIPaymentPopup';
-import { UPINotification } from './src/types';
 
 // Loading screen displayed while the app initializes data from SQLite
 const LoadingScreen = () => {
@@ -36,22 +33,11 @@ const AppContent = () => {
   const isInitialized = useAppStore(selectIsInitialized);
   const settings = useAppStore(selectSettings);
   const initialize = useAppStore((s) => s.initialize);
-  const addUPINotification = useAppStore((s) => s.addUPINotification);
   const [isAuthenticated, setIsAuthenticated] = useState(false); // Security gate state
-  const [pendingUPI, setPendingUPI] = useState<UPINotification | null>(null); // UPI popup state
 
-  // Determine if security gate should show (computed early so UPI listener can use it)
+  // Determine if security gate should show
   // PIN requires both the toggle AND a stored PIN hash; biometric just needs the toggle
   const needsAuth = ((settings.enablePin && !!settings.pinHash) || settings.enableBiometric) && !isAuthenticated;
-
-  // Handler for detected UPI notifications — stores in DB and shows popup
-  const handleUPINotification = useCallback((notification: UPINotification) => {
-    addUPINotification(notification);
-    setPendingUPI(notification);
-  }, [addUPINotification]);
-
-  // Listen for UPI payment notifications (Android only, active only when authenticated)
-  useUPINotificationListener(handleUPINotification, isInitialized && !needsAuth);
 
   // Initialize the database, process recurring expenses, and check budgets
   useEffect(() => {
@@ -89,13 +75,6 @@ const AppContent = () => {
       ) : (
         <>
           <AppNavigator />
-          {/* UPI payment popup overlay — shows when a notification is detected */}
-          <UPIPaymentPopup
-            visible={pendingUPI !== null}
-            notification={pendingUPI}
-            onDismiss={() => setPendingUPI(null)}
-            onSaved={() => setPendingUPI(null)}
-          />
         </>
       )}
     </>

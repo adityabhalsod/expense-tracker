@@ -1,6 +1,6 @@
 // Constants used throughout the Personal Expense Tracker application
 
-import { Category, Currency, PaymentMethod } from '../types';
+import { Category, Currency } from '../types';
 
 // Default expense categories with icons and colors for initial app setup
 export const DEFAULT_CATEGORIES: Omit<Category, 'id'>[] = [
@@ -19,16 +19,6 @@ export const DEFAULT_CATEGORIES: Omit<Category, 'id'>[] = [
   { name: 'Gifts & Donations', icon: 'gift', color: '#F5B7B1', isDefault: true, order: 13 },
   { name: 'Subscriptions', icon: 'repeat', color: '#AED6F1', isDefault: true, order: 14 },
   { name: 'Other', icon: 'dots-horizontal', color: '#BDC3C7', isDefault: true, order: 15 },
-];
-
-// Payment method display labels for the UI (ordered: Cash, UPI, Debit Card, Bank Transfer, Credit Card, Other)
-export const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: string }[] = [
-  { value: 'cash', label: 'Cash', icon: 'cash' },
-  { value: 'upi', label: 'UPI', icon: 'cellphone' },
-  { value: 'debit_card', label: 'Debit Card', icon: 'credit-card-outline' },
-  { value: 'bank_transfer', label: 'Bank Transfer', icon: 'bank' },
-  { value: 'credit_card', label: 'Credit Card', icon: 'credit-card' },
-  { value: 'other', label: 'Other', icon: 'dots-horizontal' },
 ];
 
 // Supported currencies with their symbols and names
@@ -57,7 +47,6 @@ export const DEFAULT_SETTINGS = {
   theme: 'system' as const, // Follow system appearance
   language: 'en' as const, // Default language is English
   defaultCurrency: 'INR', // Default currency for new expenses
-  defaultPaymentMethod: 'cash' as PaymentMethod, // Default payment method
   enableBiometric: false, // Biometric lock off by default
   enablePin: false, // PIN lock off by default
   enableNotifications: true, // Budget notifications enabled

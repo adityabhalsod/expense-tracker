@@ -2,7 +2,7 @@
 // Provides reactive state for expenses, categories, wallets, budgets, payment sources, and UPI notifications
 
 import { create } from 'zustand';
-import { Expense, Category, Wallet, Budget, AppSettings, UPINotification } from '../types';
+import { Expense, Category, Wallet, Budget, AppSettings } from '../types';
 import * as db from '../database';
 import { DEFAULT_SETTINGS } from '../constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,7 +18,6 @@ interface AppStore {
   wallets: Wallet[]; // All wallet/payment source records
   currentWallet: Wallet | null; // Default wallet for quick access
   budgets: Budget[]; // Budget rules
-  upiNotifications: UPINotification[]; // Detected UPI payment notifications
   settings: AppSettings; // App configuration
   isLoading: boolean; // Global loading indicator
   isInitialized: boolean; // Whether initial data load is complete
@@ -56,11 +55,6 @@ interface AppStore {
   loadSettings: () => Promise<void>; // Load app settings from storage
   updateSettings: (updates: Partial<AppSettings>) => Promise<void>; // Save settings changes
 
-  // UPI notification actions
-  loadUPINotifications: (limit?: number) => Promise<void>; // Load UPI notifications
-  addUPINotification: (notification: UPINotification) => Promise<void>; // Save detected notification
-  markUPINotificationProcessed: (id: string) => Promise<void>; // Mark notification as processed
-
   // Database reset actions
   clearAllData: () => Promise<void>; // Clear transactional data, keep categories/settings
   resetDatabase: () => Promise<void>; // Full factory reset — drop & recreate all tables
@@ -74,7 +68,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
   wallets: [],
   currentWallet: null,
   budgets: [],
-  upiNotifications: [], // UPI notifications loaded on init
   settings: DEFAULT_SETTINGS as AppSettings, // Start with default settings
   isLoading: true,
   isInitialized: false,
@@ -90,7 +83,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
         get().loadWallets(),
         get().loadCurrentWallet(),
         get().loadSettings(),
-        get().loadUPINotifications(50),
       ]);
       // Load budgets for current month after wallets are loaded
       const now = new Date();
@@ -258,31 +250,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
   },
 
-  // ── UPI Notification Actions ────────────────────────────────────────
-
-  // Load UPI notifications with optional limit
-  loadUPINotifications: async (limit) => {
-    const upiNotifications = await db.getAllUPINotifications(limit);
-    set({ upiNotifications });
-  },
-
-  // Save a newly detected UPI notification to the database and state
-  addUPINotification: async (notification) => {
-    await db.addUPINotification(notification);
-    set((state) => ({ upiNotifications: [notification, ...state.upiNotifications] }));
-  },
-
-  // Mark a UPI notification as processed and update state
-  markUPINotificationProcessed: async (id) => {
-    await db.markUPINotificationProcessed(id);
-    set((state) => ({
-      upiNotifications: state.upiNotifications.map((n) =>
-        n.id === id ? { ...n, isProcessed: true } : n
-      ),
-    }));
-  },
-
-  // Clear all transactional data (expenses, wallets, budgets, notifications)
+  // Clear all transactional data (expenses, wallets, budgets)
   // Preserves categories and app settings for quick fresh start
   clearAllData: async () => {
     await db.clearAllData();
@@ -292,7 +260,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       wallets: [],
       currentWallet: null,
       budgets: [],
-      upiNotifications: [],
     });
   },
 
@@ -308,7 +275,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       wallets: [],
       currentWallet: null,
       budgets: [],
-      upiNotifications: [],
       settings: DEFAULT_SETTINGS as AppSettings,
     });
     // Reload seeded categories from the fresh database
@@ -326,4 +292,3 @@ export const selectBudgets = (state: AppStore) => state.budgets;
 export const selectSettings = (state: AppStore) => state.settings;
 export const selectIsLoading = (state: AppStore) => state.isLoading;
 export const selectIsInitialized = (state: AppStore) => state.isInitialized;
-export const selectUPINotifications = (state: AppStore) => state.upiNotifications;

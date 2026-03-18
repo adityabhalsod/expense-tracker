@@ -156,7 +156,6 @@ const hi: TranslationKeys = {
     amount: 'राशि',
     date: 'तारीख',
     category: 'श्रेणी',
-    paymentMethod: 'भुगतान विधि',
     notes: 'नोट्स',
     notesPlaceholder: 'नोट जोड़ें...',
     tags: 'टैग्स',
@@ -176,7 +175,6 @@ const hi: TranslationKeys = {
   // खर्च विवरण स्क्रीन
   expenseDetail: {
     title: 'खर्च विवरण',
-    paymentMethod: 'भुगतान विधि',
     currency: 'मुद्रा',
     notes: 'नोट्स',
     tags: 'टैग्स',
@@ -349,17 +347,6 @@ const hi: TranslationKeys = {
     expense: 'खर्च',
   },
 
-  // भुगतान विधि लेबल
-  paymentMethods: {
-    cash: 'नकद',
-    upi: 'UPI',
-    debit_card: 'डेबिट कार्ड',
-    bank_transfer: 'बैंक ट्रांसफर',
-    credit_card: 'क्रेडिट कार्ड',
-    wallet: 'वॉलेट',
-    other: 'अन्य',
-  },
-
   // आवर्ती फ्रीक्वेंसी
   frequencies: {
     daily: 'दैनिक',
@@ -368,27 +355,6 @@ const hi: TranslationKeys = {
     monthly: 'मासिक',
     quarterly: 'तिमाही',
     yearly: 'वार्षिक',
-  },
-
-
-
-  // UPI भुगतान स्क्रीन
-  upiPayments: {
-    title: 'UPI भुगतान',
-    all: 'सभी',
-    pendingFilter: 'लंबित',
-    processedFilter: 'संसाधित',
-    processed: 'संसाधित',
-    pending: 'लंबित',
-    emptyTitle: 'कोई UPI सूचनाएँ नहीं',
-    emptySubtitle: 'पता लगने पर UPI भुगतान सूचनाएँ यहाँ दिखाई देंगी',
-    received: 'प्राप्त',
-    sent: 'भेजा',
-    addAsExpense: 'खर्च के रूप में जोड़ें',
-    addAsIncome: 'आय के रूप में जोड़ें',
-    addIncome: 'आय जोड़ें',
-    source: 'भुगतान स्रोत',
-    saveTransaction: 'लेनदेन सहेजें',
   },
 };
 

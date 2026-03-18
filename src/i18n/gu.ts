@@ -156,7 +156,6 @@ const gu: TranslationKeys = {
     amount: 'રકમ',
     date: 'તારીખ',
     category: 'શ્રેણી',
-    paymentMethod: 'ચુકવણી પદ્ધતિ',
     notes: 'નોંધ',
     notesPlaceholder: 'નોંધ ઉમેરો...',
     tags: 'ટૅગ્સ',
@@ -178,7 +177,6 @@ const gu: TranslationKeys = {
   // ખર્ચ વિગત સ્ક્રીન
   expenseDetail: {
     title: 'ખર્ચ વિગત',
-    paymentMethod: 'ચુકવણી પદ્ધતિ',
     currency: 'ચલણ',
     notes: 'નોંધ',
     tags: 'ટૅગ્સ',
@@ -351,17 +349,6 @@ const gu: TranslationKeys = {
     expense: 'ખર્ચ',
   },
 
-  // ચુકવણી પદ્ધતિ લેબલ
-  paymentMethods: {
-    cash: 'રોકડ',
-    upi: 'UPI',
-    debit_card: 'ડેબિટ કાર્ડ',
-    bank_transfer: 'બેંક ટ્રાન્સફર',
-    credit_card: 'ક્રેડિટ કાર્ડ',
-    wallet: 'વોલેટ',
-    other: 'અન્ય',
-  },
-
   // પુનરાવર્તન ફ્રિક્વન્સી
   frequencies: {
     daily: 'દૈનિક',
@@ -370,27 +357,6 @@ const gu: TranslationKeys = {
     monthly: 'માસિક',
     quarterly: 'ત્રિમાસિક',
     yearly: 'વાર્ષિક',
-  },
-
-
-
-  // UPI ચુકવણી સ્ક્રીન
-  upiPayments: {
-    title: 'UPI ચુકવણી',
-    all: 'બધા',
-    pendingFilter: 'બાકી',
-    processedFilter: 'પ્રોસેસ થયેલ',
-    processed: 'પ્રોસેસ થયેલ',
-    pending: 'બાકી',
-    emptyTitle: 'કોઈ UPI સૂચનાઓ નથી',
-    emptySubtitle: 'UPI ચુકવણી સૂચનાઓ શોધાયા પછી અહીં દેખાશે',
-    received: 'પ્રાપ્ત',
-    sent: 'મોકલ્યું',
-    addAsExpense: 'ખર્ચ તરીકે ઉમેરો',
-    addAsIncome: 'આવક તરીકે ઉમેરો',
-    addIncome: 'આવક ઉમેરો',
-    source: 'ચુકવણી સ્રોત',
-    saveTransaction: 'વ્યવહાર સાચવો',
   },
 };
 

@@ -136,7 +136,7 @@ const AllExpensesScreen = () => {
             {expense.notes || category?.name || t.allExpenses.expense}
           </Text>
           <Text style={[styles.expensePayment, { color: theme.colors.textTertiary }]}>
-            {expense.paymentMethod.replace('_', ' ')}
+            {expense.category}
           </Text>
         </View>
         <Text style={[styles.expenseAmount, { color: theme.colors.error }]}>

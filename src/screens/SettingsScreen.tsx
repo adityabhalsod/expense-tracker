@@ -166,7 +166,6 @@ const SettingsScreen = () => {
           />
           <SettingsRow icon="shape" label={t.settings.categories} onPress={() => navigation.navigate('CategoryManagement')} />
           <SettingsRow icon="target" label={t.settings.budgets} onPress={() => navigation.navigate('BudgetSetup')} />
-          <SettingsRow icon="cellphone-nfc" label={t.upiPayments?.title || 'UPI Payments'} onPress={() => navigation.navigate('UPIPayments')} />
         </View>
 
         {/* Data management section */}
@@ -198,7 +197,8 @@ const SettingsScreen = () => {
         {/* About section */}
         <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>{t.settings.about}</Text>
         <View style={[styles.section, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <SettingsRow icon="information" label={t.settings.version} value="1.1.0" />
+          <SettingsRow icon="information" label={t.settings.version} value="1.1.0" /> 
+          {/* TODO: Set dynamic version */}
         </View>
 
         {/* Danger zone — reset actions */}

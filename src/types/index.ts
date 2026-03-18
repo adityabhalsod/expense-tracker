@@ -7,7 +7,6 @@ export interface Expense {
   category: string; // Category name (e.g., Food, Transport)
   subcategory?: string; // Optional subcategory for finer classification
   date: string; // ISO date string of when the expense occurred
-  paymentMethod: PaymentMethod; // How the payment was made
   notes?: string; // Optional description or memo
   tags: string[]; // Searchable tags for quick filtering
   currency: string; // Currency code (e.g., USD, INR)
@@ -63,9 +62,6 @@ export interface Budget {
   notifyAt: number; // Percentage threshold to trigger notification (e.g., 80)
 }
 
-// Supported payment methods for expense transactions
-export type PaymentMethod = 'cash' | 'credit_card' | 'debit_card' | 'upi' | 'bank_transfer' | 'wallet' | 'other';
-
 // Frequency options for recurring expenses
 export type RecurringFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly';
 
@@ -93,7 +89,6 @@ export interface AppSettings {
   theme: 'light' | 'dark' | 'system'; // Appearance mode preference
   language: 'en' | 'gu' | 'hi'; // Display language preference
   defaultCurrency: string; // Default currency code for new expenses
-  defaultPaymentMethod: PaymentMethod; // Default payment method
   enableBiometric: boolean; // Whether biometric lock is enabled
   enablePin: boolean; // Whether PIN lock is enabled
   pinHash?: string; // Hashed PIN for verification
@@ -144,7 +139,6 @@ export type RootStackParamList = {
   CloudBackup: undefined; // Cloud backup settings
   BudgetSetup: undefined; // Budget configuration
   AllExpenses: undefined; // Full expense list view
-  UPIPayments: undefined; // UPI payment notification history
 };
 
 // Bottom tab navigator parameter types
@@ -156,22 +150,5 @@ export type TabParamList = {
   Settings: undefined; // App settings tab
 };
 
-// ==================== UPI NOTIFICATION TYPES ====================
-
-// Transaction type detected from UPI notification
-export type UPITransactionType = 'credit' | 'debit';
-
-// Parsed UPI payment notification data
-export interface UPINotification {
-  id: string; // Unique identifier for the notification
-  appPackage: string; // Source app package (e.g., "com.google.android.apps.nbu.paisa.user")
-  appName: string; // Human-readable app name (e.g., "Google Pay")
-  transactionType: UPITransactionType; // Whether money was received or sent
-  amount: number; // Parsed transaction amount
-  message: string; // Original notification text
-  timestamp: string; // When the notification was received
-  isProcessed: boolean; // Whether user has added this to expenses/income
-  walletId?: string; // Linked wallet/payment source (if matched)
-}
 
 

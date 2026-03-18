@@ -74,7 +74,6 @@ export const processRecurringExpenses = async (): Promise<number> => {
           category: latestExpense.category,
           subcategory: latestExpense.subcategory || undefined,
           date: format(nextDate, 'yyyy-MM-dd'),
-          paymentMethod: latestExpense.paymentMethod,
           notes: latestExpense.notes ? `[Recurring] ${latestExpense.notes}` : '[Recurring]',
           tags: typeof latestExpense.tags === 'string' ? JSON.parse(latestExpense.tags) : latestExpense.tags || [],
           currency: latestExpense.currency,

@@ -163,7 +163,7 @@ const HomeScreen = () => {
             </View>
             <Text style={[styles.widgetTitle, { color: theme.colors.text }]}>{t.home.addExpense}</Text>
             <Text style={[styles.widgetSubtitle, { color: theme.colors.textTertiary }]}>
-              {t.upiPayments?.sent || 'Quick entry'}
+              {'Quick entry'}
             </Text>
           </TouchableOpacity>
 
@@ -176,10 +176,10 @@ const HomeScreen = () => {
               <MaterialCommunityIcons name="arrow-down-circle" size={32} color="#22C55E" />
             </View>
             <Text style={[styles.widgetTitle, { color: theme.colors.text }]}>
-              {t.upiPayments?.addIncome || 'Add Income'}
+              {'Add Income'}
             </Text>
             <Text style={[styles.widgetSubtitle, { color: theme.colors.textTertiary }]}>
-              {t.upiPayments?.received || 'Top up wallet'}
+              {'Top up wallet'}
             </Text>
           </TouchableOpacity>
         </View>

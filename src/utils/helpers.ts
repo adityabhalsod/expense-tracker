@@ -144,20 +144,6 @@ export const truncateText = (text: string, maxLength: number): string => {
   return text.substring(0, maxLength) + '...'; // Add ellipsis for overflow
 };
 
-// Convert a payment method key to a display-friendly label
-export const getPaymentMethodLabel = (method: string): string => {
-  const labels: Record<string, string> = {
-    cash: 'Cash',
-    credit_card: 'Credit Card',
-    debit_card: 'Debit Card',
-    upi: 'UPI',
-    bank_transfer: 'Bank Transfer',
-    wallet: 'Digital Wallet',
-    other: 'Other',
-  };
-  return labels[method] || method; // Return the label or original value if not found
-};
-
 // Get the currency symbol for a given currency code
 export const getCurrencySymbol = (code: string): string => {
   const currency = CURRENCIES.find(c => c.code === code);

@@ -154,7 +154,6 @@ const en = {
     amount: 'Amount',
     date: 'Date',
     category: 'Category',
-    paymentMethod: 'Payment Method',
     notes: 'Notes',
     notesPlaceholder: 'Add a note...',
     tags: 'Tags',
@@ -176,7 +175,6 @@ const en = {
   // Expense Detail screen
   expenseDetail: {
     title: 'Expense Detail',
-    paymentMethod: 'Payment Method',
     currency: 'Currency',
     notes: 'Notes',
     tags: 'Tags',
@@ -349,17 +347,6 @@ const en = {
     expense: 'Expense',
   },
 
-  // Payment method labels
-  paymentMethods: {
-    cash: 'Cash',
-    upi: 'UPI',
-    debit_card: 'Debit Card',
-    bank_transfer: 'Bank Transfer',
-    credit_card: 'Credit Card',
-    wallet: 'Wallet',
-    other: 'Other',
-  },
-
   // Recurring frequency labels
   frequencies: {
     daily: 'Daily',
@@ -368,27 +355,6 @@ const en = {
     monthly: 'Monthly',
     quarterly: 'Quarterly',
     yearly: 'Yearly',
-  },
-
-
-
-  // UPI Payments screen
-  upiPayments: {
-    title: 'UPI Payments',
-    all: 'All',
-    pendingFilter: 'Pending',
-    processedFilter: 'Processed',
-    processed: 'Processed',
-    pending: 'Pending',
-    emptyTitle: 'No UPI Notifications',
-    emptySubtitle: 'UPI payment notifications will appear here when detected',
-    received: 'Received',
-    sent: 'Sent',
-    addAsExpense: 'Add as Expense',
-    addAsIncome: 'Add as Income',
-    addIncome: 'Add Income',
-    source: 'Payment Source',
-    saveTransaction: 'Save Transaction',
   },
 };
 

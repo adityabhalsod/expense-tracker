@@ -2,7 +2,7 @@
 // Uses expo-sqlite for local storage on the device
 
 import * as SQLite from 'expo-sqlite';
-import { Expense, Category, Wallet, Budget, UPINotification } from '../types';
+import { Expense, Category, Wallet, Budget } from '../types';
 import { DEFAULT_CATEGORIES } from '../constants';
 import * as Crypto from 'expo-crypto';
 import { encryptData, decryptData } from '../utils/encryption';
@@ -344,11 +344,11 @@ export const addExpense = async (expense: Omit<Expense, 'id' | 'createdAt' | 'up
   const now = new Date().toISOString(); // Current timestamp for audit fields
 
   await database.runAsync(
-    `INSERT INTO expenses (id, amount, category, subcategory, date, paymentMethod, notes, tags, currency, isRecurring, recurringFrequency, recurringEndDate, createdAt, updatedAt, walletId)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO expenses (id, amount, category, subcategory, date, notes, tags, currency, isRecurring, recurringFrequency, recurringEndDate, createdAt, updatedAt, walletId)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, expense.amount, expense.category, expense.subcategory || null,
-      expense.date, expense.paymentMethod, expense.notes || null,
+      expense.date, expense.notes || null,
       JSON.stringify(expense.tags), expense.currency, expense.isRecurring ? 1 : 0,
       expense.recurringFrequency || null, expense.recurringEndDate || null,
       now, now, expense.walletId || null,
@@ -383,7 +383,6 @@ export const updateExpense = async (id: string, updates: Partial<Expense>): Prom
   if (updates.category !== undefined) { fields.push('category = ?'); values.push(updates.category); }
   if (updates.subcategory !== undefined) { fields.push('subcategory = ?'); values.push(updates.subcategory); }
   if (updates.date !== undefined) { fields.push('date = ?'); values.push(updates.date); }
-  if (updates.paymentMethod !== undefined) { fields.push('paymentMethod = ?'); values.push(updates.paymentMethod); }
   if (updates.notes !== undefined) { fields.push('notes = ?'); values.push(updates.notes); }
   if (updates.tags !== undefined) { fields.push('tags = ?'); values.push(JSON.stringify(updates.tags)); }
   if (updates.isRecurring !== undefined) { fields.push('isRecurring = ?'); values.push(updates.isRecurring ? 1 : 0); }
@@ -638,59 +637,6 @@ export const exportAllData = async (): Promise<{ expenses: Expense[]; categories
   const budgets = await database.getAllAsync<Budget>('SELECT * FROM budgets');
   return { expenses, categories: categories.map((c: any) => ({ ...c, isDefault: c.isDefault === 1 })), wallets, budgets };
 };
-
-// ==================== UPI NOTIFICATION OPERATIONS ====================
-
-// Retrieve all UPI notifications ordered by most recent first
-export const getAllUPINotifications = async (limit?: number): Promise<UPINotification[]> => {
-  const database = await getDatabase();
-  let query = 'SELECT * FROM upi_notifications ORDER BY timestamp DESC';
-  const params: any[] = [];
-  if (limit) {
-    query += ' LIMIT ?';
-    params.push(limit);
-  }
-  const rows = await database.getAllAsync<any>(query, params);
-  return rows.map(parseUPINotificationRow);
-};
-
-// Get only unprocessed UPI notifications (not yet added to expenses/income)
-export const getUnprocessedUPINotifications = async (): Promise<UPINotification[]> => {
-  const database = await getDatabase();
-  const rows = await database.getAllAsync<any>(
-    'SELECT * FROM upi_notifications WHERE isProcessed = 0 ORDER BY timestamp DESC'
-  );
-  return rows.map(parseUPINotificationRow);
-};
-
-// Save a new UPI notification record to the database
-export const addUPINotification = async (notification: UPINotification): Promise<void> => {
-  const database = await getDatabase();
-  await database.runAsync(
-    `INSERT INTO upi_notifications (id, appPackage, appName, transactionType, amount, message, timestamp, isProcessed, walletId)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      notification.id, notification.appPackage, notification.appName,
-      notification.transactionType, notification.amount, notification.message,
-      notification.timestamp, notification.isProcessed ? 1 : 0,
-      notification.walletId || null,
-    ]
-  );
-};
-
-// Mark a UPI notification as processed (user has added it to expenses)
-export const markUPINotificationProcessed = async (id: string): Promise<void> => {
-  const database = await getDatabase();
-  await database.runAsync(
-    'UPDATE upi_notifications SET isProcessed = 1 WHERE id = ?', [id]
-  );
-};
-
-// Convert a raw database row to a typed UPINotification object
-const parseUPINotificationRow = (row: any): UPINotification => ({
-  ...row,
-  isProcessed: row.isProcessed === 1,
-});
 
 // ==================== DATABASE RESET FUNCTIONS ====================
 
