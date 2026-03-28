@@ -15,6 +15,8 @@ import { format, parse } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Button from '../components/common/Button';
 import { formatAmountInput } from '../utils/helpers';
+import * as ImagePicker from 'expo-image-picker';
+import * as db from '../database';
 
 const AddExpenseScreen = () => {
   const { theme } = useTheme();
@@ -46,6 +48,7 @@ const AddExpenseScreen = () => {
   const [recurringFrequency, setRecurringFrequency] = useState<RecurringFrequency>('monthly'); // Recurrence interval
   const [loading, setLoading] = useState(false); // Submission loading state
   const [showDatePicker, setShowDatePicker] = useState(false); // Date picker visibility
+  const [receiptUris, setReceiptUris] = useState<string[]>([]); // Attached receipt photo URIs
   // Eagerly init wallet selection from store to prevent flash of unselected state
   const [selectedWalletId, setSelectedWalletId] = useState(() => {
     const defaultW = wallets.find(w => w.isDefault) || wallets[0];
@@ -141,9 +144,19 @@ const AddExpenseScreen = () => {
       if (expenseId) {
         // Update existing expense record
         await updateExpense(expenseId, expenseData);
+        // Save any new receipt attachments
+        for (const uri of receiptUris) {
+          await db.addReceipt({ expenseId, uri });
+        }
       } else {
         // Create new expense record
-        await addExpense(expenseData);
+        const newExpense = await addExpense(expenseData);
+        // Save receipt attachments linked to the new expense
+        if (newExpense && receiptUris.length > 0) {
+          for (const uri of receiptUris) {
+            await db.addReceipt({ expenseId: newExpense.id, uri });
+          }
+        }
       }
       navigation.goBack(); // Return to previous screen on success
     } catch (error) {
@@ -357,6 +370,43 @@ const AddExpenseScreen = () => {
               ))}
             </View>
           )}
+        </View>
+
+        {/* Receipt photo attachment section */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: theme.colors.text }]}>{t.receipts.addReceipt}</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+            {/* Thumbnail previews of attached receipt photos */}
+            {receiptUris.map((uri, idx) => (
+              <TouchableOpacity key={idx} onPress={() => setReceiptUris(receiptUris.filter((_, i) => i !== idx))}>
+                <View style={{ width: 72, height: 72, borderRadius: 10, overflow: 'hidden', backgroundColor: theme.colors.inputBackground }}>
+                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <MaterialCommunityIcons name="image" size={28} color={theme.colors.textSecondary} />
+                    <View style={{ position: 'absolute', top: 2, right: 2, backgroundColor: '#EF4444', borderRadius: 10, width: 20, height: 20, justifyContent: 'center', alignItems: 'center' }}>
+                      <MaterialCommunityIcons name="close" size={12} color="#FFF" />
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+            {/* Add photo button */}
+            <TouchableOpacity
+              style={{ width: 72, height: 72, borderRadius: 10, borderWidth: 1.5, borderStyle: 'dashed', borderColor: theme.colors.border, justifyContent: 'center', alignItems: 'center' }}
+              onPress={async () => {
+                const result = await ImagePicker.launchImageLibraryAsync({
+                  mediaTypes: ['images'],
+                  quality: 0.7,
+                  allowsMultipleSelection: true,
+                });
+                if (!result.canceled && result.assets) {
+                  setReceiptUris([...receiptUris, ...result.assets.map(a => a.uri)]);
+                }
+              }}
+              accessibilityLabel={t.receipts.addReceipt}
+            >
+              <MaterialCommunityIcons name="camera-plus" size={24} color={theme.colors.textTertiary} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Save button to submit the form */}

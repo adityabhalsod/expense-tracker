@@ -2,7 +2,7 @@
 // Provides reactive state for expenses, categories, wallets, budgets, and payment sources
 
 import { create } from 'zustand';
-import { Expense, Category, Wallet, Budget, AppSettings, Income, Transfer } from '../types';
+import { Expense, Category, Wallet, Budget, AppSettings, Income, Transfer, SavingsGoal, ExpenseTemplate } from '../types';
 import * as db from '../database';
 import { DEFAULT_SETTINGS } from '../constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,6 +20,9 @@ interface AppStore {
   budgets: Budget[]; // Budget rules
   income: Income[]; // All loaded income records
   transfers: Transfer[]; // All loaded transfer records
+  savingsGoals: SavingsGoal[]; // All savings goals
+  expenseTemplates: ExpenseTemplate[]; // All expense templates/favorites
+  streak: { currentStreak: number; longestStreak: number; totalDaysActive: number }; // Gamification data
   settings: AppSettings; // App configuration
   isLoading: boolean; // Global loading indicator
   isInitialized: boolean; // Whether initial data load is complete
@@ -67,6 +70,22 @@ interface AppStore {
   addTransfer: (transfer: Omit<Transfer, 'id' | 'createdAt'>) => Promise<Transfer>; // Create transfer
   deleteTransfer: (id: string) => Promise<void>; // Remove and reverse transfer
 
+  // Savings Goal actions
+  loadSavingsGoals: () => Promise<void>; // Fetch all savings goals
+  addSavingsGoal: (goal: Omit<SavingsGoal, 'id' | 'createdAt' | 'updatedAt'>) => Promise<SavingsGoal>; // Create goal
+  updateSavingsGoal: (id: string, updates: Partial<SavingsGoal>) => Promise<void>; // Modify goal
+  deleteSavingsGoal: (id: string) => Promise<void>; // Remove goal
+
+  // Expense Template actions
+  loadExpenseTemplates: () => Promise<void>; // Fetch all templates
+  addExpenseTemplate: (template: Omit<ExpenseTemplate, 'id' | 'usageCount' | 'createdAt'>) => Promise<ExpenseTemplate>; // Create template
+  useExpenseTemplate: (id: string) => Promise<void>; // Increment usage count
+  deleteExpenseTemplate: (id: string) => Promise<void>; // Remove template
+
+  // Streak actions
+  loadStreak: () => Promise<void>; // Fetch current streak data
+  recordActivity: () => Promise<void>; // Log today's activity for streak tracking
+
   // Settings actions
   loadSettings: () => Promise<void>; // Load app settings from storage
   updateSettings: (updates: Partial<AppSettings>) => Promise<void>; // Save settings changes
@@ -86,6 +105,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
   budgets: [],
   income: [],
   transfers: [],
+  savingsGoals: [],
+  expenseTemplates: [],
+  streak: { currentStreak: 0, longestStreak: 0, totalDaysActive: 0 },
   settings: DEFAULT_SETTINGS as AppSettings, // Start with default settings
   isLoading: true,
   isInitialized: false,
@@ -103,6 +125,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
         get().loadSettings(),
         get().loadIncome(50), // Load first 50 income records
         get().loadTransfers(50), // Load first 50 transfers
+        get().loadSavingsGoals(), // Load all savings goals
+        get().loadExpenseTemplates(), // Load all expense templates
+        get().loadStreak(), // Load gamification streak data
       ]);
       // Load budgets for current month after wallets are loaded
       const now = new Date();
@@ -126,6 +151,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => ({ expenses: [newExpense, ...state.expenses] })); // Prepend new expense
     await get().loadCurrentWallet(); // Refresh wallet balance after deduction
     await get().loadWallets(); // Refresh all wallet balances
+    // Record activity for streak tracking
+    await get().recordActivity();
     return newExpense;
   },
 
@@ -329,6 +356,82 @@ export const useAppStore = create<AppStore>((set, get) => ({
     await get().loadWallets();
   },
 
+  // ==================== SAVINGS GOAL ACTIONS ====================
+
+  // Fetch all savings goals from database
+  loadSavingsGoals: async () => {
+    const savingsGoals = await db.getAllSavingsGoals();
+    set({ savingsGoals });
+  },
+
+  // Create a new savings goal
+  addSavingsGoal: async (goal) => {
+    const newGoal = await db.addSavingsGoal(goal);
+    set((state) => ({ savingsGoals: [newGoal, ...state.savingsGoals] }));
+    return newGoal;
+  },
+
+  // Update an existing savings goal (e.g., add contribution)
+  updateSavingsGoal: async (id, updates) => {
+    await db.updateSavingsGoal(id, updates);
+    await get().loadSavingsGoals(); // Reload for consistency
+  },
+
+  // Delete a savings goal by ID
+  deleteSavingsGoal: async (id) => {
+    await db.deleteSavingsGoal(id);
+    set((state) => ({ savingsGoals: state.savingsGoals.filter((g) => g.id !== id) }));
+  },
+
+  // ==================== EXPENSE TEMPLATE ACTIONS ====================
+
+  // Fetch all templates sorted by usage
+  loadExpenseTemplates: async () => {
+    const expenseTemplates = await db.getAllExpenseTemplates();
+    set({ expenseTemplates });
+  },
+
+  // Create a new expense template/favorite
+  addExpenseTemplate: async (template) => {
+    const newTemplate = await db.addExpenseTemplate(template);
+    set((state) => ({ expenseTemplates: [newTemplate, ...state.expenseTemplates] }));
+    return newTemplate;
+  },
+
+  // Increment template usage count when used to create an expense
+  useExpenseTemplate: async (id) => {
+    await db.incrementTemplateUsage(id);
+    await get().loadExpenseTemplates(); // Reload to update sort order
+  },
+
+  // Delete an expense template by ID
+  deleteExpenseTemplate: async (id) => {
+    await db.deleteExpenseTemplate(id);
+    set((state) => ({ expenseTemplates: state.expenseTemplates.filter((t) => t.id !== id) }));
+  },
+
+  // ==================== STREAK & GAMIFICATION ACTIONS ====================
+
+  // Fetch current streak data from database
+  loadStreak: async () => {
+    const data = await db.getUserStreak();
+    set({ streak: { currentStreak: data.currentStreak, longestStreak: data.longestStreak, totalDaysActive: data.totalDaysActive } });
+  },
+
+  // Record today's activity for streak tracking and check badge milestones
+  recordActivity: async () => {
+    const today = new Date().toISOString().split('T')[0]; // Extract YYYY-MM-DD
+    const result = await db.updateUserStreak(today);
+    set({ streak: result });
+    // Award badges for streak milestones
+    const milestones = [3, 7, 14, 30, 60, 100, 365];
+    for (const days of milestones) {
+      if (result.currentStreak >= days) {
+        await db.awardBadge({ id: `streak_${days}`, name: `${days} Day Streak`, description: `Logged expenses for ${days} consecutive days`, icon: 'fire' });
+      }
+    }
+  },
+
   // Load app settings from AsyncStorage
   loadSettings: async () => {
     try {
@@ -379,6 +482,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
       budgets: [],
       income: [],
       transfers: [],
+      savingsGoals: [],
+      expenseTemplates: [],
+      streak: { currentStreak: 0, longestStreak: 0, totalDaysActive: 0 },
       settings: DEFAULT_SETTINGS as AppSettings,
     });
     // Reload seeded categories from the fresh database
@@ -395,6 +501,9 @@ export const selectWallets = (state: AppStore) => state.wallets;
 export const selectBudgets = (state: AppStore) => state.budgets;
 export const selectIncome = (state: AppStore) => state.income;
 export const selectTransfers = (state: AppStore) => state.transfers;
+export const selectSavingsGoals = (state: AppStore) => state.savingsGoals;
+export const selectExpenseTemplates = (state: AppStore) => state.expenseTemplates;
+export const selectStreak = (state: AppStore) => state.streak;
 export const selectSettings = (state: AppStore) => state.settings;
 export const selectIsLoading = (state: AppStore) => state.isLoading;
 export const selectIsInitialized = (state: AppStore) => state.isInitialized;

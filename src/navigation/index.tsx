@@ -34,6 +34,14 @@ const QuickAddScreen = React.lazy(() => import('../screens/QuickAddScreen'));
 const AddIncomeScreen = React.lazy(() => import('../screens/AddIncomeScreen'));
 const TransferScreen = React.lazy(() => import('../screens/TransferScreen'));
 const IncomeListScreen = React.lazy(() => import('../screens/IncomeListScreen'));
+// Feature screens — Phase 2
+const SavingsGoalsScreen = React.lazy(() => import('../screens/SavingsGoalsScreen'));
+const ExpenseTemplatesScreen = React.lazy(() => import('../screens/ExpenseTemplatesScreen'));
+const CalendarHeatmapScreen = React.lazy(() => import('../screens/CalendarHeatmapScreen'));
+const StreaksScreen = React.lazy(() => import('../screens/StreaksScreen'));
+const MonthlyInsightsScreen = React.lazy(() => import('../screens/MonthlyInsightsScreen'));
+const SharedWalletsScreen = React.lazy(() => import('../screens/SharedWalletsScreen'));
+const OnboardingScreen = React.lazy(() => import('../screens/OnboardingScreen'));
 
 // Minimal fallback spinner shown while a lazy screen loads
 const LazyFallback = () => (
@@ -44,11 +52,13 @@ const LazyFallback = () => (
 
 // Wrap a lazy component with Suspense for safe rendering
 const withSuspense = (Component: React.LazyExoticComponent<React.ComponentType<any>>) => {
-  return (props: any) => (
+  const SuspenseWrapper = (props: any) => (
     <Suspense fallback={<LazyFallback />}>
       <Component {...props} />
     </Suspense>
   );
+  SuspenseWrapper.displayName = 'SuspenseWrapper';
+  return SuspenseWrapper;
 };
 
 // Create typed navigators for type-safe route parameters
@@ -171,13 +181,14 @@ const TabNavigator = () => {
 };
 
 // Root stack navigator combining tabs with modal/detail screens
-const AppNavigator = () => {
+const AppNavigator = ({ initialRoute = 'MainTabs' }: { initialRoute?: string }) => {
   const { theme } = useTheme();
   const { t } = useLanguage();
 
   return (
     <NavigationContainer linking={linking}>
       <Stack.Navigator
+        initialRouteName={initialRoute as any}
         screenOptions={{
           headerStyle: {
             backgroundColor: theme.colors.surface, // Theme-aware header background
@@ -221,6 +232,20 @@ const AppNavigator = () => {
         <Stack.Screen name="IncomeList" component={withSuspense(IncomeListScreen)} options={{ title: t.income.listTitle }} />
         {/* Wallet-to-wallet transfer */}
         <Stack.Screen name="Transfer" component={withSuspense(TransferScreen)} options={{ title: t.transfer.title }} />
+        {/* Savings Goals tracker */}
+        <Stack.Screen name="SavingsGoals" component={withSuspense(SavingsGoalsScreen)} options={{ title: t.savingsGoals.title }} />
+        {/* Expense Templates / Favorites */}
+        <Stack.Screen name="ExpenseTemplates" component={withSuspense(ExpenseTemplatesScreen)} options={{ title: t.templates.title }} />
+        {/* Calendar Heatmap View */}
+        <Stack.Screen name="CalendarHeatmap" component={withSuspense(CalendarHeatmapScreen)} options={{ title: t.calendarHeatmap.title }} />
+        {/* Streaks & Gamification */}
+        <Stack.Screen name="Streaks" component={withSuspense(StreaksScreen)} options={{ title: t.streaks.title }} />
+        {/* Smart Monthly Insights */}
+        <Stack.Screen name="MonthlyInsights" component={withSuspense(MonthlyInsightsScreen)} options={{ title: t.insights.title }} />
+        {/* Family / Shared Wallets */}
+        <Stack.Screen name="SharedWallets" component={withSuspense(SharedWalletsScreen)} options={{ title: t.sharedWallets.title }} />
+        {/* Onboarding walkthrough — headerless full-screen */}
+        <Stack.Screen name="Onboarding" component={withSuspense(OnboardingScreen)} options={{ headerShown: false }} />
         {/*
             QuickAdd — transparent modal launched from the widget deep link.
             presentation='transparentModal' lets the dimmed backdrop show the screen behind.

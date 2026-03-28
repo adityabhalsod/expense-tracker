@@ -317,6 +317,61 @@ const HomeScreen = () => {
             </View>
             <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.tabs.wallet}</Text>
           </TouchableOpacity>
+
+          {/* Savings Goals button */}
+          <TouchableOpacity
+            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+            onPress={() => navigation.navigate('SavingsGoals')}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#D1FAE5' }]}>
+              <MaterialCommunityIcons name="piggy-bank" size={24} color="#10B981" />
+            </View>
+            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.savingsGoals.title}</Text>
+          </TouchableOpacity>
+
+          {/* Templates button */}
+          <TouchableOpacity
+            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+            onPress={() => navigation.navigate('ExpenseTemplates')}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#EDE9FE' }]}>
+              <MaterialCommunityIcons name="lightning-bolt" size={24} color="#8B5CF6" />
+            </View>
+            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.templates.title}</Text>
+          </TouchableOpacity>
+
+          {/* Calendar Heatmap button */}
+          <TouchableOpacity
+            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+            onPress={() => navigation.navigate('CalendarHeatmap')}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#CFFAFE' }]}>
+              <MaterialCommunityIcons name="calendar-month" size={24} color="#06B6D4" />
+            </View>
+            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.calendarHeatmap.title}</Text>
+          </TouchableOpacity>
+
+          {/* Streaks button */}
+          <TouchableOpacity
+            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+            onPress={() => navigation.navigate('Streaks')}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#FEF3C7' }]}>
+              <MaterialCommunityIcons name="fire" size={24} color="#F59E0B" />
+            </View>
+            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.streaks.title}</Text>
+          </TouchableOpacity>
+
+          {/* Insights button */}
+          <TouchableOpacity
+            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+            onPress={() => navigation.navigate('MonthlyInsights')}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#DBEAFE' }]}>
+              <MaterialCommunityIcons name="lightbulb-on" size={24} color="#3B82F6" />
+            </View>
+            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.insights.title}</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Net savings summary card for current month */}
@@ -401,10 +456,7 @@ const HomeScreen = () => {
                   }
                 }}
               >
-                <Card style={[
-                  styles.expenseCard,
-                  isSelected && { backgroundColor: theme.colors.primary + '10', borderColor: theme.colors.primary, borderWidth: 1 },
-                ]}>
+                <Card style={{ ...styles.expenseCard, ...(isSelected ? { backgroundColor: theme.colors.primary + '10', borderColor: theme.colors.primary, borderWidth: 1 } : {}) }}>
                   <View style={styles.expenseRow}>
                     {/* Checkbox shown only in multi-select mode */}
                     {isSelectMode && (

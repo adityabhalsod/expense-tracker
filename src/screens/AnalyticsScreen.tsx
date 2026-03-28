@@ -41,6 +41,7 @@ const AnalyticsScreen = () => {
   const [categoryData, setCategoryData] = useState<any[]>([]); // Category breakdown data
   const [dailyData, setDailyData] = useState<any[]>([]); // Daily trend data
   const [expenseCount, setExpenseCount] = useState(0); // Number of transactions
+  const [totalIncome, setTotalIncome] = useState(0); // Total income in period
 
   // Fetch all analytics data from the database for the selected period
   const loadAnalytics = useCallback(async () => {
@@ -49,13 +50,15 @@ const AnalyticsScreen = () => {
       const { start, end } = getDateRange(timeRange); // Calculate date boundaries
 
       // Fetch total expenses and category breakdown in parallel
-      const [total, catTotals, dailyTotals] = await Promise.all([
+      const [total, catTotals, dailyTotals, income] = await Promise.all([
         db.getTotalExpenses(start, end),
         db.getCategoryTotals(start, end),
         db.getDailyTotals(start, end),
+        db.getTotalIncome(start, end),
       ]);
 
       setTotalExpenses(total);
+      setTotalIncome(income);
       setExpenseCount(catTotals.reduce((sum, c) => sum + c.count, 0)); // Sum transaction counts
 
       // Map category totals with colors and icons from the categories list
@@ -251,6 +254,38 @@ const AnalyticsScreen = () => {
               </Card>
             )}
 
+            {/* Income vs Expense comparison card — data viz upgrade */}
+            {(totalExpenses > 0 || totalIncome > 0) && (
+              <Card style={styles.chartCard}>
+                <Text style={[styles.chartTitle, { color: theme.colors.text }]}>{t.dataViz?.incomeVsExpense || 'Income vs Expense'}</Text>
+                <View style={styles.comparisonRow}>
+                  {/* Income bar */}
+                  <View style={styles.comparisonItem}>
+                    <Text style={[styles.comparisonLabel, { color: theme.colors.textSecondary }]}>{t.dataViz.income}</Text>
+                    <View style={[styles.comparisonBar, { backgroundColor: '#D1FAE5' }]}>
+                      <View style={[styles.comparisonFill, { backgroundColor: '#10B981', width: `${totalIncome > 0 ? Math.min((totalIncome / Math.max(totalIncome, totalExpenses)) * 100, 100) : 0}%` }]} />
+                    </View>
+                    <Text style={[styles.comparisonAmount, { color: '#10B981' }]}>{formatCurrency(totalIncome)}</Text>
+                  </View>
+                  {/* Expense bar */}
+                  <View style={styles.comparisonItem}>
+                    <Text style={[styles.comparisonLabel, { color: theme.colors.textSecondary }]}>{t.dataViz.expense}</Text>
+                    <View style={[styles.comparisonBar, { backgroundColor: '#FEE2E2' }]}>
+                      <View style={[styles.comparisonFill, { backgroundColor: '#EF4444', width: `${totalExpenses > 0 ? Math.min((totalExpenses / Math.max(totalIncome, totalExpenses)) * 100, 100) : 0}%` }]} />
+                    </View>
+                    <Text style={[styles.comparisonAmount, { color: '#EF4444' }]}>{formatCurrency(totalExpenses)}</Text>
+                  </View>
+                  {/* Savings rate */}
+                  <View style={styles.savingsRateRow}>
+                    <MaterialCommunityIcons name="piggy-bank" size={18} color={totalIncome > totalExpenses ? '#10B981' : '#EF4444'} />
+                    <Text style={[styles.savingsRateText, { color: totalIncome > totalExpenses ? '#10B981' : '#EF4444' }]}>
+                      {totalIncome > 0 ? `${(((totalIncome - totalExpenses) / totalIncome) * 100).toFixed(0)}% ${t.dataViz.savingsRate}` : t.dataViz.noIncome}
+                    </Text>
+                  </View>
+                </View>
+              </Card>
+            )}
+
             {/* Category breakdown list with percentages */}
             {categoryData.length > 0 && (
               <Card style={styles.chartCard}>
@@ -361,6 +396,14 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingVertical: 40 },
   emptyText: { fontSize: 16, fontWeight: '600', marginTop: 16 },
   emptySubtext: { fontSize: 13, marginTop: 4 },
+  comparisonRow: { gap: 12 },
+  comparisonItem: { gap: 4 },
+  comparisonLabel: { fontSize: 13, fontWeight: '600' },
+  comparisonBar: { height: 12, borderRadius: 6, overflow: 'hidden' },
+  comparisonFill: { height: '100%', borderRadius: 6 },
+  comparisonAmount: { fontSize: 15, fontWeight: '700' },
+  savingsRateRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  savingsRateText: { fontSize: 13, fontWeight: '600' },
 });
 
 export default AnalyticsScreen;

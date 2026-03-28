@@ -92,6 +92,87 @@ export interface Transfer {
   createdAt: string; // Timestamp of record creation
 }
 
+// Receipt / photo attachment linked to an expense
+export interface Receipt {
+  id: string; // Unique identifier for the receipt
+  expenseId: string; // Parent expense this receipt belongs to
+  uri: string; // Local file URI to the saved image
+  thumbnailUri?: string; // Optional smaller thumbnail version
+  createdAt: string; // When the receipt was captured/attached
+}
+
+// Savings goal for tracking progress toward a financial target
+export interface SavingsGoal {
+  id: string; // Unique identifier for the goal
+  name: string; // Goal display name (e.g., "Emergency Fund")
+  targetAmount: number; // Target savings amount to reach
+  currentAmount: number; // Amount saved so far
+  deadline?: string; // Optional deadline date in ISO format
+  icon: string; // MaterialCommunityIcons icon name
+  color: string; // Hex color for visual identity
+  createdAt: string; // Timestamp of goal creation
+  updatedAt: string; // Timestamp of last modification
+}
+
+// Expense template for quick reuse of frequent transactions
+export interface ExpenseTemplate {
+  id: string; // Unique identifier for the template
+  name: string; // Template display name (e.g., "Morning Coffee")
+  amount: number; // Default amount for this template
+  category: string; // Default category name
+  notes?: string; // Optional default notes
+  walletId?: string; // Default wallet to deduct from
+  icon: string; // MaterialCommunityIcons icon name
+  color: string; // Hex color for visual identity
+  usageCount: number; // Number of times this template was used
+  createdAt: string; // Timestamp of template creation
+}
+
+// User streak data for gamification tracking
+export interface UserStreak {
+  currentStreak: number; // Current consecutive days with logged activity
+  longestStreak: number; // All-time longest streak
+  lastActiveDate: string; // ISO date of last logged expense/income
+  totalDaysActive: number; // Total days with at least one transaction
+  badges: Badge[]; // Earned badges/achievements
+}
+
+// Achievement badge for the gamification system
+export interface Badge {
+  id: string; // Unique badge identifier (e.g., "streak_7")
+  name: string; // Display name of the badge
+  description: string; // How to earn this badge
+  icon: string; // MaterialCommunityIcons icon name
+  earnedAt?: string | null; // ISO date when badge was earned (undefined/null = locked)
+}
+
+// Smart monthly insight generated from spending analysis
+export interface MonthlyInsight {
+  type: 'spending_up' | 'spending_down' | 'category_spike' | 'savings_positive' | 'savings_negative' | 'new_high' | 'streak' | 'warning' | 'positive' | 'info'; // Type of insight
+  title: string; // Short headline for the insight
+  description: string; // Detailed explanation of the insight
+  icon: string; // MaterialCommunityIcons icon name for display
+  color: string; // Accent color for the insight card
+  value?: number; // Optional numeric value (e.g., percentage change)
+}
+
+// Shared wallet member for family/multi-user wallet support
+export interface SharedWalletMember {
+  id: string; // Unique member identifier
+  name: string; // Member display name
+  avatar?: string; // Optional avatar URI or icon name
+  role: 'owner' | 'editor' | 'viewer' | 'admin' | 'member'; // Permission level for wallet access
+}
+
+// Onboarding step configuration for the walkthrough flow
+export interface OnboardingStep {
+  id: string; // Step identifier
+  title: string; // Step headline
+  description: string; // Step explanation text
+  image: string; // MaterialCommunityIcons name for illustration
+  color: string; // Background accent color
+}
+
 // Frequency options for recurring expenses
 export type RecurringFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly';
 
@@ -173,6 +254,13 @@ export type RootStackParamList = {
   AddIncome: { incomeId?: string }; // Add or edit income form
   IncomeList: undefined; // Full income list view
   Transfer: undefined; // Wallet-to-wallet transfer form
+  MonthlyInsights: undefined; // Smart monthly insights screen
+  SavingsGoals: undefined; // Savings goals management screen
+  ExpenseTemplates: undefined; // Expense templates/favorites screen
+  CalendarHeatmap: undefined; // Calendar heatmap view screen
+  Streaks: undefined; // Streaks & gamification screen
+  SharedWallets: undefined; // Family / shared wallets screen
+  Onboarding: undefined; // Onboarding walkthrough (first launch)
 };
 
 // Bottom tab navigator parameter types
