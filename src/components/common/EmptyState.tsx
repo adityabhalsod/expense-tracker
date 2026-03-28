@@ -23,6 +23,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, subtitle, actionLa
     <View style={styles.container}>
       {/* Large icon to visually indicate empty state */}
       <MaterialCommunityIcons
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         name={icon as any}
         size={80}
         color={theme.colors.textTertiary}

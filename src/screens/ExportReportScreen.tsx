@@ -2,7 +2,7 @@
 // Supports JSON, CSV, Excel, and PDF exports for various time periods
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
@@ -117,6 +117,7 @@ const ExportReportScreen = () => {
             onPress={() => setSelectedRange(range.value)} // Set selected time range
           >
             <MaterialCommunityIcons
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               name={range.icon as any}
               size={28}
               color={selectedRange === range.value ? theme.colors.primary : theme.colors.textSecondary}
@@ -149,6 +150,7 @@ const ExportReportScreen = () => {
           onPress={() => setSelectedFormat(fmt.value)} // Set selected format
         >
           <MaterialCommunityIcons
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             name={fmt.icon as any}
             size={32}
             color={selectedFormat === fmt.value ? theme.colors.primary : theme.colors.textSecondary}

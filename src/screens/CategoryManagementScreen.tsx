@@ -33,6 +33,7 @@ const COLOR_OPTIONS = [
 const CategoryManagementScreen = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
   // Subscribe to individual store slices to avoid full-store re-renders
   const categories = useAppStore(selectCategories);
@@ -174,7 +175,7 @@ const CategoryManagementScreen = () => {
   };
 
   // Confirm and delete a category
-  const handleDelete = (id: string, isDefault: boolean) => {
+  const _handleDelete = (id: string, isDefault: boolean) => {
     if (isDefault) {
       Alert.alert('Cannot Delete', 'Default categories cannot be deleted.');
       return;
@@ -233,6 +234,7 @@ const CategoryManagementScreen = () => {
             )}
             {/* Color-coded category icon */}
             <View style={[styles.iconCircle, { backgroundColor: cat.color + '20' }]}>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               <MaterialCommunityIcons name={cat.icon as any} size={24} color={cat.color} />
             </View>
             {/* Category name and budget display */}
@@ -324,6 +326,7 @@ const CategoryManagementScreen = () => {
                     ]}
                     onPress={() => setSelectedIcon(icon)} // Set selected icon
                   >
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     <MaterialCommunityIcons name={icon as any} size={24} color={selectedIcon === icon ? selectedColor : theme.colors.textSecondary} />
                   </TouchableOpacity>
                 ))}

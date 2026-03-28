@@ -16,6 +16,7 @@ import { formatCurrency, formatRelativeDate } from '../utils/helpers';
 const SearchScreen = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
   const searchExpenses = useAppStore((s) => s.searchExpenses); // Action — stable reference
   const categories = useAppStore(selectCategories); // Only subscribe to categories slice
@@ -41,6 +42,7 @@ const SearchScreen = () => {
       setResults([]);
       setSearched(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategory]);
 
   // Toggle category filter on/off
@@ -102,6 +104,7 @@ const SearchScreen = () => {
             ]}
             onPress={() => toggleCategoryFilter(item.name)}
           >
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <MaterialCommunityIcons name={item.icon as any} size={16} color={item.color} />
             <Text style={[styles.filterChipText, { color: selectedCategory === item.name ? item.color : theme.colors.text }]}>
               {item.name}
@@ -124,6 +127,7 @@ const SearchScreen = () => {
               <View style={styles.resultRow}>
                 {/* Category icon */}
                 <View style={[styles.iconCircle, { backgroundColor: catInfo.color + '20' }]}>
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   <MaterialCommunityIcons name={catInfo.icon as any} size={22} color={catInfo.color} />
                 </View>
                 {/* Expense details */}

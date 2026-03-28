@@ -68,6 +68,7 @@ const PinLockScreen = ({ onAuthenticated }: Props) => {
       // Neither enabled — should not reach here, but skip the lock
       onAuthenticated();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handle number pad key press

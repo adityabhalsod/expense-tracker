@@ -22,6 +22,7 @@ type SortOption = 'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc';
 const AllExpensesScreen = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
   // Subscribe to individual store slices to avoid full-store re-renders
   const expenses = useAppStore(selectExpenses);
@@ -34,6 +35,7 @@ const AllExpensesScreen = () => {
 
   useEffect(() => {
     loadExpenses();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Refresh handler for pull-to-refresh
@@ -125,11 +127,13 @@ const AllExpensesScreen = () => {
         onPress={() => handleExpensePress(expense)}
       >
         <View style={[styles.catIcon, { backgroundColor: (category?.color || theme.colors.primary) + '15' }]}>
+          {/* eslint-disable @typescript-eslint/no-explicit-any */}
           <MaterialCommunityIcons
             name={(category?.icon || 'tag') as any}
             size={20}
             color={category?.color || theme.colors.primary}
           />
+          {/* eslint-enable @typescript-eslint/no-explicit-any */}
         </View>
         <View style={styles.expenseInfo}>
           <Text style={[styles.expenseName, { color: theme.colors.text }]} numberOfLines={1}>

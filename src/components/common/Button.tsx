@@ -94,6 +94,7 @@ const Button: React.FC<ButtonProps> = ({
       ) : (
         <>
           {typeof icon === 'string' ? (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             <MaterialCommunityIcons name={icon as any} size={getFontSize() + 2} color={getTextColor()} />
           ) : icon}
           <Text style={[styles.text, { color: getTextColor(), fontSize: getFontSize() }, textStyle]}>

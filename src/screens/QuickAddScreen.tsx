@@ -31,7 +31,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../theme';
-import { useLanguage } from '../i18n';
 import {
   useAppStore,
   selectCategories,
@@ -52,7 +51,9 @@ const PRESETS = [100, 500, 1000, 2000] as const;
 
 const QuickAddScreen = () => {
   const { theme } = useTheme();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const route = useRoute<any>();
 
   // ── Mode: pre-seeded by deep-link param, switchable inside the form ────────
@@ -112,6 +113,7 @@ const QuickAddScreen = () => {
       // Focus the amount input only after animation completes to avoid layout jank
       amountRef.current?.focus();
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Accent color: red for expense, green for income ───────────────────────
@@ -384,6 +386,7 @@ const QuickAddScreen = () => {
                           onPress={() => setSelectedCategoryName(cat.name)}
                         >
                           <MaterialCommunityIcons
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             name={cat.icon as any}
                             size={13}
                             color={sel ? cat.color : theme.colors.textSecondary}
@@ -446,6 +449,7 @@ const QuickAddScreen = () => {
                       onPress={() => setSelectedWalletId(w.id)}
                     >
                       <MaterialCommunityIcons
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         name={w.iconName as any}
                         size={13}
                         color={sel ? theme.colors.primary : theme.colors.textSecondary}

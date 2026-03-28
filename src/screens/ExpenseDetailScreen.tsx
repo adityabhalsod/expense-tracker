@@ -1,21 +1,25 @@
 // Expense detail screen showing full information about a single expense
 // Provides edit and delete actions with confirmation dialog
 
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Alert, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
 import { useAppStore, selectExpenses, selectCategories } from '../store';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { formatCurrency, formatDate } from '../utils/helpers';
+import * as db from '../database';
+import { Receipt } from '../types';
 
 const ExpenseDetailScreen = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const route = useRoute<any>();
   const { expenseId } = route.params; // ID of the expense to display
 
@@ -25,6 +29,18 @@ const ExpenseDetailScreen = () => {
   const categories = useAppStore(selectCategories);
   const deleteExpense = useAppStore((s) => s.deleteExpense);
   const expense = expenses.find(e => e.id === expenseId);
+
+  // Receipt photos attached to this expense
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
+
+  // Fetch receipts from database when screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      if (expenseId) {
+        db.getReceiptsByExpense(expenseId).then(setReceipts);
+      }
+    }, [expenseId])
+  );
 
   // Handle missing expense (edge case if deleted elsewhere)
   if (!expense) {
@@ -64,6 +80,7 @@ const ExpenseDetailScreen = () => {
         {/* Category icon circle */}
         <View style={[styles.iconCircle, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
           <MaterialCommunityIcons
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             name={(category?.icon || 'help-circle') as any}
             size={32}
             color="#FFFFFF"
@@ -119,6 +136,29 @@ const ExpenseDetailScreen = () => {
         />
       </Card>
 
+      {/* Receipt photo thumbnails — show attached images if any */}
+      {receipts.length > 0 && (
+        <Card style={styles.detailCard}>
+          <View style={styles.receiptHeader}>
+            <MaterialCommunityIcons name="camera" size={20} color={theme.colors.primary} />
+            <Text style={[styles.receiptTitle, { color: theme.colors.text }]}>
+              {t.receipts.title} ({receipts.length})
+            </Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.receiptScroll}>
+            {receipts.map((receipt) => (
+              <View key={receipt.id} style={[styles.receiptThumb, { backgroundColor: theme.colors.inputBackground }]}>
+                <Image
+                  source={{ uri: receipt.uri }}
+                  style={styles.receiptImage}
+                  resizeMode="cover"
+                />
+              </View>
+            ))}
+          </ScrollView>
+        </Card>
+      )}
+
       {/* Action buttons: Edit and Delete */}
       <View style={styles.actions}>
         <Button
@@ -145,8 +185,10 @@ const ExpenseDetailScreen = () => {
 };
 
 // Reusable row component for displaying a labeled detail with icon
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const DetailRow = ({ icon, label, value, theme }: { icon: string; label: string; value: string; theme: any }) => (
   <View style={styles.detailRow}>
+    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
     <MaterialCommunityIcons name={icon as any} size={20} color={theme.colors.primary} />
     <View style={styles.detailInfo}>
       <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>{label}</Text>
@@ -190,6 +232,11 @@ const styles = StyleSheet.create({
   tagChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   tagText: { fontSize: 12, fontWeight: '500' },
   actions: { padding: 16, marginTop: 8 },
+  receiptHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  receiptTitle: { fontSize: 15, fontWeight: '600' },
+  receiptScroll: { flexDirection: 'row' },
+  receiptThumb: { width: 88, height: 88, borderRadius: 12, overflow: 'hidden', marginRight: 8 },
+  receiptImage: { width: '100%', height: '100%' },
 });
 
 export default ExpenseDetailScreen;

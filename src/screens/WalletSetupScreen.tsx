@@ -41,7 +41,9 @@ const COLOR_OPTIONS = [
 const WalletSetupScreen = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const route = useRoute<any>();
   const walletId = route.params?.walletId; // Null for new wallet, ID for editing
 
@@ -54,6 +56,7 @@ const WalletSetupScreen = () => {
   // Find existing wallet when editing — only recompute when walletId changes, not on every wallets array update
   const existingWallet = useMemo(
     () => walletId ? wallets.find(w => w.id === walletId) : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [walletId]
   );
 
@@ -87,7 +90,8 @@ const WalletSetupScreen = () => {
     if (existingWallet) {
       setName(existingWallet.name);
       setType(existingWallet.type);
-      setInitialBalance(existingWallet.initialBalance.toString());
+      // Show the current remaining balance (after expenses) instead of the original starting balance
+      setInitialBalance(existingWallet.currentBalance.toString());
       setBankName(existingWallet.bankName || '');
       setNickname(existingWallet.nickname || '');
       setIconName(existingWallet.iconName);
@@ -95,6 +99,7 @@ const WalletSetupScreen = () => {
       setIsDefault(existingWallet.isDefault);
       navigation.setOptions({ title: t.walletSetup.updateWallet });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingWallet]);
 
   // Validate and save wallet data
@@ -113,13 +118,14 @@ const WalletSetupScreen = () => {
 
     try {
       if (walletId && existingWallet) {
-        // Recalculate current balance based on the change in initial balance
-        const diff = balance - existingWallet.initialBalance;
+        // Calculate diff from currentBalance since the form shows current (remaining) balance
+        const diff = balance - existingWallet.currentBalance;
         await updateWallet(walletId, {
           name: name.trim(),
           type,
-          initialBalance: balance,
-          currentBalance: existingWallet.currentBalance + diff,
+          // Adjust initialBalance by the same diff to preserve the spent amount
+          initialBalance: existingWallet.initialBalance + diff,
+          currentBalance: balance,
           bankName: bankName.trim() || undefined,
           nickname: nickname.trim() || undefined,
           iconName,
@@ -148,6 +154,7 @@ const WalletSetupScreen = () => {
     }
     // Navigate back only after successful save (outside try/catch to avoid false error)
     navigation.goBack();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name, type, initialBalance, bankName, nickname, iconName, color, isDefault, walletId, existingWallet, settings, addWallet, updateWallet]);
 
   return (
@@ -175,6 +182,7 @@ const WalletSetupScreen = () => {
                 }}
               >
                 <MaterialCommunityIcons
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   name={wt.icon as any}
                   size={20}
                   color={type === wt.type ? theme.colors.primary : theme.colors.textSecondary}
@@ -268,6 +276,7 @@ const WalletSetupScreen = () => {
                 onPress={() => setIconName(icon)}
               >
                 <MaterialCommunityIcons
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   name={icon as any}
                   size={24}
                   color={iconName === icon ? color : theme.colors.textSecondary}

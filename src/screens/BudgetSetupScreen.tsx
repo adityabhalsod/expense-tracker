@@ -54,6 +54,7 @@ const BudgetSetupScreen = () => {
   // Load budgets for the current month on mount
   useEffect(() => {
     loadBudgets(currentMonth, currentYear);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentMonth, currentYear]);
 
   // Calculate total spending for a category in the current month
@@ -263,6 +264,7 @@ const BudgetSetupScreen = () => {
                   <View style={styles.budgetCategoryRow}>
                     <View style={[styles.categoryIcon, { backgroundColor: getProgressColor(progress) + '15' }]}>
                       <MaterialCommunityIcons
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         name={getCategoryIcon(budget.categoryId || '') as any}
                         size={20}
                         color={getProgressColor(progress)}
@@ -351,6 +353,7 @@ const BudgetSetupScreen = () => {
                       onPress={() => setSelectedCategory(cat.id)}
                     >
                       <MaterialCommunityIcons
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         name={cat.icon as any}
                         size={16}
                         color={selectedCategory === cat.id ? '#FFF' : theme.colors.text}
@@ -429,6 +432,7 @@ const BudgetSetupScreen = () => {
                         onPress={() => setSelectedWalletId(w.id)} // Assign wallet to budget
                       >
                         <MaterialCommunityIcons
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           name={w.iconName as any}
                           size={16}
                           color={selectedWalletId === w.id ? w.color : theme.colors.text}

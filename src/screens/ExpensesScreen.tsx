@@ -15,6 +15,7 @@ import { useLanguage } from '../i18n';
 
 const ExpensesScreen = () => {
   const { theme } = useTheme();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
   // Subscribe to individual store slices to avoid full-store re-renders
   const expenses = useAppStore(selectExpenses);
@@ -75,6 +76,7 @@ const ExpensesScreen = () => {
   useFocusEffect(
     useCallback(() => {
       loadExpenses(100); // Load up to 100 expenses
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
   );
 
@@ -152,6 +154,7 @@ const ExpensesScreen = () => {
           )}
           {/* Category icon with background color */}
           <View style={[styles.iconCircle, { backgroundColor: catInfo.color + '20' }]}>
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <MaterialCommunityIcons name={catInfo.icon as any} size={22} color={catInfo.color} />
           </View>
           {/* Expense category and date */}

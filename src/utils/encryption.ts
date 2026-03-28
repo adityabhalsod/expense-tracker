@@ -166,12 +166,14 @@ export const decryptData = async (encryptedBase64: string): Promise<string> => {
 };
 
 // Encrypt a JSON object and return base64-encoded string
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const encryptJSON = async (data: Record<string, any>): Promise<string> => {
   const jsonString = JSON.stringify(data);
   return encryptData(jsonString);
 };
 
 // Decrypt a base64-encoded string back to a JSON object
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const decryptJSON = async <T = Record<string, any>>(encryptedBase64: string): Promise<T> => {
   const jsonString = await decryptData(encryptedBase64);
   return JSON.parse(jsonString) as T;

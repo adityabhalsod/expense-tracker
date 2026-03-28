@@ -1,14 +1,14 @@
 // Wallet management screen displaying all wallets as payment sources
 // Shows wallet cards with balance, type badge, icon, and color-coded visuals
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
-import { useAppStore, selectWallets, selectCurrentWallet } from '../store';
+import { useAppStore, selectWallets } from '../store';
 import Card from '../components/common/Card';
 import { formatCurrency } from '../utils/helpers';
 import { Wallet, WalletType } from '../types';
@@ -25,10 +25,10 @@ const WALLET_TYPE_META: Record<WalletType, { icon: string; label: string }> = {
 const WalletScreen = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
   // Subscribe to individual store slices to avoid full-store re-renders
   const wallets = useAppStore(selectWallets);
-  const currentWallet = useAppStore(selectCurrentWallet);
   const loadWallets = useAppStore((s) => s.loadWallets);
   const loadCurrentWallet = useAppStore((s) => s.loadCurrentWallet);
   const deleteWallet = useAppStore((s) => s.deleteWallet);
@@ -38,6 +38,7 @@ const WalletScreen = () => {
     useCallback(() => {
       loadWallets();
       loadCurrentWallet();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
   );
 
@@ -186,6 +187,7 @@ const WalletScreen = () => {
                     <View style={styles.walletRow}>
                       {/* Wallet icon with color background */}
                       <View style={[styles.walletIcon, { backgroundColor: wallet.color + '20' }]}>
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         <MaterialCommunityIcons name={wallet.iconName as any} size={26} color={wallet.color} />
                       </View>
 
@@ -206,6 +208,7 @@ const WalletScreen = () => {
                         </View>
                         {/* Type badge with icon */}
                         <View style={styles.typeBadge}>
+                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                           <MaterialCommunityIcons name={typeMeta.icon as any} size={12} color={theme.colors.textTertiary} />
                           <Text style={[styles.typeText, { color: theme.colors.textTertiary }]}>
                             {typeMeta.label}

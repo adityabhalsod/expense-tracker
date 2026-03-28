@@ -1,5 +1,4 @@
 // Theme context provider enabling light/dark mode switching across the app
-// Wraps the entire app to provide theme values via React Context
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
@@ -59,7 +58,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Memoize context value to prevent unnecessary re-renders
   const value = useMemo(
-    () => ({ theme, isDark, themeMode, setThemeMode: handleSetThemeMode }),
+    () => ({
+      theme,
+      isDark,
+      themeMode,
+      setThemeMode: handleSetThemeMode,
+    }),
     [theme, isDark, themeMode]
   );
 

@@ -1,7 +1,7 @@
 // Utility functions for formatting, date calculations, and data transformations
 
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subDays, subMonths } from 'date-fns';
-import { TimeRange, Currency } from '../types';
+import { TimeRange } from '../types';
 import { CURRENCIES } from '../constants';
 
 // Format a number as currency string with the appropriate symbol

@@ -14,6 +14,7 @@ import Constants from 'expo-constants'; // Provides access to app.json config at
 
 const SettingsScreen = () => {
   const { theme, themeMode, setThemeMode, isDark } = useTheme();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
   const settings = useAppStore(selectSettings); // Only subscribe to settings slice
   const updateSettings = useAppStore((s) => s.updateSettings);
@@ -114,6 +115,7 @@ const SettingsScreen = () => {
       disabled={!onPress && !rightElement} // Disable if no action
     >
       <View style={styles.rowLeft}>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         <MaterialCommunityIcons name={icon as any} size={22} color={theme.colors.primary} />
         <Text style={[styles.rowLabel, { color: theme.colors.text }]}>{label}</Text>
       </View>

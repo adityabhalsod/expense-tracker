@@ -32,7 +32,7 @@ const CloudBackupScreen = () => {
         'Backup Complete',
         `Your data has been backed up successfully.\n\nExpenses: ${data.expenses.length}\nCategories: ${data.categories.length}\nWallets: ${data.wallets.length}\nBudgets: ${data.budgets.length}\n\nTimestamp: ${new Date(timestamp).toLocaleString()}`,
       );
-    } catch (error) {
+    } catch {
       Alert.alert('Backup Failed', 'An error occurred while backing up your data. Please try again.');
     } finally {
       setIsBackingUp(false);
