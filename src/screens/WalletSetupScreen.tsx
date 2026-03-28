@@ -87,7 +87,8 @@ const WalletSetupScreen = () => {
     if (existingWallet) {
       setName(existingWallet.name);
       setType(existingWallet.type);
-      setInitialBalance(existingWallet.initialBalance.toString());
+      // Show the current remaining balance (after expenses) instead of the original starting balance
+      setInitialBalance(existingWallet.currentBalance.toString());
       setBankName(existingWallet.bankName || '');
       setNickname(existingWallet.nickname || '');
       setIconName(existingWallet.iconName);
@@ -113,13 +114,14 @@ const WalletSetupScreen = () => {
 
     try {
       if (walletId && existingWallet) {
-        // Recalculate current balance based on the change in initial balance
-        const diff = balance - existingWallet.initialBalance;
+        // Calculate diff from currentBalance since the form shows current (remaining) balance
+        const diff = balance - existingWallet.currentBalance;
         await updateWallet(walletId, {
           name: name.trim(),
           type,
-          initialBalance: balance,
-          currentBalance: existingWallet.currentBalance + diff,
+          // Adjust initialBalance by the same diff to preserve the spent amount
+          initialBalance: existingWallet.initialBalance + diff,
+          currentBalance: balance,
           bankName: bankName.trim() || undefined,
           nickname: nickname.trim() || undefined,
           iconName,
