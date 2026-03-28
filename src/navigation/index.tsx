@@ -30,6 +30,10 @@ const BudgetSetupScreen = React.lazy(() => import('../screens/BudgetSetupScreen'
 const AllExpensesScreen = React.lazy(() => import('../screens/AllExpensesScreen'));
 // QuickAdd is lazy-loaded — only needed when app is opened via widget deep link
 const QuickAddScreen = React.lazy(() => import('../screens/QuickAddScreen'));
+// Income and transfer screens
+const AddIncomeScreen = React.lazy(() => import('../screens/AddIncomeScreen'));
+const TransferScreen = React.lazy(() => import('../screens/TransferScreen'));
+const IncomeListScreen = React.lazy(() => import('../screens/IncomeListScreen'));
 
 // Minimal fallback spinner shown while a lazy screen loads
 const LazyFallback = () => (
@@ -211,6 +215,12 @@ const AppNavigator = () => {
         <Stack.Screen name="BudgetSetup" component={withSuspense(BudgetSetupScreen)} options={{ title: t.budget.title }} />
         {/* All expenses view with full list */}
         <Stack.Screen name="AllExpenses" component={withSuspense(AllExpensesScreen)} options={{ title: t.allExpenses.title }} />
+        {/* Add/Edit income form */}
+        <Stack.Screen name="AddIncome" component={withSuspense(AddIncomeScreen)} options={{ title: t.income.title }} />
+        {/* Income history list */}
+        <Stack.Screen name="IncomeList" component={withSuspense(IncomeListScreen)} options={{ title: t.income.listTitle }} />
+        {/* Wallet-to-wallet transfer */}
+        <Stack.Screen name="Transfer" component={withSuspense(TransferScreen)} options={{ title: t.transfer.title }} />
         {/*
             QuickAdd — transparent modal launched from the widget deep link.
             presentation='transparentModal' lets the dimmed backdrop show the screen behind.

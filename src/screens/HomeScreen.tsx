@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme';
-import { useAppStore, selectExpenses, selectCurrentWallet, selectWallets, selectCategories, selectIsLoading } from '../store';
+import { useAppStore, selectExpenses, selectCurrentWallet, selectWallets, selectCategories, selectIsLoading, selectIncome } from '../store';
 import Card from '../components/common/Card';
 import { formatCurrency, formatRelativeDate } from '../utils/helpers';
 import { useLanguage } from '../i18n';
@@ -26,11 +26,13 @@ const HomeScreen = () => {
   const wallets = useAppStore(selectWallets);
   const categories = useAppStore(selectCategories);
   const isLoading = useAppStore(selectIsLoading);
+  const income = useAppStore(selectIncome); // Income records for net savings calculation
   const initialize = useAppStore((s) => s.initialize);
   const loadExpenses = useAppStore((s) => s.loadExpenses);
   const loadCurrentWallet = useAppStore((s) => s.loadCurrentWallet);
   const loadWallets = useAppStore((s) => s.loadWallets);
   const deleteMultipleExpenses = useAppStore((s) => s.deleteMultipleExpenses);
+  const loadIncome = useAppStore((s) => s.loadIncome);
 
   // Multi-select state for batch deleting recent expenses
   const [isSelectMode, setIsSelectMode] = useState(false); // Whether multi-select is active
@@ -77,6 +79,7 @@ const HomeScreen = () => {
       loadExpenses(50);
       loadCurrentWallet();
       loadWallets();
+      loadIncome(50);
     }, [])
   );
 
@@ -112,6 +115,22 @@ const HomeScreen = () => {
     () => expenses.filter(e => e.date === todayStr).reduce((sum, e) => sum + e.amount, 0),
     [expenses, todayStr]
   );
+
+  // Calculate this month's total income
+  const monthStr = todayStr.substring(0, 7); // "YYYY-MM" prefix for current month filtering
+  const monthlyIncome = useMemo(
+    () => income.filter(i => i.date.startsWith(monthStr)).reduce((sum, i) => sum + i.amount, 0),
+    [income, monthStr]
+  );
+
+  // Calculate this month's total expenses
+  const monthlyExpenses = useMemo(
+    () => expenses.filter(e => e.date.startsWith(monthStr)).reduce((sum, e) => sum + e.amount, 0),
+    [expenses, monthStr]
+  );
+
+  // Net savings = monthly income - monthly expenses
+  const netSavings = useMemo(() => monthlyIncome - monthlyExpenses, [monthlyIncome, monthlyExpenses]);
 
   // Find icon and color for a category name from the categories list (memoized)
   const getCategoryInfo = useCallback((categoryName: string) => {
@@ -211,16 +230,16 @@ const HomeScreen = () => {
           {/* Quick Payment Received shortcut widget */}
           <TouchableOpacity
             style={[styles.widget, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            onPress={() => navigation.navigate('WalletSetup')}
+            onPress={() => navigation.navigate('AddIncome', {})}
           >
             <View style={[styles.widgetIcon, { backgroundColor: '#DCFCE7' }]}>
               <MaterialCommunityIcons name="arrow-down-circle" size={32} color="#22C55E" />
             </View>
             <Text style={[styles.widgetTitle, { color: theme.colors.text }]}>
-              {'Add Income'}
+              {t.homeIncome.addIncome}
             </Text>
             <Text style={[styles.widgetSubtitle, { color: theme.colors.textTertiary }]}>
-              {'Top up wallet'}
+              {'Record earnings'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -238,15 +257,32 @@ const HomeScreen = () => {
             <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.home.analytics}</Text>
           </TouchableOpacity>
 
-          {/* Export button */}
+          {/* Transfer between wallets button — requires at least 2 wallets */}
           <TouchableOpacity
             style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            onPress={() => navigation.navigate('ExportReport')}
+            onPress={() => {
+              if (wallets.length < 2) {
+                Alert.alert(t.transfer.noWallet, t.transfer.noWalletMsg);
+                return;
+              }
+              navigation.navigate('Transfer');
+            }}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#DBEAFE' }]}>
+              <MaterialCommunityIcons name="bank-transfer" size={24} color="#3B82F6" />
+            </View>
+            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.homeIncome.transfer}</Text>
+          </TouchableOpacity>
+
+          {/* Income history button */}
+          <TouchableOpacity
+            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+            onPress={() => navigation.navigate('IncomeList')}
           >
             <View style={[styles.quickActionIcon, { backgroundColor: '#ECFDF5' }]}>
-              <MaterialCommunityIcons name="download" size={24} color="#10B981" />
+              <MaterialCommunityIcons name="cash-multiple" size={24} color="#10B981" />
             </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.home.export}</Text>
+            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.homeIncome.incomeHistory}</Text>
           </TouchableOpacity>
 
           {/* Budget button */}
@@ -260,6 +296,17 @@ const HomeScreen = () => {
             <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.home.budgets}</Text>
           </TouchableOpacity>
 
+          {/* Export button */}
+          <TouchableOpacity
+            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+            onPress={() => navigation.navigate('ExportReport')}
+          >
+            <View style={[styles.quickActionIcon, { backgroundColor: '#F3F4F6' }]}>
+              <MaterialCommunityIcons name="download" size={24} color="#6B7280" />
+            </View>
+            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.home.export}</Text>
+          </TouchableOpacity>
+
           {/* Wallets button */}
           <TouchableOpacity
             style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
@@ -271,6 +318,32 @@ const HomeScreen = () => {
             <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.tabs.wallet}</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Net savings summary card for current month */}
+        <Card style={styles.todayCard}>
+          <View style={styles.todayHeader}>
+            <MaterialCommunityIcons name="chart-bar" size={20} color={theme.colors.primary} />
+            <Text style={[styles.todayTitle, { color: theme.colors.text }]}>{t.homeIncome.netSavings}</Text>
+          </View>
+          <View style={styles.savingsRow}>
+            <View style={styles.savingsItem}>
+              <Text style={[styles.savingsLabel, { color: theme.colors.textSecondary }]}>{t.homeIncome.totalIncome}</Text>
+              <Text style={[styles.savingsAmount, { color: theme.colors.income || '#10B981' }]}>+{formatCurrency(monthlyIncome)}</Text>
+            </View>
+            <View style={[styles.savingsDivider, { backgroundColor: theme.colors.border }]} />
+            <View style={styles.savingsItem}>
+              <Text style={[styles.savingsLabel, { color: theme.colors.textSecondary }]}>{t.home.totalSpent}</Text>
+              <Text style={[styles.savingsAmount, { color: theme.colors.expense }]}>-{formatCurrency(monthlyExpenses)}</Text>
+            </View>
+            <View style={[styles.savingsDivider, { backgroundColor: theme.colors.border }]} />
+            <View style={styles.savingsItem}>
+              <Text style={[styles.savingsLabel, { color: theme.colors.textSecondary }]}>{t.homeIncome.netSavings}</Text>
+              <Text style={[styles.savingsAmount, { color: netSavings >= 0 ? (theme.colors.income || '#10B981') : theme.colors.expense }]}>
+                {netSavings >= 0 ? '+' : ''}{formatCurrency(netSavings)}
+              </Text>
+            </View>
+          </View>
+        </Card>
 
         {/* Today's spending summary card */}
         <Card style={styles.todayCard}>
@@ -468,7 +541,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   quickAction: {
-    width: '23%', // ~4 columns with margin
+    width: '31%', // ~3 columns with margin for 6-item grid
     margin: '1%',
     padding: 12,
     borderRadius: 16,
@@ -488,6 +561,17 @@ const styles = StyleSheet.create({
   todayHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   todayTitle: { fontSize: 15, fontWeight: '600' },
   todayAmount: { fontSize: 28, fontWeight: '700' },
+  // Net savings card row styles
+  savingsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  savingsItem: { flex: 1, alignItems: 'center' },
+  savingsLabel: { fontSize: 11, fontWeight: '500', marginBottom: 4 },
+  savingsAmount: { fontSize: 16, fontWeight: '700' },
+  savingsDivider: { width: 1, height: 36, marginHorizontal: 4 },
   sectionHeader: {
     flexDirection: 'row', // Title and "View All" on the same line
     justifyContent: 'space-between',

@@ -355,6 +355,63 @@ const en = {
     quarterly: 'Quarterly',
     yearly: 'Yearly',
   },
+
+  // Income screen
+  income: {
+    title: 'Add Income',
+    editTitle: 'Edit Income',
+    amount: 'Amount',
+    source: 'Source',
+    date: 'Date',
+    notes: 'Notes',
+    notesPlaceholder: 'Add a note...',
+    recurringIncome: 'Recurring Income',
+    saveIncome: 'Save Income',
+    updateIncome: 'Update Income',
+    invalidAmount: 'Invalid Amount',
+    invalidAmountMsg: 'Please enter a valid amount greater than 0.',
+    noWallet: 'No Wallet',
+    noWalletMsg: 'Please select a wallet to credit.',
+    saveFailed: 'Failed to save income. Please try again.',
+    listTitle: 'Income History',
+    noIncome: 'No income recorded yet',
+    addFirstIncome: 'Record your first income to track earnings',
+    addIncome: 'Add Income',
+    totalIncome: 'Total Income',
+    deleteTitle: 'Delete Income',
+    deleteMsg: 'Are you sure you want to delete this income? The amount will be deducted from your wallet balance.',
+  },
+
+  // Transfer screen
+  transfer: {
+    title: 'Transfer',
+    amount: 'Amount',
+    from: 'From Wallet',
+    to: 'To Wallet',
+    date: 'Date',
+    notes: 'Notes',
+    notesPlaceholder: 'e.g., ATM withdrawal, UPI transfer...',
+    transferFunds: 'Transfer Funds',
+    invalidAmount: 'Invalid Amount',
+    invalidAmountMsg: 'Please enter a valid amount greater than 0.',
+    sameWallet: 'Same Wallet',
+    sameWalletMsg: 'Source and destination wallets must be different.',
+    noWallet: 'Select Wallets',
+    noWalletMsg: 'Please select both source and destination wallets.',
+    saveFailed: 'Failed to transfer funds. Please try again.',
+    success: 'Transfer completed successfully.',
+    insufficientBalance: 'Insufficient Balance',
+    insufficientBalanceMsg: 'The source wallet does not have enough balance for this transfer.',
+  },
+
+  // Home screen — additional keys for income/net savings
+  homeIncome: {
+    netSavings: 'Net Savings',
+    totalIncome: 'Total Income',
+    addIncome: 'Add Income',
+    transfer: 'Transfer',
+    incomeHistory: 'Income',
+  },
 };
 
 export type TranslationKeys = typeof en;

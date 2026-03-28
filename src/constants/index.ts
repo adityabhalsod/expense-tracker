@@ -1,6 +1,18 @@
 // Constants used throughout the Personal Expense Tracker application
 
-import { Category, Currency } from '../types';
+import { Category, Currency, IncomeSource } from '../types';
+
+// Default income source options with icons and colors for quick selection
+export const INCOME_SOURCES: { value: IncomeSource; label: string; icon: string; color: string }[] = [
+  { value: 'salary', label: 'Salary', icon: 'briefcase', color: '#10B981' },
+  { value: 'freelance', label: 'Freelance', icon: 'laptop', color: '#6C63FF' },
+  { value: 'business', label: 'Business', icon: 'store', color: '#F59E0B' },
+  { value: 'investment', label: 'Investment', icon: 'trending-up', color: '#3B82F6' },
+  { value: 'rental', label: 'Rental', icon: 'home-city', color: '#8B5CF6' },
+  { value: 'gift', label: 'Gift', icon: 'gift', color: '#EC4899' },
+  { value: 'refund', label: 'Refund', icon: 'cash-refund', color: '#14B8A6' },
+  { value: 'other', label: 'Other', icon: 'dots-horizontal', color: '#6B7280' },
+];
 
 // Default expense categories with icons and colors for initial app setup
 // Only 'Food & Dining' is marked as default — used as the pre-selected category across the app

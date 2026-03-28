@@ -355,6 +355,63 @@ const hi: TranslationKeys = {
     quarterly: 'तिमाही',
     yearly: 'वार्षिक',
   },
+
+  // आय स्क्रीन
+  income: {
+    title: 'आय जोड़ें',
+    editTitle: 'आय संपादित करें',
+    amount: 'राशि',
+    source: 'स्रोत',
+    date: 'तारीख',
+    notes: 'नोट्स',
+    notesPlaceholder: 'एक नोट जोड़ें...',
+    recurringIncome: 'आवर्ती आय',
+    saveIncome: 'आय सहेजें',
+    updateIncome: 'आय अपडेट करें',
+    invalidAmount: 'अमान्य राशि',
+    invalidAmountMsg: 'कृपया 0 से अधिक मान्य राशि दर्ज करें।',
+    noWallet: 'कोई वॉलेट नहीं',
+    noWalletMsg: 'कृपया क्रेडिट करने के लिए वॉलेट चुनें।',
+    saveFailed: 'आय सहेजने में विफल। कृपया पुनः प्रयास करें।',
+    listTitle: 'आय इतिहास',
+    noIncome: 'अभी तक कोई आय दर्ज नहीं',
+    addFirstIncome: 'कमाई ट्रैक करने के लिए अपनी पहली आय दर्ज करें',
+    addIncome: 'आय जोड़ें',
+    totalIncome: 'कुल आय',
+    deleteTitle: 'आय हटाएं',
+    deleteMsg: 'क्या आप इस आय को हटाना चाहते हैं? राशि आपके वॉलेट से काटी जाएगी।',
+  },
+
+  // ट्रांसफर स्क्रीन
+  transfer: {
+    title: 'ट्रांसफर',
+    amount: 'राशि',
+    from: 'स्रोत वॉलेट',
+    to: 'गंतव्य वॉलेट',
+    date: 'तारीख',
+    notes: 'नोट्स',
+    notesPlaceholder: 'जैसे, ATM निकासी, UPI ट्रांसफर...',
+    transferFunds: 'धन हस्तांतरण',
+    invalidAmount: 'अमान्य राशि',
+    invalidAmountMsg: 'कृपया 0 से अधिक मान्य राशि दर्ज करें।',
+    sameWallet: 'एक ही वॉलेट',
+    sameWalletMsg: 'स्रोत और गंतव्य वॉलेट अलग होने चाहिए।',
+    noWallet: 'वॉलेट चुनें',
+    noWalletMsg: 'कृपया स्रोत और गंतव्य दोनों वॉलेट चुनें।',
+    saveFailed: 'ट्रांसफर विफल। कृपया पुनः प्रयास करें।',
+    success: 'ट्रांसफर सफलतापूर्वक पूरा हुआ।',
+    insufficientBalance: 'अपर्याप्त शेष',
+    insufficientBalanceMsg: 'स्रोत वॉलेट में इस ट्रांसफर के लिए पर्याप्त शेष नहीं है।',
+  },
+
+  // होम स्क्रीन — अतिरिक्त कुंजियाँ
+  homeIncome: {
+    netSavings: 'शुद्ध बचत',
+    totalIncome: 'कुल आय',
+    addIncome: 'आय जोड़ें',
+    transfer: 'ट्रांसफर',
+    incomeHistory: 'आय',
+  },
 };
 
 export default hi;

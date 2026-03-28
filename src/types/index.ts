@@ -62,6 +62,36 @@ export interface Budget {
   walletId?: string; // Optional wallet/payment source association
 }
 
+// Income record representing money received into a wallet
+export interface Income {
+  id: string; // Unique identifier for the income
+  amount: number; // Income amount received
+  source: string; // Source of income (e.g., Salary, Freelance)
+  date: string; // ISO date string of when the income was received
+  notes?: string; // Optional description or memo
+  walletId: string; // Wallet the income is credited to
+  currency: string; // Currency code (e.g., USD, INR)
+  isRecurring: boolean; // Whether this income repeats automatically
+  recurringFrequency?: RecurringFrequency; // How often the income repeats
+  createdAt: string; // Timestamp of record creation
+  updatedAt: string; // Timestamp of last modification
+}
+
+// Predefined income source categories for quick selection
+export type IncomeSource = 'salary' | 'freelance' | 'business' | 'investment' | 'rental' | 'gift' | 'refund' | 'other';
+
+// Transfer record representing money moved between wallets
+export interface Transfer {
+  id: string; // Unique identifier for the transfer
+  amount: number; // Transfer amount
+  fromWalletId: string; // Source wallet to debit from
+  toWalletId: string; // Destination wallet to credit
+  date: string; // ISO date string of when the transfer occurred
+  notes?: string; // Optional description or memo
+  currency: string; // Currency code
+  createdAt: string; // Timestamp of record creation
+}
+
 // Frequency options for recurring expenses
 export type RecurringFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly';
 
@@ -140,6 +170,9 @@ export type RootStackParamList = {
   BudgetSetup: undefined; // Budget configuration
   AllExpenses: undefined; // Full expense list view
   QuickAdd: { type: 'expense' | 'income' }; // Widget quick-add modal (expense or income)
+  AddIncome: { incomeId?: string }; // Add or edit income form
+  IncomeList: undefined; // Full income list view
+  Transfer: undefined; // Wallet-to-wallet transfer form
 };
 
 // Bottom tab navigator parameter types

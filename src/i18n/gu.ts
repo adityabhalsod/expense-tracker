@@ -357,6 +357,63 @@ const gu: TranslationKeys = {
     quarterly: 'ત્રિમાસિક',
     yearly: 'વાર્ષિક',
   },
+
+  // આવક સ્ક્રીન
+  income: {
+    title: 'આવક ઉમેરો',
+    editTitle: 'આવક સંપાદિત કરો',
+    amount: 'રકમ',
+    source: 'સ્ત્રોત',
+    date: 'તારીખ',
+    notes: 'નોંધ',
+    notesPlaceholder: 'નોંધ ઉમેરો...',
+    recurringIncome: 'પુનરાવર્તિત આવક',
+    saveIncome: 'આવક સાચવો',
+    updateIncome: 'આવક અપડેટ કરો',
+    invalidAmount: 'અમાન્ય રકમ',
+    invalidAmountMsg: 'કૃપા કરીને 0 કરતાં વધુ માન્ય રકમ દાખલ કરો.',
+    noWallet: 'કોઈ વૉલેટ નથી',
+    noWalletMsg: 'કૃપા કરીને ક્રેડિટ કરવા વૉલેટ પસંદ કરો.',
+    saveFailed: 'આવક સાચવવામાં નિષ્ફળ. કૃપા કરીને ફરી પ્રયાસ કરો.',
+    listTitle: 'આવક ઇતિહાસ',
+    noIncome: 'હજી સુધી કોઈ આવક નોંધાયેલ નથી',
+    addFirstIncome: 'કમાણી ટ્રેક કરવા તમારી પ્રથમ આવક નોંધો',
+    addIncome: 'આવક ઉમેરો',
+    totalIncome: 'કુલ આવક',
+    deleteTitle: 'આવક કાઢી નાખો',
+    deleteMsg: 'શું તમે આ આવક કાઢી નાખવા માગો છો? રકમ તમારા વૉલેટમાંથી કાપવામાં આવશે.',
+  },
+
+  // ટ્રાન્સફર સ્ક્રીન
+  transfer: {
+    title: 'ટ્રાન્સફર',
+    amount: 'રકમ',
+    from: 'સ્ત્રોત વૉલેટ',
+    to: 'ગંતવ્ય વૉલેટ',
+    date: 'તારીખ',
+    notes: 'નોંધ',
+    notesPlaceholder: 'દા.ત., ATM ઉપાડ, UPI ટ્રાન્સફર...',
+    transferFunds: 'ભંડોળ ટ્રાન્સફર',
+    invalidAmount: 'અમાન્ય રકમ',
+    invalidAmountMsg: 'કૃપા કરીને 0 કરતાં વધુ માન્ય રકમ દાખલ કરો.',
+    sameWallet: 'સમાન વૉલેટ',
+    sameWalletMsg: 'સ્ત્રોત અને ગંતવ્ય વૉલેટ અલગ હોવા જોઈએ.',
+    noWallet: 'વૉલેટ પસંદ કરો',
+    noWalletMsg: 'કૃપા કરીને બંને સ્ત્રોત અને ગંતવ્ય વૉલેટ પસંદ કરો.',
+    saveFailed: 'ટ્રાન્સફર નિષ્ફળ. કૃપા કરીને ફરી પ્રયાસ કરો.',
+    success: 'ટ્રાન્સફર સફળતાપૂર્વક પૂર્ણ થયો.',
+    insufficientBalance: 'અપૂરતી બેલેન્સ',
+    insufficientBalanceMsg: 'સ્ત્રોત વૉલેટમાં આ ટ્રાન્સફર માટે પૂરતી બેલેન્સ નથી.',
+  },
+
+  // હોમ સ્ક્રીન — વધારાની કીઝ
+  homeIncome: {
+    netSavings: 'ચોખ્ખી બચત',
+    totalIncome: 'કુલ આવક',
+    addIncome: 'આવક ઉમેરો',
+    transfer: 'ટ્રાન્સફર',
+    incomeHistory: 'આવક',
+  },
 };
 
 export default gu;

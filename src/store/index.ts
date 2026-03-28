@@ -2,7 +2,7 @@
 // Provides reactive state for expenses, categories, wallets, budgets, and payment sources
 
 import { create } from 'zustand';
-import { Expense, Category, Wallet, Budget, AppSettings } from '../types';
+import { Expense, Category, Wallet, Budget, AppSettings, Income, Transfer } from '../types';
 import * as db from '../database';
 import { DEFAULT_SETTINGS } from '../constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,6 +18,8 @@ interface AppStore {
   wallets: Wallet[]; // All wallet/payment source records
   currentWallet: Wallet | null; // Default wallet for quick access
   budgets: Budget[]; // Budget rules
+  income: Income[]; // All loaded income records
+  transfers: Transfer[]; // All loaded transfer records
   settings: AppSettings; // App configuration
   isLoading: boolean; // Global loading indicator
   isInitialized: boolean; // Whether initial data load is complete
@@ -54,6 +56,17 @@ interface AppStore {
   updateBudget: (id: string, updates: Partial<Budget>) => Promise<void>; // Modify budget
   deleteBudget: (id: string) => Promise<void>; // Remove budget rule
 
+  // Income actions
+  loadIncome: (limit?: number) => Promise<void>; // Fetch income records
+  addIncome: (income: Omit<Income, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Income>; // Create income
+  updateIncome: (id: string, updates: Partial<Income>) => Promise<void>; // Modify income
+  deleteIncome: (id: string) => Promise<void>; // Remove income record
+
+  // Transfer actions
+  loadTransfers: (limit?: number) => Promise<void>; // Fetch transfer records
+  addTransfer: (transfer: Omit<Transfer, 'id' | 'createdAt'>) => Promise<Transfer>; // Create transfer
+  deleteTransfer: (id: string) => Promise<void>; // Remove and reverse transfer
+
   // Settings actions
   loadSettings: () => Promise<void>; // Load app settings from storage
   updateSettings: (updates: Partial<AppSettings>) => Promise<void>; // Save settings changes
@@ -71,6 +84,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   wallets: [],
   currentWallet: null,
   budgets: [],
+  income: [],
+  transfers: [],
   settings: DEFAULT_SETTINGS as AppSettings, // Start with default settings
   isLoading: true,
   isInitialized: false,
@@ -86,6 +101,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
         get().loadWallets(),
         get().loadCurrentWallet(),
         get().loadSettings(),
+        get().loadIncome(50), // Load first 50 income records
+        get().loadTransfers(50), // Load first 50 transfers
       ]);
       // Load budgets for current month after wallets are loaded
       const now = new Date();
@@ -254,6 +271,64 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => ({ budgets: state.budgets.filter((b) => b.id !== id) }));
   },
 
+  // ==================== INCOME ACTIONS ====================
+
+  // Fetch income records from database with optional limit
+  loadIncome: async (limit?: number) => {
+    const income = await db.getAllIncome(limit);
+    set({ income });
+  },
+
+  // Create a new income record and credit the wallet
+  addIncome: async (income) => {
+    const newIncome = await db.addIncome(income);
+    set((state) => ({ income: [newIncome, ...state.income] })); // Prepend new income
+    await get().loadCurrentWallet(); // Refresh wallet balance after credit
+    await get().loadWallets();
+    return newIncome;
+  },
+
+  // Update an income record and adjust wallet balance
+  updateIncome: async (id, updates) => {
+    await db.updateIncome(id, updates);
+    await get().loadIncome(50); // Reload for consistency
+    await get().loadCurrentWallet();
+    await get().loadWallets();
+  },
+
+  // Delete an income record and reverse the wallet credit
+  deleteIncome: async (id) => {
+    await db.deleteIncome(id);
+    set((state) => ({ income: state.income.filter((i) => i.id !== id) }));
+    await get().loadCurrentWallet();
+    await get().loadWallets();
+  },
+
+  // ==================== TRANSFER ACTIONS ====================
+
+  // Fetch transfer records from database with optional limit
+  loadTransfers: async (limit?: number) => {
+    const transfers = await db.getAllTransfers(limit);
+    set({ transfers });
+  },
+
+  // Create a wallet-to-wallet transfer
+  addTransfer: async (transfer) => {
+    const newTransfer = await db.addTransfer(transfer);
+    set((state) => ({ transfers: [newTransfer, ...state.transfers] }));
+    await get().loadCurrentWallet(); // Refresh wallet balances
+    await get().loadWallets();
+    return newTransfer;
+  },
+
+  // Delete a transfer and reverse the wallet adjustments
+  deleteTransfer: async (id) => {
+    await db.deleteTransfer(id);
+    set((state) => ({ transfers: state.transfers.filter((t) => t.id !== id) }));
+    await get().loadCurrentWallet();
+    await get().loadWallets();
+  },
+
   // Load app settings from AsyncStorage
   loadSettings: async () => {
     try {
@@ -285,6 +360,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       wallets: [],
       currentWallet: null,
       budgets: [],
+      income: [],
+      transfers: [],
     });
   },
 
@@ -300,6 +377,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       wallets: [],
       currentWallet: null,
       budgets: [],
+      income: [],
+      transfers: [],
       settings: DEFAULT_SETTINGS as AppSettings,
     });
     // Reload seeded categories from the fresh database
@@ -314,6 +393,8 @@ export const selectCategories = (state: AppStore) => state.categories;
 export const selectCurrentWallet = (state: AppStore) => state.currentWallet;
 export const selectWallets = (state: AppStore) => state.wallets;
 export const selectBudgets = (state: AppStore) => state.budgets;
+export const selectIncome = (state: AppStore) => state.income;
+export const selectTransfers = (state: AppStore) => state.transfers;
 export const selectSettings = (state: AppStore) => state.settings;
 export const selectIsLoading = (state: AppStore) => state.isLoading;
 export const selectIsInitialized = (state: AppStore) => state.isInitialized;

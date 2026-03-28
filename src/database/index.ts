@@ -2,7 +2,7 @@
 // Uses expo-sqlite for local storage on the device
 
 import * as SQLite from 'expo-sqlite';
-import { Expense, Category, Wallet, Budget } from '../types';
+import { Expense, Category, Wallet, Budget, Income, Transfer } from '../types';
 import { DEFAULT_CATEGORIES } from '../constants';
 import * as Crypto from 'expo-crypto';
 import { encryptData, decryptData } from '../utils/encryption';
@@ -111,6 +111,40 @@ const initializeDatabase = async (database: SQLite.SQLiteDatabase): Promise<void
     );
   `);
 
+  // Create income table for tracking money received into wallets
+  await database.execAsync(`
+    CREATE TABLE IF NOT EXISTS income (
+      id TEXT PRIMARY KEY NOT NULL,
+      amount REAL NOT NULL,
+      source TEXT NOT NULL,
+      date TEXT NOT NULL,
+      notes TEXT,
+      walletId TEXT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'INR',
+      isRecurring INTEGER NOT NULL DEFAULT 0,
+      recurringFrequency TEXT,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL,
+      FOREIGN KEY (walletId) REFERENCES wallets(id)
+    );
+  `);
+
+  // Create transfers table for wallet-to-wallet money movements
+  await database.execAsync(`
+    CREATE TABLE IF NOT EXISTS transfers (
+      id TEXT PRIMARY KEY NOT NULL,
+      amount REAL NOT NULL,
+      fromWalletId TEXT NOT NULL,
+      toWalletId TEXT NOT NULL,
+      date TEXT NOT NULL,
+      notes TEXT,
+      currency TEXT NOT NULL DEFAULT 'INR',
+      createdAt TEXT NOT NULL,
+      FOREIGN KEY (fromWalletId) REFERENCES wallets(id),
+      FOREIGN KEY (toWalletId) REFERENCES wallets(id)
+    );
+  `);
+
 
   // --- Migrations: add new wallet columns for existing databases upgrading from v1 ---
   // These must run BEFORE index creation since indexes reference these new columns
@@ -203,6 +237,11 @@ const initializeDatabase = async (database: SQLite.SQLiteDatabase): Promise<void
     CREATE INDEX IF NOT EXISTS idx_expenses_wallet ON expenses(walletId);
     CREATE INDEX IF NOT EXISTS idx_wallets_type ON wallets(type);
     CREATE INDEX IF NOT EXISTS idx_wallets_default ON wallets(isDefault);
+    CREATE INDEX IF NOT EXISTS idx_income_date ON income(date);
+    CREATE INDEX IF NOT EXISTS idx_income_wallet ON income(walletId);
+    CREATE INDEX IF NOT EXISTS idx_transfers_date ON transfers(date);
+    CREATE INDEX IF NOT EXISTS idx_transfers_from ON transfers(fromWalletId);
+    CREATE INDEX IF NOT EXISTS idx_transfers_to ON transfers(toWalletId);
   `);
 
   // Seed default categories if the categories table is empty
@@ -600,7 +639,177 @@ export const deleteBudget = async (id: string): Promise<void> => {
   await database.runAsync('DELETE FROM budgets WHERE id = ?', [id]);
 };
 
+// ==================== INCOME OPERATIONS ====================
+
+// Retrieve all income records ordered by most recent first
+export const getAllIncome = async (limit?: number, offset?: number): Promise<Income[]> => {
+  const database = await getDatabase();
+  let query = 'SELECT * FROM income ORDER BY date DESC, createdAt DESC';
+  const params: any[] = [];
+  // Apply pagination if limit is specified
+  if (limit) {
+    query += ' LIMIT ?';
+    params.push(limit);
+    if (offset) {
+      query += ' OFFSET ?';
+      params.push(offset);
+    }
+  }
+  const rows = await database.getAllAsync<any>(query, params);
+  return rows.map(parseIncomeRow);
+};
+
+// Insert a new income record and credit the associated wallet balance
+export const addIncome = async (income: Omit<Income, 'id' | 'createdAt' | 'updatedAt'>): Promise<Income> => {
+  const database = await getDatabase();
+  const id = generateId();
+  const now = new Date().toISOString();
+  await database.runAsync(
+    `INSERT INTO income (id, amount, source, date, notes, walletId, currency, isRecurring, recurringFrequency, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, income.amount, income.source, income.date, income.notes || null,
+     income.walletId, income.currency, income.isRecurring ? 1 : 0,
+     income.recurringFrequency || null, now, now]
+  );
+  // Credit income amount to the associated wallet
+  if (income.walletId) {
+    await database.runAsync(
+      'UPDATE wallets SET currentBalance = currentBalance + ?, updatedAt = ? WHERE id = ?',
+      [income.amount, now, income.walletId]
+    );
+  }
+  return { id, ...income, createdAt: now, updatedAt: now };
+};
+
+// Update an existing income record and adjust wallet balance
+export const updateIncome = async (id: string, updates: Partial<Income>): Promise<void> => {
+  const database = await getDatabase();
+  const now = new Date().toISOString();
+  // Fetch existing income to calculate wallet balance difference
+  const existing = await database.getFirstAsync<any>('SELECT * FROM income WHERE id = ?', [id]);
+  if (!existing) return;
+  const fields: string[] = ['updatedAt = ?'];
+  const values: any[] = [now];
+  if (updates.amount !== undefined) { fields.push('amount = ?'); values.push(updates.amount); }
+  if (updates.source !== undefined) { fields.push('source = ?'); values.push(updates.source); }
+  if (updates.date !== undefined) { fields.push('date = ?'); values.push(updates.date); }
+  if (updates.notes !== undefined) { fields.push('notes = ?'); values.push(updates.notes); }
+  if (updates.isRecurring !== undefined) { fields.push('isRecurring = ?'); values.push(updates.isRecurring ? 1 : 0); }
+  if (updates.recurringFrequency !== undefined) { fields.push('recurringFrequency = ?'); values.push(updates.recurringFrequency); }
+  values.push(id);
+  await database.runAsync(`UPDATE income SET ${fields.join(', ')} WHERE id = ?`, values);
+  // Adjust wallet balance if the amount changed
+  if (updates.amount !== undefined && existing.walletId) {
+    const diff = updates.amount - existing.amount;
+    await database.runAsync(
+      'UPDATE wallets SET currentBalance = currentBalance + ?, updatedAt = ? WHERE id = ?',
+      [diff, now, existing.walletId]
+    );
+  }
+};
+
+// Delete an income record and reverse the wallet credit
+export const deleteIncome = async (id: string): Promise<void> => {
+  const database = await getDatabase();
+  const existing = await database.getFirstAsync<any>('SELECT * FROM income WHERE id = ?', [id]);
+  if (!existing) return;
+  await database.runAsync('DELETE FROM income WHERE id = ?', [id]);
+  // Reverse the income credit from the wallet
+  if (existing.walletId) {
+    const now = new Date().toISOString();
+    await database.runAsync(
+      'UPDATE wallets SET currentBalance = currentBalance - ?, updatedAt = ? WHERE id = ?',
+      [existing.amount, now, existing.walletId]
+    );
+  }
+};
+
+// Get a single income record by ID
+export const getIncomeById = async (id: string): Promise<Income | null> => {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync<any>('SELECT * FROM income WHERE id = ?', [id]);
+  return row ? parseIncomeRow(row) : null;
+};
+
+// ==================== TRANSFER OPERATIONS ====================
+
+// Retrieve all transfer records ordered by most recent first
+export const getAllTransfers = async (limit?: number): Promise<Transfer[]> => {
+  const database = await getDatabase();
+  let query = 'SELECT * FROM transfers ORDER BY date DESC, createdAt DESC';
+  const params: any[] = [];
+  if (limit) {
+    query += ' LIMIT ?';
+    params.push(limit);
+  }
+  return database.getAllAsync<Transfer>(query, params);
+};
+
+// Create a wallet-to-wallet transfer: debit source, credit destination
+export const addTransfer = async (transfer: Omit<Transfer, 'id' | 'createdAt'>): Promise<Transfer> => {
+  const database = await getDatabase();
+  const id = generateId();
+  const now = new Date().toISOString();
+  await database.runAsync(
+    `INSERT INTO transfers (id, amount, fromWalletId, toWalletId, date, notes, currency, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, transfer.amount, transfer.fromWalletId, transfer.toWalletId,
+     transfer.date, transfer.notes || null, transfer.currency, now]
+  );
+  // Debit source wallet
+  await database.runAsync(
+    'UPDATE wallets SET currentBalance = currentBalance - ?, updatedAt = ? WHERE id = ?',
+    [transfer.amount, now, transfer.fromWalletId]
+  );
+  // Credit destination wallet
+  await database.runAsync(
+    'UPDATE wallets SET currentBalance = currentBalance + ?, updatedAt = ? WHERE id = ?',
+    [transfer.amount, now, transfer.toWalletId]
+  );
+  return { id, ...transfer, createdAt: now };
+};
+
+// Delete a transfer and reverse the wallet adjustments
+export const deleteTransfer = async (id: string): Promise<void> => {
+  const database = await getDatabase();
+  const existing = await database.getFirstAsync<any>('SELECT * FROM transfers WHERE id = ?', [id]);
+  if (!existing) return;
+  await database.runAsync('DELETE FROM transfers WHERE id = ?', [id]);
+  const now = new Date().toISOString();
+  // Reverse: credit back to source wallet
+  await database.runAsync(
+    'UPDATE wallets SET currentBalance = currentBalance + ?, updatedAt = ? WHERE id = ?',
+    [existing.amount, now, existing.fromWalletId]
+  );
+  // Reverse: debit back from destination wallet
+  await database.runAsync(
+    'UPDATE wallets SET currentBalance = currentBalance - ?, updatedAt = ? WHERE id = ?',
+    [existing.amount, now, existing.toWalletId]
+  );
+};
+
 // ==================== ANALYTICS QUERIES ====================
+
+// Get total income for a date range
+export const getTotalIncome = async (startDate: string, endDate: string): Promise<number> => {
+  const database = await getDatabase();
+  const result = await database.getFirstAsync<{ total: number }>(
+    'SELECT COALESCE(SUM(amount), 0) as total FROM income WHERE date >= ? AND date <= ?',
+    [startDate, endDate]
+  );
+  return result?.total || 0;
+};
+
+// Get income grouped by source for a date range
+export const getIncomeBySource = async (startDate: string, endDate: string): Promise<{ source: string; total: number; count: number }[]> => {
+  const database = await getDatabase();
+  return database.getAllAsync<{ source: string; total: number; count: number }>(
+    `SELECT source, SUM(amount) as total, COUNT(*) as count
+     FROM income WHERE date >= ? AND date <= ?
+     GROUP BY source ORDER BY total DESC`,
+    [startDate, endDate]
+  );
+};
 
 // Get total spending for a date range, grouped by category
 export const getCategoryTotals = async (startDate: string, endDate: string): Promise<{ category: string; total: number; count: number }[]> => {
@@ -648,7 +857,7 @@ export const getMonthlyTotals = async (year: number): Promise<{ month: number; t
 // ==================== DATA EXPORT ====================
 
 // Export all data as a JSON object for backup purposes
-export const exportAllData = async (): Promise<{ expenses: Expense[]; categories: Category[]; wallets: Wallet[]; budgets: Budget[] }> => {
+export const exportAllData = async (): Promise<{ expenses: Expense[]; categories: Category[]; wallets: Wallet[]; budgets: Budget[]; income: Income[]; transfers: Transfer[] }> => {
   const database = await getDatabase();
   const expenses = (await database.getAllAsync<any>('SELECT * FROM expenses ORDER BY date DESC')).map(parseExpenseRow);
   const categories = await database.getAllAsync<any>('SELECT * FROM categories ORDER BY "order" ASC');
@@ -658,7 +867,9 @@ export const exportAllData = async (): Promise<{ expenses: Expense[]; categories
     wallets.push(await parseWalletRow(row));
   }
   const budgets = await database.getAllAsync<Budget>('SELECT * FROM budgets');
-  return { expenses, categories: categories.map((c: any) => ({ ...c, isDefault: c.isDefault === 1 })), wallets, budgets };
+  const income = (await database.getAllAsync<any>('SELECT * FROM income ORDER BY date DESC')).map(parseIncomeRow);
+  const transfers = await database.getAllAsync<Transfer>('SELECT * FROM transfers ORDER BY date DESC');
+  return { expenses, categories: categories.map((c: any) => ({ ...c, isDefault: c.isDefault === 1 })), wallets, budgets, income, transfers };
 };
 
 // ==================== DATABASE RESET FUNCTIONS ====================
@@ -671,6 +882,8 @@ export const clearAllData = async (): Promise<void> => {
   await database.execAsync(`
     DELETE FROM expenses;
     DELETE FROM budgets;
+    DELETE FROM income;
+    DELETE FROM transfers;
     DELETE FROM wallets;
   `);
 };
@@ -683,6 +896,8 @@ export const resetDatabase = async (): Promise<void> => {
   await database.execAsync(`
     DROP TABLE IF EXISTS expenses;
     DROP TABLE IF EXISTS budgets;
+    DROP TABLE IF EXISTS income;
+    DROP TABLE IF EXISTS transfers;
     DROP TABLE IF EXISTS wallets;
     DROP TABLE IF EXISTS categories;
   `);
@@ -703,5 +918,11 @@ const parseWalletRow = async (row: any): Promise<Wallet> => ({
 const parseExpenseRow = (row: any): Expense => ({
   ...row,
   tags: typeof row.tags === 'string' ? JSON.parse(row.tags) : row.tags || [], // Parse JSON tags string
+  isRecurring: row.isRecurring === 1, // Convert SQLite integer to boolean
+});
+
+// Convert a raw database row to a typed Income object
+const parseIncomeRow = (row: any): Income => ({
+  ...row,
   isRecurring: row.isRecurring === 1, // Convert SQLite integer to boolean
 });
