@@ -48,7 +48,24 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-font"
+      "expo-font",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "ExpenseTracker",
+              "label": "PaisaTrack",
+              "minWidth": "250dp",
+              "minHeight": "180dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 3,
+              "description": "Quick add expenses/income and view your balance",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ]
     ]
   }
 }

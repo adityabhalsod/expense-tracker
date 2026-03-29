@@ -6,6 +6,7 @@ import { Expense, Category, Wallet, Budget, AppSettings, Income, Transfer, Savin
 import * as db from '../database';
 import { DEFAULT_SETTINGS } from '../constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { refreshWidget } from '../widgets/refresh-widget';
 
 // Settings storage key for async persistence
 const SETTINGS_KEY = '@expense_tracker_settings';
@@ -153,6 +154,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     await get().loadWallets(); // Refresh all wallet balances
     // Record activity for streak tracking
     await get().recordActivity();
+    // Push updated data to the home-screen widget
+    refreshWidget();
     return newExpense;
   },
 
@@ -163,6 +166,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     await get().loadExpenses(50);
     await get().loadCurrentWallet();
     await get().loadWallets();
+    // Push updated data to the home-screen widget
+    refreshWidget();
   },
 
   // Delete an expense and restore wallet balance
@@ -171,6 +176,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => ({ expenses: state.expenses.filter((e) => e.id !== id) })); // Remove from local state
     await get().loadCurrentWallet(); // Refresh balance after restoration
     await get().loadWallets();
+    // Push updated data to the home-screen widget
+    refreshWidget();
   },
 
   // Delete multiple expenses at once and restore their wallet balances
@@ -180,6 +187,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => ({ expenses: state.expenses.filter((e) => !idSet.has(e.id)) }));
     await get().loadCurrentWallet(); // Refresh wallet after batch restoration
     await get().loadWallets();
+    // Push updated data to the home-screen widget
+    refreshWidget();
   },
 
   // Search expenses by keyword across notes, categories, and tags
@@ -312,6 +321,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => ({ income: [newIncome, ...state.income] })); // Prepend new income
     await get().loadCurrentWallet(); // Refresh wallet balance after credit
     await get().loadWallets();
+    // Push updated data to the home-screen widget
+    refreshWidget();
     return newIncome;
   },
 
@@ -321,6 +332,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     await get().loadIncome(50); // Reload for consistency
     await get().loadCurrentWallet();
     await get().loadWallets();
+    // Push updated data to the home-screen widget
+    refreshWidget();
   },
 
   // Delete an income record and reverse the wallet credit
@@ -329,6 +342,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => ({ income: state.income.filter((i) => i.id !== id) }));
     await get().loadCurrentWallet();
     await get().loadWallets();
+    // Push updated data to the home-screen widget
+    refreshWidget();
   },
 
   // ==================== TRANSFER ACTIONS ====================
@@ -345,6 +360,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => ({ transfers: [newTransfer, ...state.transfers] }));
     await get().loadCurrentWallet(); // Refresh wallet balances
     await get().loadWallets();
+    // Push updated data to the home-screen widget
+    refreshWidget();
     return newTransfer;
   },
 
@@ -354,6 +371,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => ({ transfers: state.transfers.filter((t) => t.id !== id) }));
     await get().loadCurrentWallet();
     await get().loadWallets();
+    // Push updated data to the home-screen widget
+    refreshWidget();
   },
 
   // ==================== SAVINGS GOAL ACTIONS ====================
