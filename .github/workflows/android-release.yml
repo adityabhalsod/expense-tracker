@@ -46,11 +46,12 @@ env:
   JAVA_VERSION: "17"
   NODE_VERSION: "20"
   # ── Gradle performance flags (inherited by every Gradle invocation) ──
+  # Note: jvmargs value must be quoted so multi-word flags stay grouped
   GRADLE_OPTS: >-
     -Dorg.gradle.daemon=true
     -Dorg.gradle.parallel=true
     -Dorg.gradle.workers.max=4
-    -Dorg.gradle.jvmargs=-Xmx4g -XX:+HeapDumpOnOutOfMemoryError -XX:+UseParallelGC
+    -Dorg.gradle.jvmargs="-Xmx4g -XX:+HeapDumpOnOutOfMemoryError -XX:+UseParallelGC"
     -Dorg.gradle.configureondemand=true
     -Dorg.gradle.caching=true
     -Dorg.gradle.vfs.watch=false
@@ -203,7 +204,7 @@ jobs:
     name: Build APK (${{ github.ref_name }})
     runs-on: ubuntu-latest
     needs: prepare
-    timeout-minutes: 25
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repository
@@ -240,8 +241,15 @@ jobs:
           # Raise inotify limit so Gradle file watchers don't hit ceiling
           echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
           sudo sysctl -p
-          # Remove unused SDKs/toolchains to free ~8 GB
-          sudo rm -rf /usr/local/lib/android/sdk/ndk /usr/share/dotnet /opt/ghc 2>/dev/null || true
+          # Remove unused SDKs/toolchains to free ~12 GB of disk space
+          sudo rm -rf /usr/local/lib/android/sdk/ndk \
+            /usr/share/dotnet \
+            /opt/ghc \
+            /usr/local/share/boost \
+            /opt/hostedtoolcache/CodeQL \
+            /usr/local/graalvm \
+            /usr/local/share/powershell 2>/dev/null || true
+          sudo docker image prune --all --force 2>/dev/null || true
 
       # ── Install JS dependencies (uses npm cache from setup-node) ──────
       - name: Install Node dependencies
@@ -274,10 +282,12 @@ jobs:
         run: ./gradlew --version
 
       # ── Assemble release APK with all performance flags ───────────────
+      # Build only ARM architectures for release (skip x86/x86_64 emulator ABIs)
       - name: Build release APK
         working-directory: android
         run: |
           ./gradlew app:assembleRelease \
+            -PreactNativeArchitectures=armeabi-v7a,arm64-v8a \
             -x lint \
             -x test \
             --parallel \
