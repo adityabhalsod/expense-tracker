@@ -257,6 +257,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       wallets: [newWallet, ...state.wallets],
       currentWallet: newWallet.isDefault ? newWallet : state.currentWallet,
     }));
+    // Sync widget with updated wallet balance after DB write
+    await refreshWidget();
     return newWallet;
   },
 
@@ -269,6 +271,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     await db.updateWallet(id, updates);
     await get().loadCurrentWallet();
     await get().loadWallets();
+    // Sync widget with updated wallet balance after DB write
+    await refreshWidget();
   },
 
   // Delete a wallet and remove from state
@@ -279,6 +283,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       currentWallet: state.currentWallet?.id === id ? null : state.currentWallet,
     }));
     await get().loadCurrentWallet(); // Re-derive default if deleted wallet was default
+    // Sync widget with updated wallet balance after DB write
+    await refreshWidget();
   },
 
   // Load budgets for a specific month/year period

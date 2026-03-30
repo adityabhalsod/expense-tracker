@@ -61,7 +61,8 @@
               "targetCellWidth": 4,
               "targetCellHeight": 3,
               "description": "Quick add expenses/income and view your balance",
-              "updatePeriodMillis": 1800000
+              "updatePeriodMillis": 1800000,
+              "resizeMode": "horizontal|vertical"
             }
           ]
         }

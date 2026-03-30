@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
   <uses-permission android:name="android.permission.INTERNET"/>
   <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" tools:replace="android:maxSdkVersion"/>
+  <uses-permission android:name="android.permission.RECORD_AUDIO"/>
   <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
   <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
   <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
@@ -17,25 +18,7 @@
     <meta-data android:name="expo.modules.updates.ENABLED" android:value="false"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_CHECK_ON_LAUNCH" android:value="ALWAYS"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_LAUNCH_WAIT_MS" android:value="0"/>
-    <!--
-        ExpenseWidget BroadcastReceiver — required registration for Android App Widgets.
-        The APPWIDGET_UPDATE action fires when the system needs to refresh widget instances.
-        The meta-data tag points to expense_widget_info.xml which defines widget size/layout.
-    -->
-    <receiver
-        android:name=".widget.ExpenseWidget"
-        android:label="@string/widget_label"
-        android:exported="true">
-      <intent-filter>
-        <!-- System broadcast that triggers onUpdate() in AppWidgetProvider -->
-        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-      </intent-filter>
-      <!-- Points Android to the AppWidgetProviderInfo XML for size + layout metadata -->
-      <meta-data
-          android:name="android.appwidget.provider"
-          android:resource="@xml/expense_widget_info" />
-    </receiver>
-
+    <service android:name="com.reactnativeandroidwidget.RNWidgetCollectionService" android:permission="android.permission.BIND_REMOTEVIEWS"/>
     <activity android:name=".MainActivity" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode|smallestScreenSize" android:launchMode="singleTask" android:windowSoftInputMode="adjustPan" android:theme="@style/Theme.App.SplashScreen" android:exported="true" android:screenOrientation="portrait">
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>
@@ -48,5 +31,12 @@
         <data android:scheme="expense-tracker"/>
       </intent-filter>
     </activity>
+    <receiver android:name=".widget.ExpenseTracker" android:exported="false" android:label="PaisaTrack">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+        <action android:name="com.adityabhalsod.expensetracker.WIDGET_CLICK"/>
+      </intent-filter>
+      <meta-data android:name="android.appwidget.provider" android:resource="@xml/widgetprovider_expensetracker"/>
+    </receiver>
   </application>
 </manifest>

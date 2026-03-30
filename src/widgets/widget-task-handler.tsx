@@ -1,12 +1,12 @@
 // Widget task handler — runs in a background JS context when Android triggers a widget event
 // Fetches live data from the SQLite database and renders the widget with fresh content
+'use no memo';
 
 import React from 'react';
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 import { ExpenseTrackerWidget } from './ExpenseTrackerWidget';
 import * as db from '../database';
 import { CURRENCIES } from '../constants';
-import { Appearance } from 'react-native';
 import { format } from 'date-fns';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -35,11 +35,6 @@ async function getCurrencySymbol(): Promise<string> {
   return '₹';
 }
 
-// Detect whether the device is currently in dark mode
-function getIsDark(): boolean {
-  return Appearance.getColorScheme() === 'dark';
-}
-
 // Format a numeric amount for widget display (compact, no decimals for whole numbers)
 function formatWidgetAmount(amount: number): string {
   // Show decimals only if the amount has a fractional part
@@ -62,9 +57,6 @@ async function getWidgetData() {
   // Resolve the user's currency symbol
   const currencySymbol = await getCurrencySymbol();
 
-  // Detect dark mode from device appearance
-  const isDark = getIsDark();
-
   // Map raw expense records to the compact widget display format
   const recentExpenses = expenses.map((e) => ({
     id: e.id,
@@ -78,7 +70,6 @@ async function getWidgetData() {
     balance: formatWidgetAmount(totalBalance),
     currencySymbol,
     recentExpenses,
-    isDark,
   };
 }
 
@@ -91,38 +82,26 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
   if (!Widget) return;
 
   switch (props.widgetAction) {
-    // Widget first placed on home screen — render with fresh data
-    case 'WIDGET_ADDED': {
+    // Render both light and dark variants — Android selects based on system theme
+    case 'WIDGET_ADDED':
+    case 'WIDGET_UPDATE':
+    case 'WIDGET_RESIZED':
+    case 'WIDGET_CLICK': {
       const data = await getWidgetData();
-      props.renderWidget(<Widget {...data} />);
-      break;
-    }
-
-    // Periodic update triggered by updatePeriodMillis — refresh data
-    case 'WIDGET_UPDATE': {
-      const data = await getWidgetData();
-      props.renderWidget(<Widget {...data} />);
-      break;
-    }
-
-    // Widget resized by user — re-render at new dimensions
-    case 'WIDGET_RESIZED': {
-      const data = await getWidgetData();
-      props.renderWidget(<Widget {...data} />);
+      // Fallback to reasonable defaults if dimensions aren't available yet
+      const w = widgetInfo.width > 0 ? widgetInfo.width : 250;
+      const h = widgetInfo.height > 0 ? widgetInfo.height : 180;
+      // Provide both theme variants for native light/dark mode switching
+      props.renderWidget({
+        light: <Widget {...data} isDark={false} widgetWidth={w} widgetHeight={h} />,
+        dark: <Widget {...data} isDark={true} widgetWidth={w} widgetHeight={h} />,
+      });
       break;
     }
 
     // Widget removed from home screen — no cleanup needed
     case 'WIDGET_DELETED':
       break;
-
-    // User tapped a click-action inside the widget
-    case 'WIDGET_CLICK': {
-      // Refresh data after any click action (e.g., after returning from QuickAdd)
-      const data = await getWidgetData();
-      props.renderWidget(<Widget {...data} />);
-      break;
-    }
 
     default:
       break;
