@@ -65,8 +65,7 @@ Expense Tracker helps you take control of your money. Track every rupee, dollar,
 | 🔐 | **End-to-End Encryption** | AES-256-GCM encryption with PBKDF2 key derivation, hardware-backed key storage via Secure Store |
 | 🌙 | **Dark Mode** | Automatic (follows system) or manual toggle |
 | 🌐 | **Multi-Language** | English, हिन्दी (Hindi), ગુજરાતી (Gujarati) |
-| ☁️ | **Cloud Backup** | Export and back up all financial data with one tap |
-— sensitive data encrypted at rest |
+| ☁️ | **Cloud Backup** | Export and back up all financial data with one tap sensitive data encrypted at rest |
 | 🔐 | **End-to-End Encryption** | AES-256-GCM encryption with PBKDF2 key derivation, hardware-backed key storage via Secure Store |
 
 ---
