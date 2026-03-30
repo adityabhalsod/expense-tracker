@@ -13,7 +13,6 @@ import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint
 
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ExpoReactHostFactory
-import com.adityabhalsod.expensetracker.widget.WidgetBridgePackage // native bridge for widget ↔ JS communication
 
 class MainApplication : Application(), ReactApplication {
 
@@ -22,8 +21,8 @@ class MainApplication : Application(), ReactApplication {
       context = applicationContext,
       packageList =
         PackageList(this).packages.apply {
-          // Register WidgetBridgePackage so JS can communicate with the home screen widget
-          add(WidgetBridgePackage())
+          // Packages that cannot be autolinked yet can be added manually here, for example:
+          // add(MyReactNativePackage())
         }
     )
   }

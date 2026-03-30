@@ -1,5 +1,6 @@
 // Utility to push fresh data to the Android home-screen widget
 // Called after any financial mutation (add/edit/delete expense, income, transfer)
+'use no memo';
 
 import React from 'react';
 import { Platform } from 'react-native';

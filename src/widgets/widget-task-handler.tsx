@@ -1,5 +1,6 @@
 // Widget task handler — runs in a background JS context when Android triggers a widget event
 // Fetches live data from the SQLite database and renders the widget with fresh content
+'use no memo';
 
 import React from 'react';
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
@@ -87,10 +88,13 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
     case 'WIDGET_RESIZED':
     case 'WIDGET_CLICK': {
       const data = await getWidgetData();
+      // Fallback to reasonable defaults if dimensions aren't available yet
+      const w = widgetInfo.width > 0 ? widgetInfo.width : 250;
+      const h = widgetInfo.height > 0 ? widgetInfo.height : 180;
       // Provide both theme variants for native light/dark mode switching
       props.renderWidget({
-        light: <Widget {...data} isDark={false} widgetWidth={widgetInfo.width} widgetHeight={widgetInfo.height} />,
-        dark: <Widget {...data} isDark={true} widgetWidth={widgetInfo.width} widgetHeight={widgetInfo.height} />,
+        light: <Widget {...data} isDark={false} widgetWidth={w} widgetHeight={h} />,
+        dark: <Widget {...data} isDark={true} widgetWidth={w} widgetHeight={h} />,
       });
       break;
     }

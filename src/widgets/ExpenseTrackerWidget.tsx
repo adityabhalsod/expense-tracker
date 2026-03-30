@@ -1,5 +1,6 @@
 // Android home-screen widget showing balance, recent expenses, and quick-add shortcuts
 // Supports translucent backgrounds, responsive sizing, and native light/dark themes
+'use no memo';
 
 import React from 'react';
 import { FlexWidget, TextWidget, ListWidget } from 'react-native-android-widget';
@@ -214,7 +215,13 @@ export function ExpenseTrackerWidget({
 
       {/* ── Recent expenses section (hidden when widget is too short) ── */}
       {sizes.showList && (
-        <>
+        <FlexWidget
+          style={{
+            width: 'match_parent',
+            height: 'match_parent',
+            flexDirection: 'column',
+          }}
+        >
           {/* Section divider */}
           <FlexWidget
             style={{
@@ -327,7 +334,7 @@ export function ExpenseTrackerWidget({
               />
             </FlexWidget>
           )}
-        </>
+        </FlexWidget>
       )}
     </FlexWidget>
   );
