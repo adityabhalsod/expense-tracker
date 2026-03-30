@@ -88,7 +88,8 @@ export async function refreshWidget(): Promise<void> {
         // No widget placed on home screen — nothing to update
       },
     });
-  } catch {
-    // Silently ignore widget update failures — widget is non-critical
+  } catch (e) {
+    // Log widget update failures for debugging — widget is non-critical
+    console.warn('refreshWidget failed:', e);
   }
 }
