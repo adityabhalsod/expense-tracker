@@ -2,9 +2,7 @@
 // Generates insight cards with trends, anomalies, and actionable financial observations
 
 import React, { useState, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
@@ -77,8 +75,8 @@ const MonthlyInsightsScreen = () => {
 
       // Insight 3: Find the top spending category this month
       if (curCats.length > 0) {
-        const topCat = curCats.reduce((a, b) => a.total > b.total ? a : b);
-        const cat = categories.find(c => c.name === topCat.category);
+        const topCat = curCats.reduce((a, b) => (a.total > b.total ? a : b));
+        const cat = categories.find((c) => c.name === topCat.category);
         newInsights.push({
           type: 'info',
           title: t.insights.topCategory,
@@ -89,7 +87,7 @@ const MonthlyInsightsScreen = () => {
       }
 
       // Insight 4: Detect category spending spikes vs previous month (>50% increase)
-      const prevCatMap = new Map(prevCats.map(c => [c.category, c.total]));
+      const prevCatMap = new Map(prevCats.map((c) => [c.category, c.total]));
       for (const cur of curCats) {
         const prev = prevCatMap.get(cur.category) || 0;
         if (prev > 0 && cur.total > prev * 1.5) {
@@ -146,7 +144,11 @@ const MonthlyInsightsScreen = () => {
   }, [t, categories]);
 
   // Regenerate insights whenever screen gains focus (data may have changed)
-  useFocusEffect(useCallback(() => { generateInsights(); }, [generateInsights]));
+  useFocusEffect(
+    useCallback(() => {
+      generateInsights();
+    }, [generateInsights]),
+  );
 
   if (loading) {
     return (
@@ -157,19 +159,16 @@ const MonthlyInsightsScreen = () => {
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      contentContainerStyle={styles.content}
+    >
       {/* Header with month label */}
-      <Text style={[styles.header, { color: theme.colors.text }]}>
-        {format(new Date(), 'MMMM yyyy')}
-      </Text>
+      <Text style={[styles.header, { color: theme.colors.text }]}>{format(new Date(), 'MMMM yyyy')}</Text>
 
       {insights.length === 0 ? (
         // No insights — not enough data yet
-        <EmptyState
-          icon="lightbulb-on"
-          title={t.insights.noInsights}
-          subtitle={t.insights.noInsightsHint}
-        />
+        <EmptyState icon="lightbulb-on" title={t.insights.noInsights} subtitle={t.insights.noInsightsHint} />
       ) : (
         // Render each insight as a colored card
         insights.map((insight, idx) => (
@@ -201,7 +200,14 @@ const styles = StyleSheet.create({
   header: { fontSize: 22, fontWeight: '800', marginBottom: 16 },
   insightCard: { marginBottom: 4 },
   insightRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  insightIcon: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  insightIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
   insightContent: { flex: 1 },
   insightTitle: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
   insightDesc: { fontSize: 13, lineHeight: 18 },

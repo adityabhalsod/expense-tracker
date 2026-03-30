@@ -32,8 +32,18 @@ const en = {
 
   // Month names
   months: [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ],
 
   // Tab navigation labels
@@ -134,10 +144,12 @@ const en = {
     dangerZone: 'DANGER ZONE',
     resetData: 'Clear All Data',
     resetDataDesc: 'Delete all expenses, wallets, budgets, and notifications but keep categories and app settings.',
-    resetDataConfirm: 'This will permanently delete all your expenses, wallets, and budgets. Categories and settings will be preserved. This cannot be undone.',
+    resetDataConfirm:
+      'This will permanently delete all your expenses, wallets, and budgets. Categories and settings will be preserved. This cannot be undone.',
     resetDatabase: 'Reset Entire Database',
     resetDatabaseDesc: 'Drop all tables and start fresh. All data including categories will be lost.',
-    resetDatabaseConfirm: 'This will completely reset the app to its initial state. ALL data will be permanently deleted including categories, expenses, wallets, and settings. This cannot be undone.',
+    resetDatabaseConfirm:
+      'This will completely reset the app to its initial state. ALL data will be permanently deleted including categories, expenses, wallets, and settings. This cannot be undone.',
     resetSuccess: 'Reset completed successfully. The app will reload.',
     resetFailed: 'Reset failed. Please try again.',
     security: 'SECURITY',
@@ -289,7 +301,8 @@ const en = {
     pinSuccess: 'PIN lock has been enabled.',
     pinDisabledMsg: 'PIN lock has been removed.',
     disabled: 'Disabled',
-    securityTip: 'For maximum security, we recommend enabling biometric authentication. Your data is always stored locally and encrypted on your device.',
+    securityTip:
+      'For maximum security, we recommend enabling biometric authentication. Your data is always stored locally and encrypted on your device.',
     enterPin: 'Enter PIN',
     confirmPin: 'Confirm PIN',
     setPin: 'Set PIN',
@@ -592,6 +605,17 @@ const en = {
     noIncome: 'No income recorded',
     stackedChart: 'Category Breakdown by Week',
     incomeFlow: 'Spending Flow',
+  },
+
+  // App update detection prompts
+  updateChecker: {
+    title: 'Update Available',
+    message: 'A new version ({version}) is available. Update now for the latest features and fixes.',
+    update: 'Update',
+    later: 'Later',
+    upToDate: 'Up to Date',
+    upToDateMessage: 'You are running the latest version ({version}).',
+    checkFailed: 'Unable to check for updates. Please try again later.',
   },
 };
 

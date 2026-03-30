@@ -148,7 +148,17 @@ export interface Badge {
 
 // Smart monthly insight generated from spending analysis
 export interface MonthlyInsight {
-  type: 'spending_up' | 'spending_down' | 'category_spike' | 'savings_positive' | 'savings_negative' | 'new_high' | 'streak' | 'warning' | 'positive' | 'info'; // Type of insight
+  type:
+    | 'spending_up'
+    | 'spending_down'
+    | 'category_spike'
+    | 'savings_positive'
+    | 'savings_negative'
+    | 'new_high'
+    | 'streak'
+    | 'warning'
+    | 'positive'
+    | 'info'; // Type of insight
   title: string; // Short headline for the insight
   description: string; // Detailed explanation of the insight
   icon: string; // MaterialCommunityIcons icon name for display
@@ -262,6 +272,3 @@ export type TabParamList = {
   Wallet: undefined; // Wallet management tab
   Settings: undefined; // App settings tab
 };
-
-
-

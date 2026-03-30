@@ -3,9 +3,7 @@
 // Supports multi-select mode for batch-deleting recent expenses
 
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -39,9 +37,10 @@ const HomeScreen = () => {
 
   // Toggle an expense in the selection set
   const toggleSelection = useCallback((id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); // Deselect if already selected
+      if (next.has(id))
+        next.delete(id); // Deselect if already selected
       else next.add(id); // Add to selection
       return next;
     });
@@ -62,7 +61,8 @@ const HomeScreen = () => {
       [
         { text: t.common.cancel, style: 'cancel' },
         {
-          text: t.common.delete, style: 'destructive',
+          text: t.common.delete,
+          style: 'destructive',
           onPress: async () => {
             await deleteMultipleExpenses([...selectedIds]);
             exitSelectMode(); // Clear selection after deletion
@@ -79,8 +79,8 @@ const HomeScreen = () => {
       loadCurrentWallet();
       loadWallets();
       loadIncome(50);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
   );
 
   // Pull-to-refresh handler reloads all data
@@ -95,16 +95,10 @@ const HomeScreen = () => {
   const recentExpenses = useMemo(() => expenses.slice(0, 5), [expenses]);
 
   // Aggregate total balance across all wallets
-  const totalBalance = useMemo(
-    () => wallets.reduce((sum, w) => sum + w.currentBalance, 0),
-    [wallets]
-  );
+  const totalBalance = useMemo(() => wallets.reduce((sum, w) => sum + w.currentBalance, 0), [wallets]);
 
   // Aggregate total initial balance across all wallets
-  const totalInitial = useMemo(
-    () => wallets.reduce((sum, w) => sum + w.initialBalance, 0),
-    [wallets]
-  );
+  const totalInitial = useMemo(() => wallets.reduce((sum, w) => sum + w.initialBalance, 0), [wallets]);
 
   // Calculate total spent across all wallets
   const totalSpent = useMemo(() => totalInitial - totalBalance, [totalInitial, totalBalance]);
@@ -112,31 +106,34 @@ const HomeScreen = () => {
   // Calculate today's total spending from expenses (memoized)
   const todayStr = new Date().toISOString().split('T')[0];
   const todayTotal = useMemo(
-    () => expenses.filter(e => e.date === todayStr).reduce((sum, e) => sum + e.amount, 0),
-    [expenses, todayStr]
+    () => expenses.filter((e) => e.date === todayStr).reduce((sum, e) => sum + e.amount, 0),
+    [expenses, todayStr],
   );
 
   // Calculate this month's total income
   const monthStr = todayStr.substring(0, 7); // "YYYY-MM" prefix for current month filtering
   const monthlyIncome = useMemo(
-    () => income.filter(i => i.date.startsWith(monthStr)).reduce((sum, i) => sum + i.amount, 0),
-    [income, monthStr]
+    () => income.filter((i) => i.date.startsWith(monthStr)).reduce((sum, i) => sum + i.amount, 0),
+    [income, monthStr],
   );
 
   // Calculate this month's total expenses
   const monthlyExpenses = useMemo(
-    () => expenses.filter(e => e.date.startsWith(monthStr)).reduce((sum, e) => sum + e.amount, 0),
-    [expenses, monthStr]
+    () => expenses.filter((e) => e.date.startsWith(monthStr)).reduce((sum, e) => sum + e.amount, 0),
+    [expenses, monthStr],
   );
 
   // Net savings = monthly income - monthly expenses
   const netSavings = useMemo(() => monthlyIncome - monthlyExpenses, [monthlyIncome, monthlyExpenses]);
 
   // Find icon and color for a category name from the categories list (memoized)
-  const getCategoryInfo = useCallback((categoryName: string) => {
-    const cat = categories.find(c => c.name === categoryName);
-    return { icon: cat?.icon || 'help-circle', color: cat?.color || '#999' };
-  }, [categories]);
+  const getCategoryInfo = useCallback(
+    (categoryName: string) => {
+      const cat = categories.find((c) => c.name === categoryName);
+      return { icon: cat?.icon || 'help-circle', color: cat?.color || '#999' };
+    },
+    [categories],
+  );
 
   // Get time-based greeting using translations
   const getLocalizedGreeting = () => {
@@ -150,7 +147,9 @@ const HomeScreen = () => {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />
+        }
       >
         {/* Header with greeting and search button */}
         <View style={styles.header}>
@@ -194,7 +193,9 @@ const HomeScreen = () => {
                       <View key={w.id} style={[styles.miniWallet, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         <MaterialCommunityIcons name={w.iconName as any} size={16} color="#FFF" />
-                        <Text style={styles.miniWalletName} numberOfLines={1}>{w.nickname || w.name}</Text>
+                        <Text style={styles.miniWalletName} numberOfLines={1}>
+                          {w.nickname || w.name}
+                        </Text>
                         <Text style={styles.miniWalletBal}>{formatCurrency(w.currentBalance, w.currency)}</Text>
                       </View>
                     ))}
@@ -223,9 +224,7 @@ const HomeScreen = () => {
               <MaterialCommunityIcons name="arrow-up-circle" size={32} color="#EF4444" />
             </View>
             <Text style={[styles.widgetTitle, { color: theme.colors.text }]}>{t.home.addExpense}</Text>
-            <Text style={[styles.widgetSubtitle, { color: theme.colors.textTertiary }]}>
-              {'Quick entry'}
-            </Text>
+            <Text style={[styles.widgetSubtitle, { color: theme.colors.textTertiary }]}>{'Quick entry'}</Text>
           </TouchableOpacity>
 
           {/* Quick Payment Received shortcut widget */}
@@ -236,12 +235,8 @@ const HomeScreen = () => {
             <View style={[styles.widgetIcon, { backgroundColor: '#DCFCE7' }]}>
               <MaterialCommunityIcons name="arrow-down-circle" size={32} color="#22C55E" />
             </View>
-            <Text style={[styles.widgetTitle, { color: theme.colors.text }]}>
-              {t.homeIncome.addIncome}
-            </Text>
-            <Text style={[styles.widgetSubtitle, { color: theme.colors.textTertiary }]}>
-              {'Record earnings'}
-            </Text>
+            <Text style={[styles.widgetTitle, { color: theme.colors.text }]}>{t.homeIncome.addIncome}</Text>
+            <Text style={[styles.widgetSubtitle, { color: theme.colors.textTertiary }]}>{'Record earnings'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -383,19 +378,33 @@ const HomeScreen = () => {
           </View>
           <View style={styles.savingsRow}>
             <View style={styles.savingsItem}>
-              <Text style={[styles.savingsLabel, { color: theme.colors.textSecondary }]}>{t.homeIncome.totalIncome}</Text>
-              <Text style={[styles.savingsAmount, { color: theme.colors.income || '#10B981' }]}>+{formatCurrency(monthlyIncome)}</Text>
+              <Text style={[styles.savingsLabel, { color: theme.colors.textSecondary }]}>
+                {t.homeIncome.totalIncome}
+              </Text>
+              <Text style={[styles.savingsAmount, { color: theme.colors.income || '#10B981' }]}>
+                +{formatCurrency(monthlyIncome)}
+              </Text>
             </View>
             <View style={[styles.savingsDivider, { backgroundColor: theme.colors.border }]} />
             <View style={styles.savingsItem}>
               <Text style={[styles.savingsLabel, { color: theme.colors.textSecondary }]}>{t.home.totalSpent}</Text>
-              <Text style={[styles.savingsAmount, { color: theme.colors.expense }]}>-{formatCurrency(monthlyExpenses)}</Text>
+              <Text style={[styles.savingsAmount, { color: theme.colors.expense }]}>
+                -{formatCurrency(monthlyExpenses)}
+              </Text>
             </View>
             <View style={[styles.savingsDivider, { backgroundColor: theme.colors.border }]} />
             <View style={styles.savingsItem}>
-              <Text style={[styles.savingsLabel, { color: theme.colors.textSecondary }]}>{t.homeIncome.netSavings}</Text>
-              <Text style={[styles.savingsAmount, { color: netSavings >= 0 ? (theme.colors.income || '#10B981') : theme.colors.expense }]}>
-                {netSavings >= 0 ? '+' : ''}{formatCurrency(netSavings)}
+              <Text style={[styles.savingsLabel, { color: theme.colors.textSecondary }]}>
+                {t.homeIncome.netSavings}
+              </Text>
+              <Text
+                style={[
+                  styles.savingsAmount,
+                  { color: netSavings >= 0 ? theme.colors.income || '#10B981' : theme.colors.expense },
+                ]}
+              >
+                {netSavings >= 0 ? '+' : ''}
+                {formatCurrency(netSavings)}
               </Text>
             </View>
           </View>
@@ -407,9 +416,7 @@ const HomeScreen = () => {
             <MaterialCommunityIcons name="calendar-today" size={20} color={theme.colors.primary} />
             <Text style={[styles.todayTitle, { color: theme.colors.text }]}>{t.home.todaysSpending}</Text>
           </View>
-          <Text style={[styles.todayAmount, { color: theme.colors.expense }]}>
-            {formatCurrency(todayTotal)}
-          </Text>
+          <Text style={[styles.todayAmount, { color: theme.colors.expense }]}>{formatCurrency(todayTotal)}</Text>
         </Card>
 
         {/* Recent expenses list section */}
@@ -457,7 +464,18 @@ const HomeScreen = () => {
                   }
                 }}
               >
-                <Card style={{ ...styles.expenseCard, ...(isSelected ? { backgroundColor: theme.colors.primary + '10', borderColor: theme.colors.primary, borderWidth: 1 } : {}) }}>
+                <Card
+                  style={{
+                    ...styles.expenseCard,
+                    ...(isSelected
+                      ? {
+                          backgroundColor: theme.colors.primary + '10',
+                          borderColor: theme.colors.primary,
+                          borderWidth: 1,
+                        }
+                      : {}),
+                  }}
+                >
                   <View style={styles.expenseRow}>
                     {/* Checkbox shown only in multi-select mode */}
                     {isSelectMode && (
@@ -501,9 +519,7 @@ const HomeScreen = () => {
             <View style={styles.emptyState}>
               <MaterialCommunityIcons name="receipt" size={48} color={theme.colors.textTertiary} />
               <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>{t.home.noExpenses}</Text>
-              <Text style={[styles.emptySubtext, { color: theme.colors.textTertiary }]}>
-                {t.home.tapToAdd}
-              </Text>
+              <Text style={[styles.emptySubtext, { color: theme.colors.textTertiary }]}>{t.home.tapToAdd}</Text>
             </View>
           </Card>
         )}
@@ -557,8 +573,12 @@ const styles = StyleSheet.create({
   // Mini wallet previews inside the main card
   miniWallets: { marginTop: 12, flexDirection: 'row' },
   miniWallet: {
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12,
-    marginRight: 8, alignItems: 'center', minWidth: 80,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginRight: 8,
+    alignItems: 'center',
+    minWidth: 80,
   },
   miniWalletName: { color: 'rgba(255,255,255,0.8)', fontSize: 10, marginTop: 2 },
   miniWalletBal: { color: '#FFF', fontSize: 12, fontWeight: '700', marginTop: 2 },

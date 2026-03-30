@@ -2,10 +2,7 @@
 // Supports type selector, bank name, icon/color pickers, and default toggle
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, TextInput, Alert,
-  ScrollView, TouchableOpacity, Keyboard,
-} from 'react-native';
+import { View, Text, StyleSheet, TextInput, Alert, ScrollView, TouchableOpacity, Keyboard } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../theme';
@@ -26,16 +23,33 @@ const WALLET_TYPES: { type: WalletType; icon: string; label: string }[] = [
 
 // Icon picker options for visual wallet identification
 const ICON_OPTIONS = [
-  'bank', 'wallet-outline', 'credit-card-outline',
-  'cash', 'bitcoin', 'contactless-payment', 'piggy-bank-outline',
-  'currency-inr', 'hand-coin-outline', 'store-outline', 'briefcase-outline',
+  'bank',
+  'wallet-outline',
+  'credit-card-outline',
+  'cash',
+  'bitcoin',
+  'contactless-payment',
+  'piggy-bank-outline',
+  'currency-inr',
+  'hand-coin-outline',
+  'store-outline',
+  'briefcase-outline',
 ];
 
 // Color palette for wallet card styling
 const COLOR_OPTIONS = [
-  '#4CAF50', '#2196F3', '#FF9800', '#E91E63', '#9C27B0',
-  '#00BCD4', '#795548', '#607D8B', '#FF5722', '#3F51B5',
-  '#009688', '#FFC107',
+  '#4CAF50',
+  '#2196F3',
+  '#FF9800',
+  '#E91E63',
+  '#9C27B0',
+  '#00BCD4',
+  '#795548',
+  '#607D8B',
+  '#FF5722',
+  '#3F51B5',
+  '#009688',
+  '#FFC107',
 ];
 
 const WalletSetupScreen = () => {
@@ -55,9 +69,9 @@ const WalletSetupScreen = () => {
 
   // Find existing wallet when editing — only recompute when walletId changes, not on every wallets array update
   const existingWallet = useMemo(
-    () => walletId ? wallets.find(w => w.id === walletId) : null,
+    () => (walletId ? wallets.find((w) => w.id === walletId) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [walletId]
+    [walletId],
   );
 
   // Form state fields
@@ -155,29 +169,55 @@ const WalletSetupScreen = () => {
     // Navigate back only after successful save (outside try/catch to avoid false error)
     navigation.goBack();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [name, type, initialBalance, bankName, nickname, iconName, color, isDefault, walletId, existingWallet, settings, addWallet, updateWallet]);
+  }, [
+    name,
+    type,
+    initialBalance,
+    bankName,
+    nickname,
+    iconName,
+    color,
+    isDefault,
+    walletId,
+    existingWallet,
+    settings,
+    addWallet,
+    updateWallet,
+  ]);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ScrollView style={styles.container} keyboardShouldPersistTaps="always" keyboardDismissMode="none" nestedScrollEnabled>
+      <ScrollView
+        style={styles.container}
+        keyboardShouldPersistTaps="always"
+        keyboardDismissMode="none"
+        nestedScrollEnabled
+      >
         {/* Wallet type selector chips */}
         <View style={styles.section}>
-          <Text style={[styles.label, { color: theme.colors.text }]}>
-            {t.walletSetup?.type || 'Type'}
-          </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeRow} keyboardShouldPersistTaps="always" nestedScrollEnabled>
+          <Text style={[styles.label, { color: theme.colors.text }]}>{t.walletSetup?.type || 'Type'}</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.typeRow}
+            keyboardShouldPersistTaps="always"
+            nestedScrollEnabled
+          >
             {WALLET_TYPES.map((wt) => (
               <TouchableOpacity
                 key={wt.type}
                 style={[
                   styles.typeChip,
                   { borderColor: theme.colors.border },
-                  type === wt.type && { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary + '15' },
+                  type === wt.type && {
+                    borderColor: theme.colors.primary,
+                    backgroundColor: theme.colors.primary + '15',
+                  },
                 ]}
                 onPress={() => {
                   setType(wt.type);
                   // Auto-set icon when changing type
-                  const match = WALLET_TYPES.find(w => w.type === wt.type);
+                  const match = WALLET_TYPES.find((w) => w.type === wt.type);
                   if (match) setIconName(match.icon);
                 }}
               >
@@ -187,10 +227,12 @@ const WalletSetupScreen = () => {
                   size={20}
                   color={type === wt.type ? theme.colors.primary : theme.colors.textSecondary}
                 />
-                <Text style={[
-                  styles.typeChipText,
-                  { color: type === wt.type ? theme.colors.primary : theme.colors.textSecondary },
-                ]}>
+                <Text
+                  style={[
+                    styles.typeChipText,
+                    { color: type === wt.type ? theme.colors.primary : theme.colors.textSecondary },
+                  ]}
+                >
                   {wt.label}
                 </Text>
               </TouchableOpacity>
@@ -202,7 +244,14 @@ const WalletSetupScreen = () => {
         <View style={styles.section}>
           <Text style={[styles.label, { color: theme.colors.text }]}>{t.walletSetup.walletName}</Text>
           <TextInput
-            style={[styles.input, { backgroundColor: theme.colors.inputBackground, color: theme.colors.text, borderColor: theme.colors.border }]}
+            style={[
+              styles.input,
+              {
+                backgroundColor: theme.colors.inputBackground,
+                color: theme.colors.text,
+                borderColor: theme.colors.border,
+              },
+            ]}
             value={name}
             onChangeText={setName}
             placeholder={t.walletSetup?.namePlaceholder || 'e.g., HDFC Savings'}
@@ -213,11 +262,16 @@ const WalletSetupScreen = () => {
         {/* Bank name input (shown for bank accounts and credit cards) */}
         {(type === 'bank_account' || type === 'credit_card') && (
           <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>
-              {t.walletSetup?.bankName || 'Bank Name'}
-            </Text>
+            <Text style={[styles.label, { color: theme.colors.text }]}>{t.walletSetup?.bankName || 'Bank Name'}</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: theme.colors.inputBackground, color: theme.colors.text, borderColor: theme.colors.border }]}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: theme.colors.inputBackground,
+                  color: theme.colors.text,
+                  borderColor: theme.colors.border,
+                },
+              ]}
               value={bankName}
               onChangeText={setBankName}
               placeholder={t.walletSetup?.bankNamePlaceholder || 'e.g., HDFC Bank'}
@@ -230,7 +284,14 @@ const WalletSetupScreen = () => {
         <View style={styles.section}>
           <Text style={[styles.label, { color: theme.colors.text }]}>{t.walletSetup.startingBalance}</Text>
           <TextInput
-            style={[styles.amountInput, { backgroundColor: theme.colors.inputBackground, color: theme.colors.text, borderColor: theme.colors.border }]}
+            style={[
+              styles.amountInput,
+              {
+                backgroundColor: theme.colors.inputBackground,
+                color: theme.colors.text,
+                borderColor: theme.colors.border,
+              },
+            ]}
             value={formatAmountInput(initialBalance)}
             onChangeText={handleBalanceChange}
             placeholder="0.00"
@@ -240,9 +301,7 @@ const WalletSetupScreen = () => {
             returnKeyType="done"
             onSubmitEditing={Keyboard.dismiss}
           />
-          <Text style={[styles.hint, { color: theme.colors.textTertiary }]}>
-            {t.walletSetup.balanceHint}
-          </Text>
+          <Text style={[styles.hint, { color: theme.colors.textTertiary }]}>{t.walletSetup.balanceHint}</Text>
         </View>
 
         {/* Nickname input (optional alias) */}
@@ -251,7 +310,14 @@ const WalletSetupScreen = () => {
             {t.walletSetup?.nickname || 'Nickname (Optional)'}
           </Text>
           <TextInput
-            style={[styles.input, { backgroundColor: theme.colors.inputBackground, color: theme.colors.text, borderColor: theme.colors.border }]}
+            style={[
+              styles.input,
+              {
+                backgroundColor: theme.colors.inputBackground,
+                color: theme.colors.text,
+                borderColor: theme.colors.border,
+              },
+            ]}
             value={nickname}
             onChangeText={setNickname}
             placeholder={t.walletSetup?.nicknamePlaceholder || 'Short alias'}
@@ -261,9 +327,7 @@ const WalletSetupScreen = () => {
 
         {/* Icon selection grid */}
         <View style={styles.section}>
-          <Text style={[styles.label, { color: theme.colors.text }]}>
-            {t.walletSetup?.icon || 'Icon'}
-          </Text>
+          <Text style={[styles.label, { color: theme.colors.text }]}>{t.walletSetup?.icon || 'Icon'}</Text>
           <View style={styles.optionGrid}>
             {ICON_OPTIONS.map((icon) => (
               <TouchableOpacity
@@ -288,18 +352,12 @@ const WalletSetupScreen = () => {
 
         {/* Color selection grid */}
         <View style={styles.section}>
-          <Text style={[styles.label, { color: theme.colors.text }]}>
-            {t.walletSetup?.color || 'Color'}
-          </Text>
+          <Text style={[styles.label, { color: theme.colors.text }]}>{t.walletSetup?.color || 'Color'}</Text>
           <View style={styles.optionGrid}>
             {COLOR_OPTIONS.map((c) => (
               <TouchableOpacity
                 key={c}
-                style={[
-                  styles.colorOption,
-                  { backgroundColor: c },
-                  color === c && styles.colorSelected,
-                ]}
+                style={[styles.colorOption, { backgroundColor: c }, color === c && styles.colorSelected]}
                 onPress={() => setColor(c)}
               >
                 {color === c && <MaterialCommunityIcons name="check" size={18} color="#FFF" />}
@@ -320,11 +378,13 @@ const WalletSetupScreen = () => {
             </Text>
           </View>
           {/* Checkbox indicator */}
-          <View style={[
-            styles.checkbox,
-            { borderColor: theme.colors.border },
-            isDefault && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
-          ]}>
+          <View
+            style={[
+              styles.checkbox,
+              { borderColor: theme.colors.border },
+              isDefault && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+            ]}
+          >
             {isDefault && <MaterialCommunityIcons name="check" size={16} color="#FFF" />}
           </View>
         </TouchableOpacity>

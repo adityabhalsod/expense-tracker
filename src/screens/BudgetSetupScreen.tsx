@@ -2,10 +2,7 @@
 // Supports daily, weekly, monthly, quarterly, yearly periods and wallet association
 
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, Modal,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
@@ -33,7 +30,7 @@ const BudgetSetupScreen = () => {
   const [showModal, setShowModal] = useState(false); // Budget edit modal visibility
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null); // Budget being edited
   // Default category selection: use the category marked as default (e.g., Food & Dining)
-  const defaultCategory = categories.find(c => c.isDefault);
+  const defaultCategory = categories.find((c) => c.isDefault);
   const [selectedCategory, setSelectedCategory] = useState(defaultCategory?.id || '');
   const [amount, setAmount] = useState(''); // Budget amount input
   const [selectedPeriod, setSelectedPeriod] = useState<BudgetPeriod>('monthly'); // Budget period type
@@ -58,17 +55,18 @@ const BudgetSetupScreen = () => {
   }, [currentMonth, currentYear]);
 
   // Calculate total spending for a category in the current month
-  const getCategorySpending = useCallback((categoryId: string) => {
-    const monthStart = new Date(currentYear, currentMonth - 1, 1);
-    const monthEnd = new Date(currentYear, currentMonth, 0);
-    const catName = categories.find(c => c.id === categoryId)?.name || '';
+  const getCategorySpending = useCallback(
+    (categoryId: string) => {
+      const monthStart = new Date(currentYear, currentMonth - 1, 1);
+      const monthEnd = new Date(currentYear, currentMonth, 0);
+      const catName = categories.find((c) => c.id === categoryId)?.name || '';
 
-    return expenses
-      .filter(e => e.category === catName &&
-        new Date(e.date) >= monthStart &&
-        new Date(e.date) <= monthEnd)
-      .reduce((sum, e) => sum + e.amount, 0);
-  }, [expenses, currentMonth, currentYear, categories]);
+      return expenses
+        .filter((e) => e.category === catName && new Date(e.date) >= monthStart && new Date(e.date) <= monthEnd)
+        .reduce((sum, e) => sum + e.amount, 0);
+    },
+    [expenses, currentMonth, currentYear, categories],
+  );
 
   // Open modal for adding a new budget with default category pre-selected
   const handleAddBudget = () => {
@@ -114,14 +112,19 @@ const BudgetSetupScreen = () => {
     }
 
     // Prevent duplicate budgets for same category in a month
-    const existing = budgets.find(b => b.categoryId === selectedCategory && b.id !== editingBudget?.id);
+    const existing = budgets.find((b) => b.categoryId === selectedCategory && b.id !== editingBudget?.id);
     if (existing) {
       Alert.alert(t.common.error, t.budget.duplicateBudget);
       return;
     }
 
     if (editingBudget) {
-      await updateBudget(editingBudget.id, { amount: numAmount, categoryId: selectedCategory, period: selectedPeriod, walletId: selectedWalletId || undefined });
+      await updateBudget(editingBudget.id, {
+        amount: numAmount,
+        categoryId: selectedCategory,
+        period: selectedPeriod,
+        walletId: selectedWalletId || undefined,
+      });
     } else {
       await addBudget({
         categoryId: selectedCategory,
@@ -143,7 +146,8 @@ const BudgetSetupScreen = () => {
     Alert.alert(t.budget.deleteTitle, t.budget.deleteMsg, [
       { text: t.common.cancel, style: 'cancel' },
       {
-        text: t.common.delete, style: 'destructive',
+        text: t.common.delete,
+        style: 'destructive',
         onPress: async () => {
           await deleteBudget(budget.id);
           await loadBudgets(currentMonth, currentYear);
@@ -164,24 +168,24 @@ const BudgetSetupScreen = () => {
 
   // Find category name by ID
   const getCategoryName = (categoryId: string) => {
-    return categories.find(c => c.id === categoryId)?.name || 'Unknown';
+    return categories.find((c) => c.id === categoryId)?.name || 'Unknown';
   };
 
   // Find category icon by ID
   const getCategoryIcon = (categoryId: string) => {
-    return categories.find(c => c.id === categoryId)?.icon || 'tag';
+    return categories.find((c) => c.id === categoryId)?.icon || 'tag';
   };
 
   // Get display label for a budget period
   const getPeriodLabel = (period: string) => {
-    return PERIOD_OPTIONS.find(p => p.value === period)?.label || period;
+    return PERIOD_OPTIONS.find((p) => p.value === period)?.label || period;
   };
 
   // Find wallet name by ID for display
   const getWalletName = (walletId?: string) => {
     if (!walletId) return null;
-    const w = wallets.find(w => w.id === walletId);
-    return w ? (w.nickname || w.name) : null;
+    const w = wallets.find((w) => w.id === walletId);
+    return w ? w.nickname || w.name : null;
   };
 
   // Calculate aggregate totals across all budgets
@@ -305,10 +309,18 @@ const BudgetSetupScreen = () => {
                 {/* Amount details: spent / budget, remaining */}
                 <View style={styles.budgetDetails}>
                   <Text style={[styles.budgetSpent, { color: theme.colors.textSecondary }]}>
-                    {formatCurrency(spent, settings.defaultCurrency)} / {formatCurrency(budget.amount, settings.defaultCurrency)}
+                    {formatCurrency(spent, settings.defaultCurrency)} /{' '}
+                    {formatCurrency(budget.amount, settings.defaultCurrency)}
                   </Text>
-                  <Text style={[styles.budgetRemaining, { color: remaining >= 0 ? theme.colors.success : theme.colors.error }]}>
-                    {remaining >= 0 ? `${formatCurrency(remaining, settings.defaultCurrency)} ${t.budget.left}` : `${formatCurrency(Math.abs(remaining), settings.defaultCurrency)} ${t.budget.over}`}
+                  <Text
+                    style={[
+                      styles.budgetRemaining,
+                      { color: remaining >= 0 ? theme.colors.success : theme.colors.error },
+                    ]}
+                  >
+                    {remaining >= 0
+                      ? `${formatCurrency(remaining, settings.defaultCurrency)} ${t.budget.left}`
+                      : `${formatCurrency(Math.abs(remaining), settings.defaultCurrency)} ${t.budget.over}`}
                   </Text>
                 </View>
               </Card>
@@ -320,10 +332,7 @@ const BudgetSetupScreen = () => {
       </ScrollView>
 
       {/* Floating action button for adding new budgets */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-        onPress={handleAddBudget}
-      >
+      <TouchableOpacity style={[styles.fab, { backgroundColor: theme.colors.primary }]} onPress={handleAddBudget}>
         <MaterialCommunityIcons name="plus" size={28} color="#FFF" />
       </TouchableOpacity>
 
@@ -339,30 +348,35 @@ const BudgetSetupScreen = () => {
               {/* Category selection grid */}
               <Text style={[styles.fieldLabel, { color: theme.colors.textSecondary }]}>{t.budget.category}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-                {categories
-                  .map(cat => (
-                    <TouchableOpacity
-                      key={cat.id}
+                {categories.map((cat) => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[
+                      styles.categoryChip,
+                      {
+                        backgroundColor:
+                          selectedCategory === cat.id ? theme.colors.primary : theme.colors.inputBackground,
+                        borderColor: selectedCategory === cat.id ? theme.colors.primary : theme.colors.border,
+                      },
+                    ]}
+                    onPress={() => setSelectedCategory(cat.id)}
+                  >
+                    <MaterialCommunityIcons
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      name={cat.icon as any}
+                      size={16}
+                      color={selectedCategory === cat.id ? '#FFF' : theme.colors.text}
+                    />
+                    <Text
                       style={[
-                        styles.categoryChip,
-                        {
-                          backgroundColor: selectedCategory === cat.id ? theme.colors.primary : theme.colors.inputBackground,
-                          borderColor: selectedCategory === cat.id ? theme.colors.primary : theme.colors.border,
-                        },
+                        styles.categoryChipText,
+                        { color: selectedCategory === cat.id ? '#FFF' : theme.colors.text },
                       ]}
-                      onPress={() => setSelectedCategory(cat.id)}
                     >
-                      <MaterialCommunityIcons
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        name={cat.icon as any}
-                        size={16}
-                        color={selectedCategory === cat.id ? '#FFF' : theme.colors.text}
-                      />
-                      <Text style={[styles.categoryChipText, { color: selectedCategory === cat.id ? '#FFF' : theme.colors.text }]}>
-                        {cat.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                      {cat.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </ScrollView>
 
               {/* Budget period selector — daily, weekly, monthly, quarterly, yearly */}
@@ -376,16 +390,20 @@ const BudgetSetupScreen = () => {
                     style={[
                       styles.periodChip,
                       {
-                        backgroundColor: selectedPeriod === opt.value ? theme.colors.primary : theme.colors.inputBackground,
+                        backgroundColor:
+                          selectedPeriod === opt.value ? theme.colors.primary : theme.colors.inputBackground,
                         borderColor: selectedPeriod === opt.value ? theme.colors.primary : theme.colors.border,
                       },
                     ]}
                     onPress={() => setSelectedPeriod(opt.value)} // Set selected period
                   >
-                    <Text style={{
-                      color: selectedPeriod === opt.value ? '#FFF' : theme.colors.text,
-                      fontSize: 12, fontWeight: '600',
-                    }}>
+                    <Text
+                      style={{
+                        color: selectedPeriod === opt.value ? '#FFF' : theme.colors.text,
+                        fontSize: 12,
+                        fontWeight: '600',
+                      }}
+                    >
                       {opt.label}
                     </Text>
                   </TouchableOpacity>
@@ -404,7 +422,8 @@ const BudgetSetupScreen = () => {
                       style={[
                         styles.categoryChip,
                         {
-                          backgroundColor: selectedWalletId === '' ? theme.colors.primary : theme.colors.inputBackground,
+                          backgroundColor:
+                            selectedWalletId === '' ? theme.colors.primary : theme.colors.inputBackground,
                           borderColor: selectedWalletId === '' ? theme.colors.primary : theme.colors.border,
                         },
                       ]}
@@ -415,7 +434,12 @@ const BudgetSetupScreen = () => {
                         size={16}
                         color={selectedWalletId === '' ? '#FFF' : theme.colors.text}
                       />
-                      <Text style={[styles.categoryChipText, { color: selectedWalletId === '' ? '#FFF' : theme.colors.text }]}>
+                      <Text
+                        style={[
+                          styles.categoryChipText,
+                          { color: selectedWalletId === '' ? '#FFF' : theme.colors.text },
+                        ]}
+                      >
                         All Wallets
                       </Text>
                     </TouchableOpacity>
@@ -437,7 +461,12 @@ const BudgetSetupScreen = () => {
                           size={16}
                           color={selectedWalletId === w.id ? w.color : theme.colors.text}
                         />
-                        <Text style={[styles.categoryChipText, { color: selectedWalletId === w.id ? w.color : theme.colors.text }]}>
+                        <Text
+                          style={[
+                            styles.categoryChipText,
+                            { color: selectedWalletId === w.id ? w.color : theme.colors.text },
+                          ]}
+                        >
                           {w.nickname || w.name}
                         </Text>
                       </TouchableOpacity>
@@ -450,7 +479,12 @@ const BudgetSetupScreen = () => {
               <Text style={[styles.fieldLabel, { color: theme.colors.textSecondary, marginTop: 16 }]}>
                 {t.budget.monthlyBudgetAmount}
               </Text>
-              <View style={[styles.amountInput, { backgroundColor: theme.colors.inputBackground, borderColor: theme.colors.border }]}>
+              <View
+                style={[
+                  styles.amountInput,
+                  { backgroundColor: theme.colors.inputBackground, borderColor: theme.colors.border },
+                ]}
+              >
                 <Text style={[styles.currencySymbol, { color: theme.colors.textSecondary }]}>{currency}</Text>
                 <TextInput
                   style={[styles.amountField, { color: theme.colors.text }]}
@@ -494,7 +528,13 @@ const styles = StyleSheet.create({
   progressBarBg: { height: 8, borderRadius: 4, overflow: 'hidden' },
   progressBarFill: { height: '100%', borderRadius: 4 },
   progressText: { fontSize: 12, marginTop: 6, textAlign: 'right' },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 4 },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 4,
+  },
   sectionTitle: { fontSize: 16, fontWeight: '600' },
   budgetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   budgetCategoryRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -504,39 +544,59 @@ const styles = StyleSheet.create({
   budgetSpent: { fontSize: 12 },
   budgetRemaining: { fontSize: 12, fontWeight: '600' },
   fab: {
-    position: 'absolute', bottom: 24, right: 24,
-    width: 56, height: 56, borderRadius: 28,
-    justifyContent: 'center', alignItems: 'center',
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
     elevation: 5,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25, shadowRadius: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end', // Slide up from bottom
   },
   modalContent: {
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 24, maxHeight: '80%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '80%',
   },
   modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 20 },
   fieldLabel: { fontSize: 13, fontWeight: '500', marginBottom: 8 },
   categoryScroll: { maxHeight: 44 },
   categoryChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1, marginRight: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: 8,
   },
   categoryChipText: { fontSize: 13, fontWeight: '500' },
   // Period selector row with wrapping chips
   periodRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   periodChip: {
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
   },
   amountInput: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1, borderRadius: 12, paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
   },
   currencySymbol: { fontSize: 20, fontWeight: '600', marginRight: 8 },
   amountField: { flex: 1, fontSize: 24, fontWeight: '700', paddingVertical: 14 },

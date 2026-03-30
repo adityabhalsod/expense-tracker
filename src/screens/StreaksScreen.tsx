@@ -2,9 +2,7 @@
 // Motivates daily usage through visual streak counters and achievement system
 
 import React, { useState, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, Dimensions,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme';
@@ -35,17 +33,25 @@ const StreaksScreen = () => {
   useFocusEffect(
     useCallback(() => {
       db.getAllBadges().then(setBadges);
-    }, [])
+    }, []),
   );
 
   // Set of badge IDs the user has earned, for quick lookup
   const earnedSet = new Set(badges.map((b) => b.id));
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      contentContainerStyle={styles.content}
+    >
       {/* Streak flame animation card — main visual focus */}
       <Card style={styles.streakCard}>
-        <View style={[styles.flameContainer, { backgroundColor: streak.currentStreak > 0 ? '#FEF3C7' : theme.colors.inputBackground }]}>
+        <View
+          style={[
+            styles.flameContainer,
+            { backgroundColor: streak.currentStreak > 0 ? '#FEF3C7' : theme.colors.inputBackground },
+          ]}
+        >
           <MaterialCommunityIcons
             name="fire"
             size={64}
@@ -83,7 +89,12 @@ const StreaksScreen = () => {
           return (
             <Card key={def.id} style={{ ...styles.badgeCard, ...(!earned ? { opacity: 0.4 } : {}) }}>
               {/* Badge icon — colored when earned, muted when locked */}
-              <View style={[styles.badgeIcon, { backgroundColor: earned ? def.color + '20' : theme.colors.inputBackground }]}>
+              <View
+                style={[
+                  styles.badgeIcon,
+                  { backgroundColor: earned ? def.color + '20' : theme.colors.inputBackground },
+                ]}
+              >
                 <MaterialCommunityIcons
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   name={def.icon as any}
@@ -91,10 +102,17 @@ const StreaksScreen = () => {
                   color={earned ? def.color : theme.colors.textTertiary}
                 />
               </View>
-              <Text style={[styles.badgeDays, { color: theme.colors.text }]}>{def.days} {t.streaks.days}</Text>
+              <Text style={[styles.badgeDays, { color: theme.colors.text }]}>
+                {def.days} {t.streaks.days}
+              </Text>
               {/* Lock icon overlay for unearned badges */}
               {!earned && (
-                <MaterialCommunityIcons name="lock" size={14} color={theme.colors.textTertiary} style={styles.lockIcon} />
+                <MaterialCommunityIcons
+                  name="lock"
+                  size={14}
+                  color={theme.colors.textTertiary}
+                  style={styles.lockIcon}
+                />
               )}
               {/* Checkmark overlay for earned badges */}
               {earned && (
@@ -108,9 +126,7 @@ const StreaksScreen = () => {
       {/* Motivational tips section */}
       <Card style={styles.tipsCard}>
         <MaterialCommunityIcons name="lightbulb-on" size={20} color="#F59E0B" />
-        <Text style={[styles.tipsText, { color: theme.colors.textSecondary }]}>
-          {t.streaks.tip}
-        </Text>
+        <Text style={[styles.tipsText, { color: theme.colors.textSecondary }]}>{t.streaks.tip}</Text>
       </Card>
 
       <View style={{ height: 40 }} />
@@ -122,7 +138,14 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16 },
   streakCard: { alignItems: 'center', paddingVertical: 28, marginBottom: 16 },
-  flameContainer: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  flameContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   streakCount: { fontSize: 48, fontWeight: '800' },
   streakLabel: { fontSize: 16, fontWeight: '600', marginTop: -4 },
   streakDesc: { fontSize: 13, marginTop: 8 },
@@ -133,7 +156,14 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
   badgeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
   badgeCard: { width: (Dimensions.get('window').width - 64) / 3, alignItems: 'center', paddingVertical: 14 },
-  badgeIcon: { width: 52, height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
+  badgeIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
   badgeDays: { fontSize: 12, fontWeight: '600' },
   lockIcon: { position: 'absolute', top: 8, right: 8 },
   checkIcon: { position: 'absolute', top: 8, right: 8 },

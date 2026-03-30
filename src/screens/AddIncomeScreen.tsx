@@ -3,8 +3,16 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
-  TouchableWithoutFeedback, Alert, Platform, Keyboard,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  Alert,
+  Platform,
+  Keyboard,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -46,7 +54,7 @@ const AddIncomeScreen = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   // Default to default wallet or first wallet
   const [selectedWalletId, setSelectedWalletId] = useState(() => {
-    const defaultW = wallets.find(w => w.isDefault) || wallets[0];
+    const defaultW = wallets.find((w) => w.isDefault) || wallets[0];
     return defaultW?.id || '';
   });
 
@@ -67,16 +75,16 @@ const AddIncomeScreen = () => {
   // Sync wallet selection if wallets load after initial render
   useEffect(() => {
     if (!selectedWalletId && wallets.length > 0) {
-      const defaultWallet = wallets.find(w => w.isDefault) || wallets[0];
+      const defaultWallet = wallets.find((w) => w.isDefault) || wallets[0];
       setSelectedWalletId(defaultWallet.id);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wallets.length]);
 
   // Pre-fill form when editing existing income
   useEffect(() => {
     if (incomeId) {
-      const income = incomeRecords.find(i => i.id === incomeId);
+      const income = incomeRecords.find((i) => i.id === incomeId);
       if (income) {
         setAmount(income.amount.toString());
         setSelectedSource(income.source);
@@ -89,7 +97,7 @@ const AddIncomeScreen = () => {
         navigation.setOptions({ title: t.income.editTitle });
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incomeId]);
 
   // Validate and submit the income form
@@ -193,10 +201,12 @@ const AddIncomeScreen = () => {
                   color={selectedSource === src.value ? src.color : theme.colors.textSecondary}
                 />
                 {/* eslint-enable @typescript-eslint/no-explicit-any */}
-                <Text style={[
-                  styles.sourceChipText,
-                  { color: selectedSource === src.value ? src.color : theme.colors.text },
-                ]}>
+                <Text
+                  style={[
+                    styles.sourceChipText,
+                    { color: selectedSource === src.value ? src.color : theme.colors.text },
+                  ]}
+                >
                   {src.label}
                 </Text>
               </TouchableOpacity>
@@ -251,10 +261,9 @@ const AddIncomeScreen = () => {
                     color={selectedWalletId === w.id ? w.color : theme.colors.textSecondary}
                   />
                   {/* eslint-enable @typescript-eslint/no-explicit-any */}
-                  <Text style={[
-                    styles.walletChipText,
-                    { color: selectedWalletId === w.id ? w.color : theme.colors.text },
-                  ]}>
+                  <Text
+                    style={[styles.walletChipText, { color: selectedWalletId === w.id ? w.color : theme.colors.text }]}
+                  >
                     {w.nickname || w.name}
                   </Text>
                 </TouchableOpacity>
@@ -267,7 +276,14 @@ const AddIncomeScreen = () => {
         <View style={styles.section}>
           <Text style={[styles.label, { color: theme.colors.text }]}>{t.income.notes}</Text>
           <TextInput
-            style={[styles.textArea, { backgroundColor: theme.colors.inputBackground, color: theme.colors.text, borderColor: theme.colors.border }]}
+            style={[
+              styles.textArea,
+              {
+                backgroundColor: theme.colors.inputBackground,
+                color: theme.colors.text,
+                borderColor: theme.colors.border,
+              },
+            ]}
             value={notes}
             onChangeText={setNotes}
             placeholder={t.income.notesPlaceholder}
@@ -281,7 +297,10 @@ const AddIncomeScreen = () => {
         {/* Recurring income toggle and frequency selector */}
         <View style={styles.section}>
           <TouchableOpacity
-            style={[styles.recurringToggle, { backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.border }]}
+            style={[
+              styles.recurringToggle,
+              { backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.border },
+            ]}
             onPress={() => setIsRecurring(!isRecurring)}
           >
             <MaterialCommunityIcons
@@ -301,17 +320,20 @@ const AddIncomeScreen = () => {
                   style={[
                     styles.frequencyChip,
                     {
-                      backgroundColor: recurringFrequency === freq.value ? theme.colors.income : theme.colors.surfaceVariant,
+                      backgroundColor:
+                        recurringFrequency === freq.value ? theme.colors.income : theme.colors.surfaceVariant,
                       borderColor: recurringFrequency === freq.value ? theme.colors.income : theme.colors.border,
                     },
                   ]}
                   onPress={() => setRecurringFrequency(freq.value)}
                 >
-                  <Text style={{
-                    color: recurringFrequency === freq.value ? '#FFF' : theme.colors.text,
-                    fontSize: 12,
-                    fontWeight: '600',
-                  }}>
+                  <Text
+                    style={{
+                      color: recurringFrequency === freq.value ? '#FFF' : theme.colors.text,
+                      fontSize: 12,
+                      fontWeight: '600',
+                    }}
+                  >
                     {freq.label}
                   </Text>
                 </TouchableOpacity>

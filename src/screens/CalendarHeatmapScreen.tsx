@@ -2,9 +2,7 @@
 // Color intensity maps to spending amount, providing at-a-glance spending patterns
 
 import React, { useState, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, TouchableOpacity, Dimensions,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { format, startOfMonth, addMonths, subMonths, getDay, getDaysInMonth, parseISO } from 'date-fns';
@@ -22,12 +20,12 @@ const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 // Intensity color scale — from no spending to very high spending
 const INTENSITY_COLORS = [
-  'transparent',   // level 0: no data
-  '#D1FAE5',       // level 1: light green (low spending)
-  '#6EE7B7',       // level 2: medium-light 
-  '#34D399',       // level 3: medium
-  '#10B981',       // level 4: medium-high
-  '#059669',       // level 5: high spending
+  'transparent', // level 0: no data
+  '#D1FAE5', // level 1: light green (low spending)
+  '#6EE7B7', // level 2: medium-light
+  '#34D399', // level 3: medium
+  '#10B981', // level 4: medium-high
+  '#059669', // level 5: high spending
 ];
 
 const CalendarHeatmapScreen = () => {
@@ -63,7 +61,11 @@ const CalendarHeatmapScreen = () => {
   }, [currentMonth]);
 
   // Reload data when screen gains focus or month changes
-  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData]),
+  );
 
   // Determine color intensity level (0-5) based on amount relative to month's max
   const getIntensityLevel = (amount: number): number => {
@@ -96,9 +98,7 @@ const CalendarHeatmapScreen = () => {
         <TouchableOpacity onPress={() => setCurrentMonth(subMonths(currentMonth, 1))}>
           <MaterialCommunityIcons name="chevron-left" size={28} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.monthLabel, { color: theme.colors.text }]}>
-          {format(currentMonth, 'MMMM yyyy')}
-        </Text>
+        <Text style={[styles.monthLabel, { color: theme.colors.text }]}>{format(currentMonth, 'MMMM yyyy')}</Text>
         <TouchableOpacity onPress={() => setCurrentMonth(addMonths(currentMonth, 1))}>
           <MaterialCommunityIcons name="chevron-right" size={28} color={theme.colors.text} />
         </TouchableOpacity>
@@ -118,7 +118,9 @@ const CalendarHeatmapScreen = () => {
       {/* Day-of-week column headers */}
       <View style={styles.dayLabels}>
         {DAY_LABELS.map((d) => (
-          <Text key={d} style={[styles.dayLabel, { color: theme.colors.textTertiary, width: CELL_SIZE }]}>{d}</Text>
+          <Text key={d} style={[styles.dayLabel, { color: theme.colors.textTertiary, width: CELL_SIZE }]}>
+            {d}
+          </Text>
         ))}
       </View>
 
@@ -177,7 +179,13 @@ const CalendarHeatmapScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingHorizontal: 4 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
   monthLabel: { fontSize: 18, fontWeight: '700' },
   summaryCard: { marginBottom: 16, alignItems: 'center', paddingVertical: 16 },
   summaryLabel: { fontSize: 13 },

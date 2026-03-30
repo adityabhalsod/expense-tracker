@@ -14,6 +14,7 @@
   <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Platform-Android_|_iOS-green" alt="Platform" />
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License" />
+  <a href="https://github.com/adityabhalsod/expense-tracker/actions/workflows/ci.yml"><img src="https://github.com/adityabhalsod/expense-tracker/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://github.com/adityabhalsod/expense-tracker/actions/workflows/android-release.yml"><img src="https://github.com/adityabhalsod/expense-tracker/actions/workflows/android-release.yml/badge.svg" alt="Android Release" /></a>
   <a href="https://github.com/adityabhalsod/expense-tracker/releases/latest"><img src="https://img.shields.io/github/v/release/adityabhalsod/expense-tracker?include_prereleases&label=Latest%20Release" alt="Latest Release" /></a>
 </p>
@@ -290,6 +291,32 @@ Translation files are in `src/i18n/`. To add a new language, create a new transl
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+### Code Quality Requirements
+
+Every pull request targeting `main` must pass these automated checks before it can be merged:
+
+| Check | Command | What it verifies |
+|-------|---------|------------------|
+| **ESLint** | `npm run lint` | Zero warnings across all `.ts` / `.tsx` files |
+| **TypeScript** | `npm run typecheck` | Zero type errors (`tsc --noEmit`) |
+
+Both checks run automatically via the [CI workflow](.github/workflows/ci.yml) on every PR.
+
+**Run checks locally before pushing:**
+```bash
+# Run both lint and typecheck in one command
+npm run check
+```
+
+### Branch Protection
+
+The `main` branch is protected with these rules:
+- **Require status checks to pass** — `lint` and `typecheck` jobs must be green
+- **Require branches to be up to date** — PR must be rebased on latest `main`
+- **No direct pushes** — all changes go through pull requests
+
+To configure branch protection: **Settings → Branches → Add rule** for `main`, then select the `lint` and `typecheck` status checks as required.
 
 ---
 

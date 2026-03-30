@@ -2,7 +2,17 @@
 // Provides reactive state for expenses, categories, wallets, budgets, and payment sources
 
 import { create } from 'zustand';
-import { Expense, Category, Wallet, Budget, AppSettings, Income, Transfer, SavingsGoal, ExpenseTemplate } from '../types';
+import {
+  Expense,
+  Category,
+  Wallet,
+  Budget,
+  AppSettings,
+  Income,
+  Transfer,
+  SavingsGoal,
+  ExpenseTemplate,
+} from '../types';
 import * as db from '../database';
 import { DEFAULT_SETTINGS } from '../constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -440,7 +450,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
   // Fetch current streak data from database
   loadStreak: async () => {
     const data = await db.getUserStreak();
-    set({ streak: { currentStreak: data.currentStreak, longestStreak: data.longestStreak, totalDaysActive: data.totalDaysActive } });
+    set({
+      streak: {
+        currentStreak: data.currentStreak,
+        longestStreak: data.longestStreak,
+        totalDaysActive: data.totalDaysActive,
+      },
+    });
   },
 
   // Record today's activity for streak tracking and check badge milestones
@@ -452,7 +468,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const milestones = [3, 7, 14, 30, 60, 100, 365];
     for (const days of milestones) {
       if (result.currentStreak >= days) {
-        await db.awardBadge({ id: `streak_${days}`, name: `${days} Day Streak`, description: `Logged expenses for ${days} consecutive days`, icon: 'fire' });
+        await db.awardBadge({
+          id: `streak_${days}`,
+          name: `${days} Day Streak`,
+          description: `Logged expenses for ${days} consecutive days`,
+          icon: 'fire',
+        });
       }
     }
   },

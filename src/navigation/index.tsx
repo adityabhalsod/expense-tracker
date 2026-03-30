@@ -128,9 +128,7 @@ const TabNavigator = () => {
         component={HomeScreen}
         options={{
           tabBarLabel: t.tabs.home,
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="home" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="home" size={size} color={color} />,
         }}
       />
       {/* Expense list tab */}
@@ -150,9 +148,7 @@ const TabNavigator = () => {
         component={AnalyticsScreen}
         options={{
           tabBarLabel: t.tabs.analytics,
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="chart-arc" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="chart-arc" size={size} color={color} />,
         }}
       />
       {/* Wallet and balance management tab */}
@@ -161,9 +157,7 @@ const TabNavigator = () => {
         component={WalletScreen}
         options={{
           tabBarLabel: t.tabs.wallet,
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="wallet" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="wallet" size={size} color={color} />,
         }}
       />
       {/* App settings tab */}
@@ -172,9 +166,7 @@ const TabNavigator = () => {
         component={SettingsScreen}
         options={{
           tabBarLabel: t.tabs.settings,
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="cog" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="cog" size={size} color={color} />,
         }}
       />
     </Tab.Navigator>
@@ -209,15 +201,35 @@ const AppNavigator = ({ initialRoute = 'MainTabs' }: { initialRoute?: string }) 
         {/* Main tab navigator as the home screen */}
         <Stack.Screen name="MainTabs" component={TabNavigator} options={{ headerShown: false }} />
         {/* Add/Edit expense form */}
-        <Stack.Screen name="AddExpense" component={withSuspense(AddExpenseScreen)} options={{ title: t.addExpense.title }} />
+        <Stack.Screen
+          name="AddExpense"
+          component={withSuspense(AddExpenseScreen)}
+          options={{ title: t.addExpense.title }}
+        />
         {/* Single expense detail view */}
-        <Stack.Screen name="ExpenseDetail" component={withSuspense(ExpenseDetailScreen)} options={{ title: t.expenseDetail.title }} />
+        <Stack.Screen
+          name="ExpenseDetail"
+          component={withSuspense(ExpenseDetailScreen)}
+          options={{ title: t.expenseDetail.title }}
+        />
         {/* Category management CRUD screen */}
-        <Stack.Screen name="CategoryManagement" component={withSuspense(CategoryManagementScreen)} options={{ title: t.categoryManagement.title }} />
+        <Stack.Screen
+          name="CategoryManagement"
+          component={withSuspense(CategoryManagementScreen)}
+          options={{ title: t.categoryManagement.title }}
+        />
         {/* Wallet creation/edit form */}
-        <Stack.Screen name="WalletSetup" component={withSuspense(WalletSetupScreen)} options={{ title: t.walletSetup.title }} />
+        <Stack.Screen
+          name="WalletSetup"
+          component={withSuspense(WalletSetupScreen)}
+          options={{ title: t.walletSetup.title }}
+        />
         {/* Export report configuration */}
-        <Stack.Screen name="ExportReport" component={withSuspense(ExportReportScreen)} options={{ title: t.exportReport.title }} />
+        <Stack.Screen
+          name="ExportReport"
+          component={withSuspense(ExportReportScreen)}
+          options={{ title: t.exportReport.title }}
+        />
         {/* Search and filter screen */}
         <Stack.Screen name="Search" component={withSuspense(SearchScreen)} options={{ title: t.search.title }} />
         {/* Security settings (PIN/Biometric) */}
@@ -225,25 +237,53 @@ const AppNavigator = ({ initialRoute = 'MainTabs' }: { initialRoute?: string }) 
         {/* Cloud Backup feature commented out for now */}
         {/* <Stack.Screen name="CloudBackup" component={CloudBackupScreen} options={{ title: 'Cloud Backup' }} /> */}
         {/* Budget setup and management */}
-        <Stack.Screen name="BudgetSetup" component={withSuspense(BudgetSetupScreen)} options={{ title: t.budget.title }} />
+        <Stack.Screen
+          name="BudgetSetup"
+          component={withSuspense(BudgetSetupScreen)}
+          options={{ title: t.budget.title }}
+        />
         {/* All expenses view with full list */}
-        <Stack.Screen name="AllExpenses" component={withSuspense(AllExpensesScreen)} options={{ title: t.allExpenses.title }} />
+        <Stack.Screen
+          name="AllExpenses"
+          component={withSuspense(AllExpensesScreen)}
+          options={{ title: t.allExpenses.title }}
+        />
         {/* Add/Edit income form */}
         <Stack.Screen name="AddIncome" component={withSuspense(AddIncomeScreen)} options={{ title: t.income.title }} />
         {/* Income history list */}
-        <Stack.Screen name="IncomeList" component={withSuspense(IncomeListScreen)} options={{ title: t.income.listTitle }} />
+        <Stack.Screen
+          name="IncomeList"
+          component={withSuspense(IncomeListScreen)}
+          options={{ title: t.income.listTitle }}
+        />
         {/* Wallet-to-wallet transfer */}
         <Stack.Screen name="Transfer" component={withSuspense(TransferScreen)} options={{ title: t.transfer.title }} />
         {/* Savings Goals tracker */}
-        <Stack.Screen name="SavingsGoals" component={withSuspense(SavingsGoalsScreen)} options={{ title: t.savingsGoals.title }} />
+        <Stack.Screen
+          name="SavingsGoals"
+          component={withSuspense(SavingsGoalsScreen)}
+          options={{ title: t.savingsGoals.title }}
+        />
         {/* Expense Templates / Favorites */}
-        <Stack.Screen name="ExpenseTemplates" component={withSuspense(ExpenseTemplatesScreen)} options={{ title: t.templates.title }} />
+        <Stack.Screen
+          name="ExpenseTemplates"
+          component={withSuspense(ExpenseTemplatesScreen)}
+          options={{ title: t.templates.title }}
+        />
         {/* Calendar Heatmap View */}
-        <Stack.Screen name="CalendarHeatmap" component={withSuspense(CalendarHeatmapScreen)} options={{ title: t.calendarHeatmap.title }} />
+        <Stack.Screen
+          name="CalendarHeatmap"
+          component={withSuspense(CalendarHeatmapScreen)}
+          options={{ title: t.calendarHeatmap.title }}
+        />
         {/* Streaks & Gamification */}
         <Stack.Screen name="Streaks" component={withSuspense(StreaksScreen)} options={{ title: t.streaks.title }} />
         {/* Smart Monthly Insights */}
-        <Stack.Screen name="MonthlyInsights" component={withSuspense(MonthlyInsightsScreen)} options={{ title: t.insights.title }} />
+        <Stack.Screen
+          name="MonthlyInsights"
+          component={withSuspense(MonthlyInsightsScreen)}
+          options={{ title: t.insights.title }}
+        />
         {/* Onboarding walkthrough — headerless full-screen */}
         <Stack.Screen name="Onboarding" component={withSuspense(OnboardingScreen)} options={{ headerShown: false }} />
         {/*
@@ -255,9 +295,9 @@ const AppNavigator = ({ initialRoute = 'MainTabs' }: { initialRoute?: string }) 
           name="QuickAdd"
           component={withSuspense(QuickAddScreen)}
           options={{
-            headerShown: false,         // no header — card has its own colored header strip
+            headerShown: false, // no header — card has its own colored header strip
             presentation: 'transparentModal', // show screen background as semi-transparent
-            animation: 'fade',          // fade-in overlay; card slides up via Animated.spring
+            animation: 'fade', // fade-in overlay; card slides up via Animated.spring
           }}
         />
       </Stack.Navigator>

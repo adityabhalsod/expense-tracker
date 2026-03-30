@@ -31,9 +31,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, subtitle, actionLa
       {/* Main empty state message */}
       <Text style={[styles.title, { color: theme.colors.text }]}>{title}</Text>
       {/* Optional description below the title */}
-      {subtitle && (
-        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{subtitle}</Text>
-      )}
+      {subtitle && <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{subtitle}</Text>}
       {/* Optional action button for user to create first item */}
       {actionLabel && onAction && (
         <View style={styles.buttonContainer}>

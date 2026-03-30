@@ -3,8 +3,16 @@
 
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  Alert, Modal, KeyboardAvoidingView, Platform,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -18,14 +26,34 @@ import EmptyState from '../components/common/EmptyState';
 
 // Predefined icons for template visual identification
 const TEMPLATE_ICONS = [
-  'coffee', 'food', 'bus', 'gas-station', 'cart', 'pill',
-  'dumbbell', 'movie-open', 'book-open-variant', 'gamepad-variant', 'wifi', 'phone',
+  'coffee',
+  'food',
+  'bus',
+  'gas-station',
+  'cart',
+  'pill',
+  'dumbbell',
+  'movie-open',
+  'book-open-variant',
+  'gamepad-variant',
+  'wifi',
+  'phone',
 ];
 
 // Color palette for template cards
 const TEMPLATE_COLORS = [
-  '#6C63FF', '#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#EC4899',
-  '#8B5CF6', '#14B8A6', '#F97316', '#06B6D4', '#84CC16', '#A855F7',
+  '#6C63FF',
+  '#10B981',
+  '#3B82F6',
+  '#F59E0B',
+  '#EF4444',
+  '#EC4899',
+  '#8B5CF6',
+  '#14B8A6',
+  '#F97316',
+  '#06B6D4',
+  '#84CC16',
+  '#A855F7',
 ];
 
 const ExpenseTemplatesScreen = () => {
@@ -60,7 +88,7 @@ const ExpenseTemplatesScreen = () => {
   }, []);
 
   // Use a template: navigate to AddExpense with pre-filled data, increment usage count
-  const handleUseTemplate = async (template: typeof templates[0]) => {
+  const handleUseTemplate = async (template: (typeof templates)[0]) => {
     await applyTemplate(template.id);
     navigation.navigate('AddExpense', {
       prefillCategory: template.category,
@@ -115,7 +143,10 @@ const ExpenseTemplatesScreen = () => {
             title={t.templates.noTemplates}
             subtitle={t.templates.noTemplatesHint}
             actionLabel={t.templates.createTemplate}
-            onAction={() => { resetForm(); setShowModal(true); }}
+            onAction={() => {
+              resetForm();
+              setShowModal(true);
+            }}
           />
         ) : (
           // Template list grouped by usage
@@ -136,11 +167,15 @@ const ExpenseTemplatesScreen = () => {
                     </View>
                     <View style={styles.templateInfo}>
                       <Text style={[styles.templateName, { color: theme.colors.text }]}>{template.name}</Text>
-                      <Text style={[styles.templateCategory, { color: theme.colors.textSecondary }]}>{template.category}</Text>
+                      <Text style={[styles.templateCategory, { color: theme.colors.textSecondary }]}>
+                        {template.category}
+                      </Text>
                     </View>
                     {/* Amount and usage count */}
                     <View style={styles.templateRight}>
-                      <Text style={[styles.templateAmount, { color: theme.colors.text }]}>{formatCurrency(template.amount)}</Text>
+                      <Text style={[styles.templateAmount, { color: theme.colors.text }]}>
+                        {formatCurrency(template.amount)}
+                      </Text>
                       {template.usageCount > 0 && (
                         <Text style={[styles.usageCount, { color: theme.colors.textTertiary }]}>
                           {t.templates.used} {template.usageCount}×
@@ -160,7 +195,10 @@ const ExpenseTemplatesScreen = () => {
       {sortedTemplates.length > 0 && (
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-          onPress={() => { resetForm(); setShowModal(true); }}
+          onPress={() => {
+            resetForm();
+            setShowModal(true);
+          }}
         >
           <MaterialCommunityIcons name="plus" size={28} color="#FFF" />
         </TouchableOpacity>
@@ -175,7 +213,14 @@ const ExpenseTemplatesScreen = () => {
 
               {/* Template name input */}
               <TextInput
-                style={[styles.input, { backgroundColor: theme.colors.inputBackground, color: theme.colors.text, borderColor: theme.colors.border }]}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: theme.colors.inputBackground,
+                    color: theme.colors.text,
+                    borderColor: theme.colors.border,
+                  },
+                ]}
                 value={templateName}
                 onChangeText={setTemplateName}
                 placeholder={t.templates.templateName}
@@ -184,7 +229,14 @@ const ExpenseTemplatesScreen = () => {
 
               {/* Amount input */}
               <TextInput
-                style={[styles.input, { backgroundColor: theme.colors.inputBackground, color: theme.colors.text, borderColor: theme.colors.border }]}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: theme.colors.inputBackground,
+                    color: theme.colors.text,
+                    borderColor: theme.colors.border,
+                  },
+                ]}
                 value={templateAmount}
                 onChangeText={setTemplateAmount}
                 placeholder={t.templates.amount}
@@ -205,16 +257,34 @@ const ExpenseTemplatesScreen = () => {
                     ]}
                     onPress={() => setSelectedCategory(cat.name)}
                   >
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    <MaterialCommunityIcons name={cat.icon as any} size={16} color={selectedCategory === cat.name ? cat.color : theme.colors.textSecondary} />
-                    <Text style={[styles.categoryChipText, { color: selectedCategory === cat.name ? cat.color : theme.colors.text }]}>{cat.name}</Text>
+                    <MaterialCommunityIcons
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      name={cat.icon as any}
+                      size={16}
+                      color={selectedCategory === cat.name ? cat.color : theme.colors.textSecondary}
+                    />
+                    <Text
+                      style={[
+                        styles.categoryChipText,
+                        { color: selectedCategory === cat.name ? cat.color : theme.colors.text },
+                      ]}
+                    >
+                      {cat.name}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
               {/* Notes input (optional) */}
               <TextInput
-                style={[styles.input, { backgroundColor: theme.colors.inputBackground, color: theme.colors.text, borderColor: theme.colors.border }]}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: theme.colors.inputBackground,
+                    color: theme.colors.text,
+                    borderColor: theme.colors.border,
+                  },
+                ]}
                 value={notes}
                 onChangeText={setNotes}
                 placeholder={t.templates.notes}
@@ -227,11 +297,18 @@ const ExpenseTemplatesScreen = () => {
                 {TEMPLATE_ICONS.map((icon) => (
                   <TouchableOpacity
                     key={icon}
-                    style={[styles.iconOption, selectedIcon === icon && { backgroundColor: selectedColor + '20', borderColor: selectedColor }]}
+                    style={[
+                      styles.iconOption,
+                      selectedIcon === icon && { backgroundColor: selectedColor + '20', borderColor: selectedColor },
+                    ]}
                     onPress={() => setSelectedIcon(icon)}
                   >
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    <MaterialCommunityIcons name={icon as any} size={22} color={selectedIcon === icon ? selectedColor : theme.colors.textSecondary} />
+                    <MaterialCommunityIcons
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      name={icon as any}
+                      size={22}
+                      color={selectedIcon === icon ? selectedColor : theme.colors.textSecondary}
+                    />
                   </TouchableOpacity>
                 ))}
               </View>
@@ -242,7 +319,11 @@ const ExpenseTemplatesScreen = () => {
                 {TEMPLATE_COLORS.map((color) => (
                   <TouchableOpacity
                     key={color}
-                    style={[styles.colorOption, { backgroundColor: color }, selectedColor === color && styles.colorSelected]}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: color },
+                      selectedColor === color && styles.colorSelected,
+                    ]}
                     onPress={() => setSelectedColor(color)}
                   />
                 ))}
@@ -250,8 +331,18 @@ const ExpenseTemplatesScreen = () => {
 
               {/* Action buttons */}
               <View style={styles.modalActions}>
-                <Button title={t.common.cancel} variant="outline" onPress={() => setShowModal(false)} style={{ flex: 1, marginRight: 8 }} />
-                <Button title={t.templates.createTemplate} onPress={handleSaveTemplate} loading={loading} style={{ flex: 1 }} />
+                <Button
+                  title={t.common.cancel}
+                  variant="outline"
+                  onPress={() => setShowModal(false)}
+                  style={{ flex: 1, marginRight: 8 }}
+                />
+                <Button
+                  title={t.templates.createTemplate}
+                  onPress={handleSaveTemplate}
+                  loading={loading}
+                  style={{ flex: 1 }}
+                />
               </View>
             </View>
           </ScrollView>
@@ -266,7 +357,14 @@ const styles = StyleSheet.create({
   content: { padding: 16 },
   templateCard: { marginBottom: 4 },
   templateRow: { flexDirection: 'row', alignItems: 'center' },
-  templateIcon: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  templateIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
   templateInfo: { flex: 1 },
   templateName: { fontSize: 15, fontWeight: '700' },
   templateCategory: { fontSize: 13, marginTop: 2 },
@@ -274,9 +372,19 @@ const styles = StyleSheet.create({
   templateAmount: { fontSize: 16, fontWeight: '700' },
   usageCount: { fontSize: 11, marginTop: 2 },
   fab: {
-    position: 'absolute', bottom: 20, right: 20, width: 56, height: 56, borderRadius: 28,
-    justifyContent: 'center', alignItems: 'center', elevation: 6,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6,
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
   modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
@@ -285,15 +393,35 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 13, fontWeight: '600', marginBottom: 8, marginTop: 4 },
   categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
   categoryChip: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1, gap: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 4,
   },
   categoryChipText: { fontSize: 13 },
   iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  iconOption: { width: 42, height: 42, borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: 'transparent' },
+  iconOption: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
   colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
   colorOption: { width: 32, height: 32, borderRadius: 16 },
-  colorSelected: { borderWidth: 3, borderColor: '#FFF', shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 },
+  colorSelected: {
+    borderWidth: 3,
+    borderColor: '#FFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
   modalActions: { flexDirection: 'row', marginTop: 8 },
 });
 

@@ -86,7 +86,7 @@ const PinLockScreen = ({ onAuthenticated }: Props) => {
       } else {
         // Wrong PIN — vibrate and show error
         Vibration.vibrate(200);
-        setAttempts(prev => prev + 1);
+        setAttempts((prev) => prev + 1);
         setError(t.pinLock.incorrectPin);
         setPin('');
 
@@ -100,7 +100,7 @@ const PinLockScreen = ({ onAuthenticated }: Props) => {
 
   // Delete last digit from PIN input
   const handleDelete = () => {
-    setPin(prev => prev.slice(0, -1));
+    setPin((prev) => prev.slice(0, -1));
     setError('');
   };
 
@@ -113,9 +113,7 @@ const PinLockScreen = ({ onAuthenticated }: Props) => {
             <MaterialCommunityIcons name="fingerprint" size={48} color={theme.colors.primary} />
           </View>
           <Text style={[styles.title, { color: theme.colors.text }]}>{t.pinLock.unlockPrompt}</Text>
-          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-            {t.pinLock.subtitle}
-          </Text>
+          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{t.pinLock.subtitle}</Text>
         </View>
 
         {biometricFailed && (
@@ -162,9 +160,7 @@ const PinLockScreen = ({ onAuthenticated }: Props) => {
           <MaterialCommunityIcons name="lock" size={40} color={theme.colors.primary} />
         </View>
         <Text style={[styles.title, { color: theme.colors.text }]}>{t.pinLock.enterPin}</Text>
-        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-          {t.pinLock.subtitle}
-        </Text>
+        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>{t.pinLock.subtitle}</Text>
       </View>
 
       {/* PIN dots indicator showing entered digits */}
@@ -245,8 +241,11 @@ const styles = StyleSheet.create({
   },
   header: { alignItems: 'center', marginBottom: 40 },
   lockIcon: {
-    width: 80, height: 80, borderRadius: 40,
-    justifyContent: 'center', alignItems: 'center',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 20,
   },
   title: { fontSize: 24, fontWeight: '700' },
@@ -257,7 +256,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dot: {
-    width: 16, height: 16, borderRadius: 8,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     borderWidth: 2,
   },
   error: { fontSize: 13, fontWeight: '600', height: 20 },
@@ -270,7 +271,8 @@ const styles = StyleSheet.create({
     maxWidth: 280,
   },
   key: {
-    width: 72, height: 72,
+    width: 72,
+    height: 72,
     borderRadius: 36,
     justifyContent: 'center',
     alignItems: 'center',

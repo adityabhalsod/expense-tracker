@@ -64,14 +64,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       themeMode,
       setThemeMode: handleSetThemeMode,
     }),
-    [theme, isDark, themeMode]
+    [theme, isDark, themeMode],
   );
 
-  return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
 
 export { lightTheme, darkTheme, Theme };

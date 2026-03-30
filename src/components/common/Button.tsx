@@ -21,8 +21,16 @@ interface ButtonProps {
 
 // Themed button with loading state, disabled state, and variant support
 const Button: React.FC<ButtonProps> = ({
-  title, onPress, variant = 'primary', size = 'medium',
-  loading = false, disabled = false, icon, style, textStyle, fullWidth = false,
+  title,
+  onPress,
+  variant = 'primary',
+  size = 'medium',
+  loading = false,
+  disabled = false,
+  icon,
+  style,
+  textStyle,
+  fullWidth = false,
 }) => {
   const { theme } = useTheme();
 
@@ -30,12 +38,18 @@ const Button: React.FC<ButtonProps> = ({
   const getBackgroundColor = () => {
     if (disabled) return theme.colors.border; // Grey out when disabled
     switch (variant) {
-      case 'primary': return theme.colors.primary;
-      case 'secondary': return theme.colors.primaryLight;
-      case 'outline': return 'transparent'; // No background for outline
-      case 'text': return 'transparent'; // No background for text
-      case 'danger': return theme.colors.error;
-      default: return theme.colors.primary;
+      case 'primary':
+        return theme.colors.primary;
+      case 'secondary':
+        return theme.colors.primaryLight;
+      case 'outline':
+        return 'transparent'; // No background for outline
+      case 'text':
+        return 'transparent'; // No background for text
+      case 'danger':
+        return theme.colors.error;
+      default:
+        return theme.colors.primary;
     }
   };
 
@@ -43,30 +57,42 @@ const Button: React.FC<ButtonProps> = ({
   const getTextColor = () => {
     if (disabled) return theme.colors.textTertiary;
     switch (variant) {
-      case 'primary': return '#FFFFFF'; // White text on solid backgrounds
-      case 'secondary': return theme.colors.primary;
-      case 'outline': return theme.colors.primary;
-      case 'text': return theme.colors.primary;
-      case 'danger': return '#FFFFFF';
-      default: return '#FFFFFF';
+      case 'primary':
+        return '#FFFFFF'; // White text on solid backgrounds
+      case 'secondary':
+        return theme.colors.primary;
+      case 'outline':
+        return theme.colors.primary;
+      case 'text':
+        return theme.colors.primary;
+      case 'danger':
+        return '#FFFFFF';
+      default:
+        return '#FFFFFF';
     }
   };
 
   // Determine padding based on size variant
   const getPadding = () => {
     switch (size) {
-      case 'small': return { paddingVertical: 8, paddingHorizontal: 16 };
-      case 'medium': return { paddingVertical: 12, paddingHorizontal: 24 };
-      case 'large': return { paddingVertical: 16, paddingHorizontal: 32 };
+      case 'small':
+        return { paddingVertical: 8, paddingHorizontal: 16 };
+      case 'medium':
+        return { paddingVertical: 12, paddingHorizontal: 24 };
+      case 'large':
+        return { paddingVertical: 16, paddingHorizontal: 32 };
     }
   };
 
   // Determine font size based on size variant
   const getFontSize = () => {
     switch (size) {
-      case 'small': return 13;
-      case 'medium': return 15;
-      case 'large': return 17;
+      case 'small':
+        return 13;
+      case 'medium':
+        return 15;
+      case 'large':
+        return 17;
     }
   };
 
@@ -96,10 +122,10 @@ const Button: React.FC<ButtonProps> = ({
           {typeof icon === 'string' ? (
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             <MaterialCommunityIcons name={icon as any} size={getFontSize() + 2} color={getTextColor()} />
-          ) : icon}
-          <Text style={[styles.text, { color: getTextColor(), fontSize: getFontSize() }, textStyle]}>
-            {title}
-          </Text>
+          ) : (
+            icon
+          )}
+          <Text style={[styles.text, { color: getTextColor(), fontSize: getFontSize() }, textStyle]}>{title}</Text>
         </>
       )}
     </TouchableOpacity>

@@ -37,7 +37,7 @@ export const processRecurringExpenses = async (): Promise<number> => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recurringExpenses = await database.getAllAsync<any>(
     `SELECT * FROM expenses WHERE isRecurring = 1 AND recurringFrequency IS NOT NULL
-     ORDER BY date DESC`
+     ORDER BY date DESC`,
   );
 
   // Group by category + amount + walletId to find the most recent instance of each recurring pattern
@@ -66,7 +66,7 @@ export const processRecurringExpenses = async (): Promise<number> => {
       const existing = await database.getFirstAsync<{ count: number }>(
         `SELECT COUNT(*) as count FROM expenses
          WHERE category = ? AND amount = ? AND date = ? AND isRecurring = 1`,
-        [latestExpense.category, latestExpense.amount, format(nextDate, 'yyyy-MM-dd')]
+        [latestExpense.category, latestExpense.amount, format(nextDate, 'yyyy-MM-dd')],
       );
 
       if (!existing || existing.count === 0) {

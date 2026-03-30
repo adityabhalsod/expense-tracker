@@ -9,7 +9,7 @@ import { formatDate } from './helpers';
 // Export expenses as a formatted JSON file
 export const exportAsJSON = async (expenses: Expense[], filename: string): Promise<void> => {
   // Create clean JSON representation of expenses
-  const data = expenses.map(e => ({
+  const data = expenses.map((e) => ({
     date: e.date,
     amount: e.amount,
     category: e.category,
@@ -28,7 +28,7 @@ export const exportAsJSON = async (expenses: Expense[], filename: string): Promi
 export const exportAsCSV = async (expenses: Expense[], filename: string): Promise<void> => {
   // CSV column headers
   const headers = ['Date', 'Amount', 'Category', 'Notes', 'Tags', 'Currency'];
-  const rows = expenses.map(e => [
+  const rows = expenses.map((e) => [
     e.date,
     e.amount.toString(),
     e.category,
@@ -38,7 +38,7 @@ export const exportAsCSV = async (expenses: Expense[], filename: string): Promis
   ]);
 
   // Join headers and rows with commas and newlines
-  const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
   const filePath = `${FileSystem.documentDirectory}${filename}.csv`;
   await FileSystem.writeAsStringAsync(filePath, csvContent);
   await Sharing.shareAsync(filePath, { mimeType: 'text/csv' });
@@ -56,13 +56,13 @@ export const exportAsExcel = async (expenses: Expense[], filename: string): Prom
 
   // Header row with column titles
   xml += '      <Row>\n';
-  ['Date', 'Amount', 'Category', 'Notes', 'Tags', 'Currency'].forEach(h => {
+  ['Date', 'Amount', 'Category', 'Notes', 'Tags', 'Currency'].forEach((h) => {
     xml += `        <Cell><Data ss:Type="String">${h}</Data></Cell>\n`;
   });
   xml += '      </Row>\n';
 
   // Data rows for each expense
-  expenses.forEach(e => {
+  expenses.forEach((e) => {
     xml += '      <Row>\n';
     xml += `        <Cell><Data ss:Type="String">${e.date}</Data></Cell>\n`;
     xml += `        <Cell><Data ss:Type="Number">${e.amount}</Data></Cell>\n`;
@@ -86,7 +86,7 @@ export const exportAsExcel = async (expenses: Expense[], filename: string): Prom
 export const exportAsPDF = async (
   expenses: Expense[],
   filename: string,
-  summary?: { total: number; currency: string; period: string }
+  summary?: { total: number; currency: string; period: string },
 ): Promise<void> => {
   // Calculate summary stats for the report footer
   const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);

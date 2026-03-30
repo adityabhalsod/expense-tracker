@@ -95,18 +95,16 @@ export const checkBudgetNotifications = async (): Promise<void> => {
   const year = now.getFullYear();
 
   // Get all budgets for the current month
-  const budgets = await database.getAllAsync<Budget>(
-    'SELECT * FROM budgets WHERE month = ? AND year = ?',
-    [month, year]
-  );
+  const budgets = await database.getAllAsync<Budget>('SELECT * FROM budgets WHERE month = ? AND year = ?', [
+    month,
+    year,
+  ]);
 
   if (budgets.length === 0) return;
 
   // Get all categories for name lookup
-  const categories = await database.getAllAsync<Category>(
-    'SELECT * FROM categories ORDER BY "order" ASC'
-  );
-  const categoryMap = new Map(categories.map(c => [c.id, c]));
+  const categories = await database.getAllAsync<Category>('SELECT * FROM categories ORDER BY "order" ASC');
+  const categoryMap = new Map(categories.map((c) => [c.id, c]));
 
   for (const budget of budgets) {
     if (!budget.categoryId) continue;
@@ -182,11 +180,11 @@ export const scheduleWeeklyDigest = async (): Promise<void> => {
   // Fetch weekly totals for the digest content
   const expenseResult = await database.getFirstAsync<{ total: number }>(
     'SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE date >= ? AND date <= ?',
-    [weekStart, weekEnd]
+    [weekStart, weekEnd],
   );
   const incomeResult = await database.getFirstAsync<{ total: number }>(
     'SELECT COALESCE(SUM(amount), 0) as total FROM income WHERE date >= ? AND date <= ?',
-    [weekStart, weekEnd]
+    [weekStart, weekEnd],
   );
 
   const weekExpenses = expenseResult?.total || 0;
