@@ -2,10 +2,21 @@
 // Provides reactive state for expenses, categories, wallets, budgets, and payment sources
 
 import { create } from 'zustand';
-import { Expense, Category, Wallet, Budget, AppSettings } from '../types';
+import {
+  Expense,
+  Category,
+  Wallet,
+  Budget,
+  AppSettings,
+  Income,
+  Transfer,
+  SavingsGoal,
+  ExpenseTemplate,
+} from '../types';
 import * as db from '../database';
 import { DEFAULT_SETTINGS } from '../constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { refreshWidget } from '../widgets/refresh-widget';
 
 // Settings storage key for async persistence
 const SETTINGS_KEY = '@expense_tracker_settings';
@@ -18,6 +29,11 @@ interface AppStore {
   wallets: Wallet[]; // All wallet/payment source records
   currentWallet: Wallet | null; // Default wallet for quick access
   budgets: Budget[]; // Budget rules
+  income: Income[]; // All loaded income records
+  transfers: Transfer[]; // All loaded transfer records
+  savingsGoals: SavingsGoal[]; // All savings goals
+  expenseTemplates: ExpenseTemplate[]; // All expense templates/favorites
+  streak: { currentStreak: number; longestStreak: number; totalDaysActive: number }; // Gamification data
   settings: AppSettings; // App configuration
   isLoading: boolean; // Global loading indicator
   isInitialized: boolean; // Whether initial data load is complete
@@ -54,6 +70,33 @@ interface AppStore {
   updateBudget: (id: string, updates: Partial<Budget>) => Promise<void>; // Modify budget
   deleteBudget: (id: string) => Promise<void>; // Remove budget rule
 
+  // Income actions
+  loadIncome: (limit?: number) => Promise<void>; // Fetch income records
+  addIncome: (income: Omit<Income, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Income>; // Create income
+  updateIncome: (id: string, updates: Partial<Income>) => Promise<void>; // Modify income
+  deleteIncome: (id: string) => Promise<void>; // Remove income record
+
+  // Transfer actions
+  loadTransfers: (limit?: number) => Promise<void>; // Fetch transfer records
+  addTransfer: (transfer: Omit<Transfer, 'id' | 'createdAt'>) => Promise<Transfer>; // Create transfer
+  deleteTransfer: (id: string) => Promise<void>; // Remove and reverse transfer
+
+  // Savings Goal actions
+  loadSavingsGoals: () => Promise<void>; // Fetch all savings goals
+  addSavingsGoal: (goal: Omit<SavingsGoal, 'id' | 'createdAt' | 'updatedAt'>) => Promise<SavingsGoal>; // Create goal
+  updateSavingsGoal: (id: string, updates: Partial<SavingsGoal>) => Promise<void>; // Modify goal
+  deleteSavingsGoal: (id: string) => Promise<void>; // Remove goal
+
+  // Expense Template actions
+  loadExpenseTemplates: () => Promise<void>; // Fetch all templates
+  addExpenseTemplate: (template: Omit<ExpenseTemplate, 'id' | 'usageCount' | 'createdAt'>) => Promise<ExpenseTemplate>; // Create template
+  useExpenseTemplate: (id: string) => Promise<void>; // Increment usage count
+  deleteExpenseTemplate: (id: string) => Promise<void>; // Remove template
+
+  // Streak actions
+  loadStreak: () => Promise<void>; // Fetch current streak data
+  recordActivity: () => Promise<void>; // Log today's activity for streak tracking
+
   // Settings actions
   loadSettings: () => Promise<void>; // Load app settings from storage
   updateSettings: (updates: Partial<AppSettings>) => Promise<void>; // Save settings changes
@@ -71,6 +114,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
   wallets: [],
   currentWallet: null,
   budgets: [],
+  income: [],
+  transfers: [],
+  savingsGoals: [],
+  expenseTemplates: [],
+  streak: { currentStreak: 0, longestStreak: 0, totalDaysActive: 0 },
   settings: DEFAULT_SETTINGS as AppSettings, // Start with default settings
   isLoading: true,
   isInitialized: false,
@@ -86,6 +134,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
         get().loadWallets(),
         get().loadCurrentWallet(),
         get().loadSettings(),
+        get().loadIncome(50), // Load first 50 income records
+        get().loadTransfers(50), // Load first 50 transfers
+        get().loadSavingsGoals(), // Load all savings goals
+        get().loadExpenseTemplates(), // Load all expense templates
+        get().loadStreak(), // Load gamification streak data
       ]);
       // Load budgets for current month after wallets are loaded
       const now = new Date();
@@ -109,6 +162,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => ({ expenses: [newExpense, ...state.expenses] })); // Prepend new expense
     await get().loadCurrentWallet(); // Refresh wallet balance after deduction
     await get().loadWallets(); // Refresh all wallet balances
+    // Record activity for streak tracking
+    await get().recordActivity();
+    // Push updated data to the home-screen widget
+    refreshWidget();
     return newExpense;
   },
 
@@ -119,6 +176,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     await get().loadExpenses(50);
     await get().loadCurrentWallet();
     await get().loadWallets();
+    // Push updated data to the home-screen widget
+    refreshWidget();
   },
 
   // Delete an expense and restore wallet balance
@@ -127,6 +186,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => ({ expenses: state.expenses.filter((e) => e.id !== id) })); // Remove from local state
     await get().loadCurrentWallet(); // Refresh balance after restoration
     await get().loadWallets();
+    // Push updated data to the home-screen widget
+    refreshWidget();
   },
 
   // Delete multiple expenses at once and restore their wallet balances
@@ -136,6 +197,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => ({ expenses: state.expenses.filter((e) => !idSet.has(e.id)) }));
     await get().loadCurrentWallet(); // Refresh wallet after batch restoration
     await get().loadWallets();
+    // Push updated data to the home-screen widget
+    refreshWidget();
   },
 
   // Search expenses by keyword across notes, categories, and tags
@@ -204,6 +267,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       wallets: [newWallet, ...state.wallets],
       currentWallet: newWallet.isDefault ? newWallet : state.currentWallet,
     }));
+    // Sync widget with updated wallet balance after DB write
+    await refreshWidget();
     return newWallet;
   },
 
@@ -216,6 +281,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     await db.updateWallet(id, updates);
     await get().loadCurrentWallet();
     await get().loadWallets();
+    // Sync widget with updated wallet balance after DB write
+    await refreshWidget();
   },
 
   // Delete a wallet and remove from state
@@ -226,6 +293,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       currentWallet: state.currentWallet?.id === id ? null : state.currentWallet,
     }));
     await get().loadCurrentWallet(); // Re-derive default if deleted wallet was default
+    // Sync widget with updated wallet balance after DB write
+    await refreshWidget();
   },
 
   // Load budgets for a specific month/year period
@@ -252,6 +321,161 @@ export const useAppStore = create<AppStore>((set, get) => ({
   deleteBudget: async (id) => {
     await db.deleteBudget(id);
     set((state) => ({ budgets: state.budgets.filter((b) => b.id !== id) }));
+  },
+
+  // ==================== INCOME ACTIONS ====================
+
+  // Fetch income records from database with optional limit
+  loadIncome: async (limit?: number) => {
+    const income = await db.getAllIncome(limit);
+    set({ income });
+  },
+
+  // Create a new income record and credit the wallet
+  addIncome: async (income) => {
+    const newIncome = await db.addIncome(income);
+    set((state) => ({ income: [newIncome, ...state.income] })); // Prepend new income
+    await get().loadCurrentWallet(); // Refresh wallet balance after credit
+    await get().loadWallets();
+    // Push updated data to the home-screen widget
+    refreshWidget();
+    return newIncome;
+  },
+
+  // Update an income record and adjust wallet balance
+  updateIncome: async (id, updates) => {
+    await db.updateIncome(id, updates);
+    await get().loadIncome(50); // Reload for consistency
+    await get().loadCurrentWallet();
+    await get().loadWallets();
+    // Push updated data to the home-screen widget
+    refreshWidget();
+  },
+
+  // Delete an income record and reverse the wallet credit
+  deleteIncome: async (id) => {
+    await db.deleteIncome(id);
+    set((state) => ({ income: state.income.filter((i) => i.id !== id) }));
+    await get().loadCurrentWallet();
+    await get().loadWallets();
+    // Push updated data to the home-screen widget
+    refreshWidget();
+  },
+
+  // ==================== TRANSFER ACTIONS ====================
+
+  // Fetch transfer records from database with optional limit
+  loadTransfers: async (limit?: number) => {
+    const transfers = await db.getAllTransfers(limit);
+    set({ transfers });
+  },
+
+  // Create a wallet-to-wallet transfer
+  addTransfer: async (transfer) => {
+    const newTransfer = await db.addTransfer(transfer);
+    set((state) => ({ transfers: [newTransfer, ...state.transfers] }));
+    await get().loadCurrentWallet(); // Refresh wallet balances
+    await get().loadWallets();
+    // Push updated data to the home-screen widget
+    refreshWidget();
+    return newTransfer;
+  },
+
+  // Delete a transfer and reverse the wallet adjustments
+  deleteTransfer: async (id) => {
+    await db.deleteTransfer(id);
+    set((state) => ({ transfers: state.transfers.filter((t) => t.id !== id) }));
+    await get().loadCurrentWallet();
+    await get().loadWallets();
+    // Push updated data to the home-screen widget
+    refreshWidget();
+  },
+
+  // ==================== SAVINGS GOAL ACTIONS ====================
+
+  // Fetch all savings goals from database
+  loadSavingsGoals: async () => {
+    const savingsGoals = await db.getAllSavingsGoals();
+    set({ savingsGoals });
+  },
+
+  // Create a new savings goal
+  addSavingsGoal: async (goal) => {
+    const newGoal = await db.addSavingsGoal(goal);
+    set((state) => ({ savingsGoals: [newGoal, ...state.savingsGoals] }));
+    return newGoal;
+  },
+
+  // Update an existing savings goal (e.g., add contribution)
+  updateSavingsGoal: async (id, updates) => {
+    await db.updateSavingsGoal(id, updates);
+    await get().loadSavingsGoals(); // Reload for consistency
+  },
+
+  // Delete a savings goal by ID
+  deleteSavingsGoal: async (id) => {
+    await db.deleteSavingsGoal(id);
+    set((state) => ({ savingsGoals: state.savingsGoals.filter((g) => g.id !== id) }));
+  },
+
+  // ==================== EXPENSE TEMPLATE ACTIONS ====================
+
+  // Fetch all templates sorted by usage
+  loadExpenseTemplates: async () => {
+    const expenseTemplates = await db.getAllExpenseTemplates();
+    set({ expenseTemplates });
+  },
+
+  // Create a new expense template/favorite
+  addExpenseTemplate: async (template) => {
+    const newTemplate = await db.addExpenseTemplate(template);
+    set((state) => ({ expenseTemplates: [newTemplate, ...state.expenseTemplates] }));
+    return newTemplate;
+  },
+
+  // Increment template usage count when used to create an expense
+  useExpenseTemplate: async (id) => {
+    await db.incrementTemplateUsage(id);
+    await get().loadExpenseTemplates(); // Reload to update sort order
+  },
+
+  // Delete an expense template by ID
+  deleteExpenseTemplate: async (id) => {
+    await db.deleteExpenseTemplate(id);
+    set((state) => ({ expenseTemplates: state.expenseTemplates.filter((t) => t.id !== id) }));
+  },
+
+  // ==================== STREAK & GAMIFICATION ACTIONS ====================
+
+  // Fetch current streak data from database
+  loadStreak: async () => {
+    const data = await db.getUserStreak();
+    set({
+      streak: {
+        currentStreak: data.currentStreak,
+        longestStreak: data.longestStreak,
+        totalDaysActive: data.totalDaysActive,
+      },
+    });
+  },
+
+  // Record today's activity for streak tracking and check badge milestones
+  recordActivity: async () => {
+    const today = new Date().toISOString().split('T')[0]; // Extract YYYY-MM-DD
+    const result = await db.updateUserStreak(today);
+    set({ streak: result });
+    // Award badges for streak milestones
+    const milestones = [3, 7, 14, 30, 60, 100, 365];
+    for (const days of milestones) {
+      if (result.currentStreak >= days) {
+        await db.awardBadge({
+          id: `streak_${days}`,
+          name: `${days} Day Streak`,
+          description: `Logged expenses for ${days} consecutive days`,
+          icon: 'fire',
+        });
+      }
+    }
   },
 
   // Load app settings from AsyncStorage
@@ -285,6 +509,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       wallets: [],
       currentWallet: null,
       budgets: [],
+      income: [],
+      transfers: [],
     });
   },
 
@@ -300,6 +526,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
       wallets: [],
       currentWallet: null,
       budgets: [],
+      income: [],
+      transfers: [],
+      savingsGoals: [],
+      expenseTemplates: [],
+      streak: { currentStreak: 0, longestStreak: 0, totalDaysActive: 0 },
       settings: DEFAULT_SETTINGS as AppSettings,
     });
     // Reload seeded categories from the fresh database
@@ -314,6 +545,11 @@ export const selectCategories = (state: AppStore) => state.categories;
 export const selectCurrentWallet = (state: AppStore) => state.currentWallet;
 export const selectWallets = (state: AppStore) => state.wallets;
 export const selectBudgets = (state: AppStore) => state.budgets;
+export const selectIncome = (state: AppStore) => state.income;
+export const selectTransfers = (state: AppStore) => state.transfers;
+export const selectSavingsGoals = (state: AppStore) => state.savingsGoals;
+export const selectExpenseTemplates = (state: AppStore) => state.expenseTemplates;
+export const selectStreak = (state: AppStore) => state.streak;
 export const selectSettings = (state: AppStore) => state.settings;
 export const selectIsLoading = (state: AppStore) => state.isLoading;
 export const selectIsInitialized = (state: AppStore) => state.isInitialized;

@@ -1,0 +1,81 @@
+# ============================================================================
+# CI — Code Quality Checks (Lint + TypeScript)
+# ============================================================================
+# Runs on every pull request targeting main, and on pushes to main.
+# Both ESLint and TypeScript type-checking must pass before merging.
+#
+# To enforce this as a merge gate, enable branch protection on `main`:
+#   Settings → Branches → Add rule for `main`
+#   ✅ Require status checks to pass → select "lint" and "typecheck"
+#   ✅ Require branches to be up to date before merging
+# ============================================================================
+
+name: CI
+
+on:
+  # Run on every PR targeting the main branch
+  pull_request:
+    branches:
+      - main
+  # Also run on direct pushes to main (safety net)
+  push:
+    branches:
+      - main
+
+# Cancel in-progress runs for the same PR/branch to save resources
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── ESLint ────────────────────────────────────────────────────────────
+  lint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # Check out the repository code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Set up Node.js with dependency caching for faster installs
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Install all project dependencies (frozen lockfile for reproducibility)
+      - name: Install dependencies
+        run: npm ci
+
+      # Run ESLint on all TypeScript files — must exit with 0 warnings
+      - name: Run ESLint
+        run: npm run lint
+
+  # ── TypeScript ────────────────────────────────────────────────────────
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # Check out the repository code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Set up Node.js with dependency caching
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Install all project dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # Run the TypeScript compiler in check-only mode — must exit with 0 errors
+      - name: Run TypeScript type check
+        run: npm run typecheck

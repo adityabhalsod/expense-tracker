@@ -10,8 +10,16 @@ import { LanguageProvider, useLanguage } from './src/i18n';
 import AppNavigator from './src/navigation';
 import { useAppStore, selectIsInitialized, selectSettings } from './src/store';
 import { processRecurringExpenses } from './src/services/recurringExpenses';
-import { requestNotificationPermissions, checkBudgetNotifications } from './src/services/notifications';
+import {
+  requestNotificationPermissions,
+  checkBudgetNotifications,
+  scheduleWeeklyDigest,
+} from './src/services/notifications';
+import { checkForUpdate } from './src/services/updateChecker';
 import PinLockScreen from './src/components/PinLockScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const ONBOARDING_KEY = '@onboarding_completed';
 
 // Loading screen displayed while the app initializes data from SQLite
 const LoadingScreen = () => {
@@ -20,9 +28,7 @@ const LoadingScreen = () => {
   return (
     <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
       <ActivityIndicator size="large" color={theme.colors.primary} />
-      <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
-        {t.common.loading}
-      </Text>
+      <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>{t.common.loading}</Text>
     </View>
   );
 };
@@ -30,19 +36,28 @@ const LoadingScreen = () => {
 // Inner app component that handles store initialization and security gate
 const AppContent = () => {
   const { theme, isDark } = useTheme();
+  const { t } = useLanguage(); // Access translations for update checker alert
   const isInitialized = useAppStore(selectIsInitialized);
   const settings = useAppStore(selectSettings);
   const initialize = useAppStore((s) => s.initialize);
   const [isAuthenticated, setIsAuthenticated] = useState(false); // Security gate state
+  const [showOnboarding, setShowOnboarding] = useState(false); // First-launch onboarding
 
   // Determine if security gate should show
   // PIN requires both the toggle AND a stored PIN hash; biometric just needs the toggle
   const needsAuth = ((settings.enablePin && !!settings.pinHash) || settings.enableBiometric) && !isAuthenticated;
 
-  // Initialize the database, process recurring expenses, and check budgets
+  // Initialize the database, process recurring expenses, check budgets, and set up onboarding
   useEffect(() => {
     const boot = async () => {
       await initialize();
+
+      // Check if this is the first launch (show onboarding)
+      const onboardingDone = await AsyncStorage.getItem(ONBOARDING_KEY);
+      if (!onboardingDone) {
+        setShowOnboarding(true);
+      }
+
       // Process any due recurring expenses after data is loaded
       try {
         await processRecurringExpenses();
@@ -54,27 +69,30 @@ const AppContent = () => {
         const hasPermission = await requestNotificationPermissions();
         if (hasPermission) {
           await checkBudgetNotifications();
+          // Schedule weekly digest notification (every Sunday 9 AM)
+          await scheduleWeeklyDigest();
         }
       } catch (e) {
         console.warn('Notification setup skipped:', e);
       }
+
+      // Check GitHub releases for a newer app version (non-blocking)
+      checkForUpdate(t.updateChecker);
     };
     boot();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <>
-      <StatusBar
-        barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor={theme.colors.background}
-      />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.colors.background} />
       {!isInitialized ? (
         <LoadingScreen />
       ) : needsAuth ? (
         <PinLockScreen onAuthenticated={() => setIsAuthenticated(true)} />
       ) : (
         <>
-          <AppNavigator />
+          <AppNavigator initialRoute={showOnboarding ? 'Onboarding' : 'MainTabs'} />
         </>
       )}
     </>

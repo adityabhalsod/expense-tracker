@@ -15,6 +15,7 @@ import { useLanguage } from '../i18n';
 
 const ExpensesScreen = () => {
   const { theme } = useTheme();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
   // Subscribe to individual store slices to avoid full-store re-renders
   const expenses = useAppStore(selectExpenses);
@@ -30,9 +31,10 @@ const ExpensesScreen = () => {
 
   // Toggle an expense in the selection set
   const toggleSelection = useCallback((id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); // Deselect if already selected
+      if (next.has(id))
+        next.delete(id); // Deselect if already selected
       else next.add(id); // Add to selection
       return next;
     });
@@ -53,7 +55,8 @@ const ExpensesScreen = () => {
       [
         { text: t.common.cancel, style: 'cancel' },
         {
-          text: t.common.delete, style: 'destructive',
+          text: t.common.delete,
+          style: 'destructive',
           onPress: async () => {
             await deleteMultipleExpenses([...selectedIds]);
             exitSelectMode(); // Clear selection after deletion
@@ -75,7 +78,8 @@ const ExpensesScreen = () => {
   useFocusEffect(
     useCallback(() => {
       loadExpenses(100); // Load up to 100 expenses
-    }, [])
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
   );
 
   // Filter expenses based on selected time range (memoized to avoid recalculation every render)
@@ -85,16 +89,16 @@ const ExpensesScreen = () => {
 
     switch (activeFilter) {
       case 'Today':
-        return expenses.filter(e => e.date === todayStr);
+        return expenses.filter((e) => e.date === todayStr);
       case 'This Week': {
         const weekStart = format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
         const weekEnd = format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-        return expenses.filter(e => e.date >= weekStart && e.date <= weekEnd);
+        return expenses.filter((e) => e.date >= weekStart && e.date <= weekEnd);
       }
       case 'This Month': {
         const monthStart = format(startOfMonth(now), 'yyyy-MM-dd');
         const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd');
-        return expenses.filter(e => e.date >= monthStart && e.date <= monthEnd);
+        return expenses.filter((e) => e.date >= monthStart && e.date <= monthEnd);
       }
       default:
         return expenses;
@@ -102,19 +106,19 @@ const ExpensesScreen = () => {
   }, [expenses, activeFilter]);
 
   // Calculate total for the filtered set of expenses (memoized)
-  const totalFiltered = useMemo(
-    () => filteredExpenses.reduce((sum, e) => sum + e.amount, 0),
-    [filteredExpenses]
-  );
+  const totalFiltered = useMemo(() => filteredExpenses.reduce((sum, e) => sum + e.amount, 0), [filteredExpenses]);
 
   // Get category info (icon and color) for display (memoized callback)
-  const getCategoryInfo = useCallback((categoryName: string) => {
-    const cat = categories.find(c => c.name === categoryName);
-    return { icon: cat?.icon || 'help-circle', color: cat?.color || '#999' };
-  }, [categories]);
+  const getCategoryInfo = useCallback(
+    (categoryName: string) => {
+      const cat = categories.find((c) => c.name === categoryName);
+      return { icon: cat?.icon || 'help-circle', color: cat?.color || '#999' };
+    },
+    [categories],
+  );
 
   // Render a single expense item with multi-select support
-  const renderExpenseItem = ({ item }: { item: typeof expenses[0] }) => {
+  const renderExpenseItem = ({ item }: { item: (typeof expenses)[0] }) => {
     const catInfo = getCategoryInfo(item.category);
     const isSelected = selectedIds.has(item.id); // Check if this item is selected
     return (
@@ -152,6 +156,7 @@ const ExpensesScreen = () => {
           )}
           {/* Category icon with background color */}
           <View style={[styles.iconCircle, { backgroundColor: catInfo.color + '20' }]}>
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <MaterialCommunityIcons name={catInfo.icon as any} size={22} color={catInfo.color} />
           </View>
           {/* Expense category and date */}
@@ -210,12 +215,7 @@ const ExpensesScreen = () => {
             ]}
             onPress={() => setActiveFilter(filter.key)} // Switch active filter
           >
-            <Text
-              style={[
-                styles.filterText,
-                { color: activeFilter === filter.key ? '#FFFFFF' : theme.colors.text },
-              ]}
-            >
+            <Text style={[styles.filterText, { color: activeFilter === filter.key ? '#FFFFFF' : theme.colors.text }]}>
               {filter.label}
             </Text>
           </TouchableOpacity>
@@ -225,11 +225,10 @@ const ExpensesScreen = () => {
       {/* Total amount summary for active filter */}
       <View style={[styles.totalBar, { backgroundColor: theme.colors.surfaceVariant }]}>
         <Text style={[styles.totalLabel, { color: theme.colors.textSecondary }]}>
-          {FILTERS.find(f => f.key === activeFilter)?.label} {t.common.total} ({filteredExpenses.length} {t.common.transactions})
+          {FILTERS.find((f) => f.key === activeFilter)?.label} {t.common.total} ({filteredExpenses.length}{' '}
+          {t.common.transactions})
         </Text>
-        <Text style={[styles.totalAmount, { color: theme.colors.expense }]}>
-          {formatCurrency(totalFiltered)}
-        </Text>
+        <Text style={[styles.totalAmount, { color: theme.colors.expense }]}>{formatCurrency(totalFiltered)}</Text>
       </View>
 
       {/* Scrollable expense list or empty state */}

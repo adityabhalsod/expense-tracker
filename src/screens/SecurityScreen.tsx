@@ -83,9 +83,7 @@ const SecurityScreen = () => {
           <MaterialCommunityIcons name="shield-lock" size={32} color={theme.colors.primary} />
           <View style={styles.infoText}>
             <Text style={[styles.infoTitle, { color: theme.colors.text }]}>{t.security.appSecurity}</Text>
-            <Text style={[styles.infoSubtitle, { color: theme.colors.textSecondary }]}>
-              {t.security.securityDesc}
-            </Text>
+            <Text style={[styles.infoSubtitle, { color: theme.colors.textSecondary }]}>{t.security.securityDesc}</Text>
           </View>
         </View>
       </Card>
@@ -141,7 +139,14 @@ const SecurityScreen = () => {
         {showPinSetup && (
           <View style={styles.pinSetup}>
             <TextInput
-              style={[styles.pinInput, { backgroundColor: theme.colors.inputBackground, color: theme.colors.text, borderColor: theme.colors.border }]}
+              style={[
+                styles.pinInput,
+                {
+                  backgroundColor: theme.colors.inputBackground,
+                  color: theme.colors.text,
+                  borderColor: theme.colors.border,
+                },
+              ]}
               value={pin}
               onChangeText={setPin}
               placeholder={t.security.enterPin}
@@ -151,7 +156,14 @@ const SecurityScreen = () => {
               maxLength={6}
             />
             <TextInput
-              style={[styles.pinInput, { backgroundColor: theme.colors.inputBackground, color: theme.colors.text, borderColor: theme.colors.border }]}
+              style={[
+                styles.pinInput,
+                {
+                  backgroundColor: theme.colors.inputBackground,
+                  color: theme.colors.text,
+                  borderColor: theme.colors.border,
+                },
+              ]}
               value={confirmPin}
               onChangeText={setConfirmPin}
               placeholder={t.security.confirmPin}
@@ -164,7 +176,11 @@ const SecurityScreen = () => {
               <Button title={t.security.setPin} onPress={handleSavePin} size="medium" />
               <Button
                 title={t.common.cancel}
-                onPress={() => { setShowPinSetup(false); setPin(''); setConfirmPin(''); }}
+                onPress={() => {
+                  setShowPinSetup(false);
+                  setPin('');
+                  setConfirmPin('');
+                }}
                 variant="outline"
                 size="medium"
               />
@@ -177,9 +193,7 @@ const SecurityScreen = () => {
       <Card>
         <View style={styles.tipRow}>
           <MaterialCommunityIcons name="lightbulb-outline" size={20} color={theme.colors.warning} />
-          <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
-            {t.security.securityTip}
-          </Text>
+          <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>{t.security.securityTip}</Text>
         </View>
       </Card>
 

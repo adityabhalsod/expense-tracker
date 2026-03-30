@@ -32,7 +32,7 @@ const CloudBackupScreen = () => {
         'Backup Complete',
         `Your data has been backed up successfully.\n\nExpenses: ${data.expenses.length}\nCategories: ${data.categories.length}\nWallets: ${data.wallets.length}\nBudgets: ${data.budgets.length}\n\nTimestamp: ${new Date(timestamp).toLocaleString()}`,
       );
-    } catch (error) {
+    } catch {
       Alert.alert('Backup Failed', 'An error occurred while backing up your data. Please try again.');
     } finally {
       setIsBackingUp(false);
@@ -53,7 +53,7 @@ const CloudBackupScreen = () => {
             setIsRestoring(true);
             try {
               // Simulate restore delay (production: download + import from cloud)
-              await new Promise(resolve => setTimeout(resolve, 2000));
+              await new Promise((resolve) => setTimeout(resolve, 2000));
               Alert.alert('Restore Complete', 'Your data has been restored from the backup.');
             } catch {
               Alert.alert('Restore Failed', 'Could not restore data. Please try again.');
@@ -170,7 +170,8 @@ const CloudBackupScreen = () => {
         <View style={styles.tipRow}>
           <MaterialCommunityIcons name="information-outline" size={20} color={theme.colors.info} />
           <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
-            Backups are stored locally on your device. Cloud storage integration with Google Drive and OneDrive is coming in a future update.
+            Backups are stored locally on your device. Cloud storage integration with Google Drive and OneDrive is
+            coming in a future update.
           </Text>
         </View>
       </Card>
@@ -184,9 +185,11 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   iconCircle: {
-    width: 64, height: 64,
+    width: 64,
+    height: 64,
     borderRadius: 32,
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerText: { flex: 1 },
   headerTitle: { fontSize: 20, fontWeight: '700' },

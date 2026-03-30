@@ -14,6 +14,7 @@
   <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Platform-Android_|_iOS-green" alt="Platform" />
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License" />
+  <a href="https://github.com/adityabhalsod/expense-tracker/actions/workflows/ci.yml"><img src="https://github.com/adityabhalsod/expense-tracker/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://github.com/adityabhalsod/expense-tracker/actions/workflows/android-release.yml"><img src="https://github.com/adityabhalsod/expense-tracker/actions/workflows/android-release.yml/badge.svg" alt="Android Release" /></a>
   <a href="https://github.com/adityabhalsod/expense-tracker/releases/latest"><img src="https://img.shields.io/github/v/release/adityabhalsod/expense-tracker?include_prereleases&label=Latest%20Release" alt="Latest Release" /></a>
 </p>
@@ -22,32 +23,50 @@
 
 ## What is Expense Tracker?
 
-Expense Tracker helps you take control of your money. Track every rupee, dollar, or euro you spend — all from your phone, no internet required.
+Expense Tracker helps you take control of your money. Track every rupee, dollar, or euro you spend and earn — all from your phone, no internet required.
 
 - **No account needed** — your data stays on your device
 - **Works offline** — powered by a local SQLite database
 - **Fast & lightweight** — optimized for smooth performance on any device
+- **Track income & expenses** — see your net savings at a glance
 
 ---
 
 ## Features
 
+### Core
+
 | | Feature | Description |
 |---|---|---|
 | 💰 | **Expense Tracking** | Add, edit, and delete expenses with categories, payment methods, notes, and tags |
-| 👛 | **Monthly Wallets** | Set a starting balance each month — expenses auto-deduct in real time |
-| 📊 | **Analytics Dashboard** | Pie charts, bar charts, and line charts to visualize spending patterns |
+| 💵 | **Income Tracking** | Record salary, freelance, business, and other income sources with wallet integration |
+| 🔄 | **Wallet Transfers** | Move money between wallets — ATM withdrawals, UPI transfers, bank-to-cash, etc. |
+| 📈 | **Net Savings** | Monthly income vs expense comparison with real-time savings calculation |
+| 👛 | **Multi-Wallet** | Manage cash, bank accounts, digital wallets, and credit cards with real-time balance tracking |
+| 📊 | **Analytics Dashboard** | Pie charts, bar charts, line charts, stacked bar charts, and spending flow diagrams |
 | 🏷️ | **15+ Categories** | Pre-loaded categories + create your own with custom icons and colors |
 | 💱 | **Multi-Currency** | Supports 10 currencies — INR, USD, EUR, GBP, JPY, CAD, AUD, CNY, SGD, AED |
 | 🔄 | **Recurring Expenses** | Auto-generate daily, weekly, biweekly, monthly, quarterly, or yearly entries |
-| 🎯 | **Budgets** | Set per-category monthly limits with visual progress bars |
+| 🎯 | **Budgets** | Set per-category budgets (daily/weekly/monthly/quarterly/yearly) with visual progress bars |
 | 🔔 | **Budget Alerts** | Get notified at 80% and 100% of your budget limits |
-| 🔍 | **Search** | Full-text search across notes, categories, and tags |
+| 🔍 | **Search** | Full-text search across notes, categories, and tags with category filters |
 | 📤 | **Export Reports** | Export to JSON, CSV, Excel (XML), or HTML/PDF and share instantly |
+| ⚡ | **Quick Add** | Bottom-sheet quick-entry with preset amounts, mode switcher (expense/income), and auto-close |
+| 🎯 | **Savings Goals** | Set financial targets with progress bars, contribute funds, and track completion |
+| ⚡ | **Expense Templates** | Save frequently-used expense patterns for one-tap creation with usage tracking |
+| 📅 | **Calendar Heatmap** | Visualize daily spending intensity across a month with color-coded cells |
+| 🔥 | **Streaks & Gamification** | Track daily logging consistency, earn badges at 3/7/14/30/60/100/365 day milestones |
+| 💡 | **Monthly Insights** | Smart spending analysis — trend detection, savings rate, category spikes, and top categories |
+| 🎓 | **Onboarding Walkthrough** | Guided first-time setup with feature highlights and horizontal pager |
+| 📬 | **Weekly Digest** | Push notification summaries of weekly spending patterns |
+| 📸 | **Receipt Attachments** | Attach photos to expenses, view thumbnails on detail and edit screens |
+| 📊 | **Advanced Data Viz** | Stacked bar charts for weekly category breakdown + custom SVG spending flow diagrams |
 | 🔒 | **PIN & Biometric Lock** | Protect your data with a 4–6 digit PIN or fingerprint/Face ID |
+| 🔐 | **End-to-End Encryption** | AES-256-GCM encryption with PBKDF2 key derivation, hardware-backed key storage via Secure Store |
 | 🌙 | **Dark Mode** | Automatic (follows system) or manual toggle |
 | 🌐 | **Multi-Language** | English, हिन्दी (Hindi), ગુજરાતી (Gujarati) |
-| 🏦 | **Payment Sources** | Manage bank accounts, digital wallets, and credit cards — sensitive data encrypted at rest |
+| ☁️ | **Cloud Backup** | Export and back up all financial data with one tap |
+— sensitive data encrypted at rest |
 | 🔐 | **End-to-End Encryption** | AES-256-GCM encryption with PBKDF2 key derivation, hardware-backed key storage via Secure Store |
 
 ---
@@ -191,9 +210,10 @@ Pushing to specific branches triggers a GitHub Actions pipeline that builds a cl
 | **State** | Zustand 5 | Lightweight reactive state management |
 | **Navigation** | React Navigation 7 | Bottom tabs + native stack transitions |
 | **UI** | react-native-paper, MaterialCommunityIcons | Material Design components |
-| **Charts** | react-native-chart-kit, react-native-svg | Data visualization |
+| **Charts** | react-native-chart-kit, react-native-svg | Data visualization (pie, bar, line, stacked bar, custom SVG) |
 | **Dates** | date-fns 4 | Date formatting and range calculations |
 | **Export** | expo-file-system, expo-sharing | File generation and sharing |
+| **Camera** | expo-image-picker | Receipt photo capture and attachment |
 | **Security** | expo-local-authentication, expo-secure-store | Biometrics and encrypted storage |
 | **Encryption** | SubtleCrypto (Web Crypto API), expo-crypto | AES-256-GCM + PBKDF2 key derivation |
 | **Notifications** | expo-notifications | Budget alert push notifications |
@@ -209,24 +229,41 @@ expense-tracker/
 │   ├── components/          # Reusable UI components
 │   │   ├── common/          #   Card, Button, EmptyState
 │   │   └── PinLockScreen    #   Security lock gate
-│   ├── constants/           # App constants, default categories, currencies
-│   ├── database/            # SQLite service (all CRUD operations)
+│   ├── constants/           # App constants, default categories, currencies, income sources
+│   ├── database/            # SQLite service (all CRUD operations, 11 tables)
 │   ├── i18n/                # Translations (en, hi, gu) + LanguageProvider
 │   ├── navigation/          # Tab navigator + stack screens
-│   ├── screens/             # 17 app screens
-│   │   ├── HomeScreen       #   Dashboard with wallet summary
-│   │   ├── ExpensesScreen   #   Filtered expense list
-│   │   ├── AnalyticsScreen  #   Charts and insights
-│   │   ├── WalletScreen     #   Balance and history
-│   │   ├── SettingsScreen   #   Theme, language, security
-│   │   ├── PaymentSources   #   Bank accounts & payment methods
-│   │   └── ...              #   Add, Detail, Search, Export, Budget, etc.
-│   ├── hooks/               # Custom hooks
-│   ├── services/            # Recurring expenses, notifications
-│   ├── store/               # Zustand global state
-│   ├── theme/               # Light & dark theme definitions
+│   ├── screens/             # 25 app screens
+│   │   ├── HomeScreen           #   Dashboard with wallet summary, net savings, quick actions
+│   │   ├── ExpensesScreen       #   Filtered expense list (All/Today/Week/Month)
+│   │   ├── AnalyticsScreen      #   Charts, stacked bars, spending flow diagrams
+│   │   ├── WalletScreen         #   Balance overview and wallet management
+│   │   ├── SettingsScreen       #   Theme, language, security
+│   │   ├── AddExpenseScreen     #   Add/edit expense with receipt attachments
+│   │   ├── AddIncomeScreen      #   Add/edit income with source selection
+│   │   ├── IncomeListScreen     #   Income history with sorting
+│   │   ├── TransferScreen       #   Wallet-to-wallet transfers
+│   │   ├── QuickAddScreen       #   Bottom-sheet quick-entry (expense/income)
+│   │   ├── SavingsGoalsScreen   #   Financial targets with progress tracking
+│   │   ├── ExpenseTemplatesScreen #  Saved expense patterns for quick re-use
+│   │   ├── CalendarHeatmapScreen  #  Monthly spending heatmap grid
+│   │   ├── StreaksScreen        #   Daily logging streaks and badges
+│   │   ├── MonthlyInsightsScreen  #  Smart spending analysis and trends
+│   │   ├── OnboardingScreen     #   First-time walkthrough pager
+│   │   ├── ExpenseDetailScreen  #   Expense details with receipt thumbnails
+│   │   ├── AllExpensesScreen    #   Full expense list with advanced sorting
+│   │   ├── SearchScreen         #   Full-text search with category filters
+│   │   ├── BudgetSetupScreen    #   Per-category budget management
+│   │   ├── CategoryManagementScreen # Custom categories with batch operations
+│   │   ├── ExportReportScreen   #   Multi-format export (JSON/CSV/Excel/PDF)
+│   │   ├── SecurityScreen       #   PIN and biometric settings
+│   │   ├── CloudBackupScreen    #   Data backup and restore
+│   │   └── WalletSetupScreen    #   Create/edit wallet (payment source)
+│   ├── services/            # Recurring expenses, notifications, weekly digest
+│   ├── store/               # Zustand global state (granular selectors)
+│   ├── theme/               # Light and dark theme definitions
 │   ├── types/               # TypeScript interfaces
-│   └── utils/               # Formatters, helpers, export service
+│   └── utils/               # Formatters, helpers, export service, encryption
 ├── android/                 # Native Android project
 └── assets/                  # App icons and images
 ```
@@ -254,6 +291,32 @@ Translation files are in `src/i18n/`. To add a new language, create a new transl
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+### Code Quality Requirements
+
+Every pull request targeting `main` must pass these automated checks before it can be merged:
+
+| Check | Command | What it verifies |
+|-------|---------|------------------|
+| **ESLint** | `npm run lint` | Zero warnings across all `.ts` / `.tsx` files |
+| **TypeScript** | `npm run typecheck` | Zero type errors (`tsc --noEmit`) |
+
+Both checks run automatically via the [CI workflow](.github/workflows/ci.yml) on every PR.
+
+**Run checks locally before pushing:**
+```bash
+# Run both lint and typecheck in one command
+npm run check
+```
+
+### Branch Protection
+
+The `main` branch is protected with these rules:
+- **Require status checks to pass** — `lint` and `typecheck` jobs must be green
+- **Require branches to be up to date** — PR must be rebased on latest `main`
+- **No direct pushes** — all changes go through pull requests
+
+To configure branch protection: **Settings → Branches → Add rule** for `main`, then select the `lint` and `typecheck` status checks as required.
 
 ---
 

@@ -11,9 +11,11 @@ import { useAppStore, selectSettings } from '../store';
 import { CURRENCIES } from '../constants';
 import { useLanguage, LANGUAGES } from '../i18n';
 import Constants from 'expo-constants'; // Provides access to app.json config at runtime
+import { manualCheckForUpdate } from '../services/updateChecker';
 
 const SettingsScreen = () => {
   const { theme, themeMode, setThemeMode, isDark } = useTheme();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
   const settings = useAppStore(selectSettings); // Only subscribe to settings slice
   const updateSettings = useAppStore((s) => s.updateSettings);
@@ -26,54 +28,46 @@ const SettingsScreen = () => {
 
   // Handle clearing all transactional data while keeping categories/settings
   const handleClearAllData = () => {
-    Alert.alert(
-      t.settings.resetData,
-      t.settings.resetDataConfirm,
-      [
-        { text: t.common.cancel, style: 'cancel' },
-        {
-          text: t.common.delete,
-          style: 'destructive',
-          onPress: async () => {
-            setIsResetting(true);
-            try {
-              await clearAllData();
-              Alert.alert(t.common.success || 'Success', t.settings.resetSuccess);
-            } catch {
-              Alert.alert(t.common.error, t.settings.resetFailed);
-            } finally {
-              setIsResetting(false);
-            }
-          },
+    Alert.alert(t.settings.resetData, t.settings.resetDataConfirm, [
+      { text: t.common.cancel, style: 'cancel' },
+      {
+        text: t.common.delete,
+        style: 'destructive',
+        onPress: async () => {
+          setIsResetting(true);
+          try {
+            await clearAllData();
+            Alert.alert(t.common.success || 'Success', t.settings.resetSuccess);
+          } catch {
+            Alert.alert(t.common.error, t.settings.resetFailed);
+          } finally {
+            setIsResetting(false);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   // Handle full database reset — drops all tables, recreates schema
   const handleResetDatabase = () => {
-    Alert.alert(
-      t.settings.resetDatabase,
-      t.settings.resetDatabaseConfirm,
-      [
-        { text: t.common.cancel, style: 'cancel' },
-        {
-          text: t.common.delete,
-          style: 'destructive',
-          onPress: async () => {
-            setIsResetting(true);
-            try {
-              await resetDatabase();
-              Alert.alert(t.common.success || 'Success', t.settings.resetSuccess);
-            } catch {
-              Alert.alert(t.common.error, t.settings.resetFailed);
-            } finally {
-              setIsResetting(false);
-            }
-          },
+    Alert.alert(t.settings.resetDatabase, t.settings.resetDatabaseConfirm, [
+      { text: t.common.cancel, style: 'cancel' },
+      {
+        text: t.common.delete,
+        style: 'destructive',
+        onPress: async () => {
+          setIsResetting(true);
+          try {
+            await resetDatabase();
+            Alert.alert(t.common.success || 'Success', t.settings.resetSuccess);
+          } catch {
+            Alert.alert(t.common.error, t.settings.resetFailed);
+          } finally {
+            setIsResetting(false);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   // Toggle between light, dark, and system theme modes
@@ -87,15 +81,18 @@ const SettingsScreen = () => {
   // Get display label for the current theme mode
   const getThemeLabel = () => {
     switch (themeMode) {
-      case 'light': return t.settings.light;
-      case 'dark': return t.settings.dark;
-      case 'system': return t.settings.system;
+      case 'light':
+        return t.settings.light;
+      case 'dark':
+        return t.settings.dark;
+      case 'system':
+        return t.settings.system;
     }
   };
 
   // Get display label for the current language
   const getLanguageLabel = () => {
-    const lang = LANGUAGES.find(l => l.code === language);
+    const lang = LANGUAGES.find((l) => l.code === language);
     return lang?.nativeLabel || 'English';
   };
 
@@ -105,8 +102,18 @@ const SettingsScreen = () => {
   };
 
   // Reusable settings row component for consistent layout
-  const SettingsRow = ({ icon, label, value, onPress, rightElement }: {
-    icon: string; label: string; value?: string; onPress?: () => void; rightElement?: React.ReactNode;
+  const SettingsRow = ({
+    icon,
+    label,
+    value,
+    onPress,
+    rightElement,
+  }: {
+    icon: string;
+    label: string;
+    value?: string;
+    onPress?: () => void;
+    rightElement?: React.ReactNode;
   }) => (
     <TouchableOpacity
       style={[styles.row, { borderBottomColor: theme.colors.border }]}
@@ -114,12 +121,14 @@ const SettingsScreen = () => {
       disabled={!onPress && !rightElement} // Disable if no action
     >
       <View style={styles.rowLeft}>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         <MaterialCommunityIcons name={icon as any} size={22} color={theme.colors.primary} />
         <Text style={[styles.rowLabel, { color: theme.colors.text }]}>{label}</Text>
       </View>
       <View style={styles.rowRight}>
         {value && <Text style={[styles.rowValue, { color: theme.colors.textSecondary }]}>{value}</Text>}
-        {rightElement || (onPress && <MaterialCommunityIcons name="chevron-right" size={20} color={theme.colors.textTertiary} />)}
+        {rightElement ||
+          (onPress && <MaterialCommunityIcons name="chevron-right" size={20} color={theme.colors.textTertiary} />)}
       </View>
     </TouchableOpacity>
   );
@@ -162,17 +171,25 @@ const SettingsScreen = () => {
           <SettingsRow
             icon="currency-usd"
             label={t.settings.defaultCurrency}
-            value={`${CURRENCIES.find(c => c.code === settings.defaultCurrency)?.symbol} ${settings.defaultCurrency}`}
+            value={`${CURRENCIES.find((c) => c.code === settings.defaultCurrency)?.symbol} ${settings.defaultCurrency}`}
             onPress={showCurrencyPicker}
           />
-          <SettingsRow icon="shape" label={t.settings.categories} onPress={() => navigation.navigate('CategoryManagement')} />
+          <SettingsRow
+            icon="shape"
+            label={t.settings.categories}
+            onPress={() => navigation.navigate('CategoryManagement')}
+          />
           <SettingsRow icon="target" label={t.settings.budgets} onPress={() => navigation.navigate('BudgetSetup')} />
         </View>
 
         {/* Data management section */}
         <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>{t.settings.data}</Text>
         <View style={[styles.section, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <SettingsRow icon="download" label={t.settings.exportReports} onPress={() => navigation.navigate('ExportReport')} />
+          <SettingsRow
+            icon="download"
+            label={t.settings.exportReports}
+            onPress={() => navigation.navigate('ExportReport')}
+          />
           {/* Cloud Backup feature commented out for now */}
           {/* <SettingsRow icon="cloud-upload" label="Cloud Backup" onPress={() => navigation.navigate('CloudBackup')} /> */}
         </View>
@@ -198,27 +215,26 @@ const SettingsScreen = () => {
         {/* About section */}
         <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>{t.settings.about}</Text>
         <View style={[styles.section, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          {/* Version is read dynamically from app.json via expo-constants */}
-          <SettingsRow icon="information" label={t.settings.version} value={Constants.expoConfig?.version ?? '—'} />
+          {/* Tap to manually check GitHub releases for a newer version */}
+          <SettingsRow
+            icon="information"
+            label={t.settings.version}
+            value={Constants.expoConfig?.version ?? '—'}
+            onPress={() => manualCheckForUpdate(t.updateChecker)}
+          />
         </View>
 
         {/* Danger zone — reset actions */}
         <Text style={[styles.sectionTitle, { color: '#EF4444' }]}>{t.settings.dangerZone}</Text>
         <View style={[styles.section, { backgroundColor: theme.colors.surface, borderColor: '#EF444430' }]}>
           {/* Clear transactional data only (expenses, wallets, budgets, notifications) */}
-          <TouchableOpacity
-            style={styles.dangerRow}
-            onPress={handleClearAllData}
-            disabled={isResetting}
-          >
+          <TouchableOpacity style={styles.dangerRow} onPress={handleClearAllData} disabled={isResetting}>
             <View style={styles.dangerRowLeft}>
               <View style={[styles.dangerIconBg, { backgroundColor: '#FEF2F2' }]}>
                 <MaterialCommunityIcons name="delete-sweep" size={20} color="#EF4444" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.dangerLabel, { color: theme.colors.text }]}>
-                  {t.settings.resetData}
-                </Text>
+                <Text style={[styles.dangerLabel, { color: theme.colors.text }]}>{t.settings.resetData}</Text>
                 <Text style={[styles.dangerDesc, { color: theme.colors.textSecondary }]}>
                   {t.settings.resetDataDesc}
                 </Text>
@@ -227,19 +243,13 @@ const SettingsScreen = () => {
             <MaterialCommunityIcons name="chevron-right" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
           {/* Full factory reset — drop all tables and start from scratch */}
-          <TouchableOpacity
-            style={styles.dangerRow}
-            onPress={handleResetDatabase}
-            disabled={isResetting}
-          >
+          <TouchableOpacity style={styles.dangerRow} onPress={handleResetDatabase} disabled={isResetting}>
             <View style={styles.dangerRowLeft}>
               <View style={[styles.dangerIconBg, { backgroundColor: '#FEF2F2' }]}>
                 <MaterialCommunityIcons name="database-remove" size={20} color="#EF4444" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.dangerLabel, { color: theme.colors.text }]}>
-                  {t.settings.resetDatabase}
-                </Text>
+                <Text style={[styles.dangerLabel, { color: theme.colors.text }]}>{t.settings.resetDatabase}</Text>
                 <Text style={[styles.dangerDesc, { color: theme.colors.textSecondary }]}>
                   {t.settings.resetDatabaseDesc}
                 </Text>
@@ -279,9 +289,10 @@ const SettingsScreen = () => {
                     styles.currencyRow,
                     {
                       borderBottomColor: theme.colors.border,
-                      backgroundColor: settings.defaultCurrency === item.code
-                        ? theme.colors.primary + '15' // Highlight selected currency
-                        : 'transparent',
+                      backgroundColor:
+                        settings.defaultCurrency === item.code
+                          ? theme.colors.primary + '15' // Highlight selected currency
+                          : 'transparent',
                     },
                   ]}
                   onPress={() => {
@@ -329,9 +340,7 @@ const SettingsScreen = () => {
                     styles.currencyRow,
                     {
                       borderBottomColor: theme.colors.border,
-                      backgroundColor: language === item.code
-                        ? theme.colors.primary + '15'
-                        : 'transparent',
+                      backgroundColor: language === item.code ? theme.colors.primary + '15' : 'transparent',
                     },
                   ]}
                   onPress={() => {

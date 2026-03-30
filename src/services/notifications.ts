@@ -6,7 +6,7 @@
 import Constants from 'expo-constants';
 import { getDatabase } from '../database';
 import { Budget, Category } from '../types';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, format } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, startOfYear, endOfYear, format } from 'date-fns';
 
 // Expo Go does not support push notifications since SDK 53 — avoid importing the module entirely
 const isExpoGo = Constants.appOwnership === 'expo';
@@ -51,10 +51,11 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
 const getDateRangeForPeriod = (period: string): { startDate: string; endDate: string } => {
   const now = new Date();
   switch (period) {
-    case 'daily':
+    case 'daily': {
       // Today only
       const todayStr = format(now, 'yyyy-MM-dd');
       return { startDate: todayStr, endDate: todayStr };
+    }
     case 'weekly':
       return {
         startDate: format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
@@ -94,18 +95,16 @@ export const checkBudgetNotifications = async (): Promise<void> => {
   const year = now.getFullYear();
 
   // Get all budgets for the current month
-  const budgets = await database.getAllAsync<Budget>(
-    'SELECT * FROM budgets WHERE month = ? AND year = ?',
-    [month, year]
-  );
+  const budgets = await database.getAllAsync<Budget>('SELECT * FROM budgets WHERE month = ? AND year = ?', [
+    month,
+    year,
+  ]);
 
   if (budgets.length === 0) return;
 
   // Get all categories for name lookup
-  const categories = await database.getAllAsync<Category>(
-    'SELECT * FROM categories ORDER BY "order" ASC'
-  );
-  const categoryMap = new Map(categories.map(c => [c.id, c]));
+  const categories = await database.getAllAsync<Category>('SELECT * FROM categories ORDER BY "order" ASC');
+  const categoryMap = new Map(categories.map((c) => [c.id, c]));
 
   for (const budget of budgets) {
     if (!budget.categoryId) continue;
@@ -119,6 +118,7 @@ export const checkBudgetNotifications = async (): Promise<void> => {
     // Build query with optional wallet filter
     let query = `SELECT COALESCE(SUM(amount), 0) as total FROM expenses
        WHERE category = ? AND date >= ? AND date <= ?`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const params: any[] = [category.name, startDate, endDate];
 
     // Filter by wallet if budget is wallet-specific
@@ -154,6 +154,68 @@ export const checkBudgetNotifications = async (): Promise<void> => {
         },
         trigger: null,
       });
+    }
+  }
+};
+
+// Schedule a weekly digest notification — fires every Sunday at 9 AM
+// Provides a summary of the past week's spending and income
+export const scheduleWeeklyDigest = async (): Promise<void> => {
+  const Notifications = await getNotifications();
+  if (!Notifications) return;
+
+  // Cancel any existing weekly digest to avoid duplicates
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  for (const notif of scheduled) {
+    if (notif.content.data?.type === 'weekly_digest') {
+      await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+    }
+  }
+
+  const database = await getDatabase();
+  const now = new Date();
+  const weekStart = format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+  const weekEnd = format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+
+  // Fetch weekly totals for the digest content
+  const expenseResult = await database.getFirstAsync<{ total: number }>(
+    'SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE date >= ? AND date <= ?',
+    [weekStart, weekEnd],
+  );
+  const incomeResult = await database.getFirstAsync<{ total: number }>(
+    'SELECT COALESCE(SUM(amount), 0) as total FROM income WHERE date >= ? AND date <= ?',
+    [weekStart, weekEnd],
+  );
+
+  const weekExpenses = expenseResult?.total || 0;
+  const weekIncome = incomeResult?.total || 0;
+
+  // Schedule the notification for next Sunday at 9 AM
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'Weekly Spending Digest',
+      body: `This week: Spent ₹${weekExpenses.toLocaleString('en-IN')}, Earned ₹${weekIncome.toLocaleString('en-IN')}. Net: ₹${(weekIncome - weekExpenses).toLocaleString('en-IN')}`,
+      data: { type: 'weekly_digest' },
+    },
+    trigger: {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      type: 'weekly' as any,
+      weekday: 1, // Sunday
+      hour: 9,
+      minute: 0,
+    },
+  });
+};
+
+// Cancel the weekly digest notification
+export const cancelWeeklyDigest = async (): Promise<void> => {
+  const Notifications = await getNotifications();
+  if (!Notifications) return;
+
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  for (const notif of scheduled) {
+    if (notif.content.data?.type === 'weekly_digest') {
+      await Notifications.cancelScheduledNotificationAsync(notif.identifier);
     }
   }
 };

@@ -1,14 +1,14 @@
 // Wallet management screen displaying all wallets as payment sources
 // Shows wallet cards with balance, type badge, icon, and color-coded visuals
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
-import { useAppStore, selectWallets, selectCurrentWallet } from '../store';
+import { useAppStore, selectWallets } from '../store';
 import Card from '../components/common/Card';
 import { formatCurrency } from '../utils/helpers';
 import { Wallet, WalletType } from '../types';
@@ -25,10 +25,10 @@ const WALLET_TYPE_META: Record<WalletType, { icon: string; label: string }> = {
 const WalletScreen = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
   // Subscribe to individual store slices to avoid full-store re-renders
   const wallets = useAppStore(selectWallets);
-  const currentWallet = useAppStore(selectCurrentWallet);
   const loadWallets = useAppStore((s) => s.loadWallets);
   const loadCurrentWallet = useAppStore((s) => s.loadCurrentWallet);
   const deleteWallet = useAppStore((s) => s.deleteWallet);
@@ -38,28 +38,23 @@ const WalletScreen = () => {
     useCallback(() => {
       loadWallets();
       loadCurrentWallet();
-    }, [])
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
   );
 
   // Aggregate total balance across all wallets
-  const totalBalance = useMemo(
-    () => wallets.reduce((sum, w) => sum + w.currentBalance, 0),
-    [wallets]
-  );
+  const totalBalance = useMemo(() => wallets.reduce((sum, w) => sum + w.currentBalance, 0), [wallets]);
 
   // Aggregate total initial balance across all wallets
-  const totalInitial = useMemo(
-    () => wallets.reduce((sum, w) => sum + w.initialBalance, 0),
-    [wallets]
-  );
+  const totalInitial = useMemo(() => wallets.reduce((sum, w) => sum + w.initialBalance, 0), [wallets]);
 
   // Calculate total spent across all wallets
   const totalSpent = useMemo(() => totalInitial - totalBalance, [totalInitial, totalBalance]);
 
   // Calculate spending percentage for progress bar
   const spentPercentage = useMemo(
-    () => totalInitial > 0 ? Math.min((totalSpent / totalInitial) * 100, 100) : 0,
-    [totalSpent, totalInitial]
+    () => (totalInitial > 0 ? Math.min((totalSpent / totalInitial) * 100, 100) : 0),
+    [totalSpent, totalInitial],
   );
 
   // Determine progress bar color based on percentage
@@ -71,18 +66,14 @@ const WalletScreen = () => {
 
   // Confirm and delete a wallet by ID
   const handleDelete = (wallet: Wallet) => {
-    Alert.alert(
-      t.common.delete,
-      `${t.walletSetup?.deleteConfirm || 'Are you sure you want to delete this wallet?'}`,
-      [
-        { text: t.common.cancel, style: 'cancel' },
-        {
-          text: t.common.delete,
-          style: 'destructive',
-          onPress: () => deleteWallet(wallet.id),
-        },
-      ]
-    );
+    Alert.alert(t.common.delete, `${t.walletSetup?.deleteConfirm || 'Are you sure you want to delete this wallet?'}`, [
+      { text: t.common.cancel, style: 'cancel' },
+      {
+        text: t.common.delete,
+        style: 'destructive',
+        onPress: () => deleteWallet(wallet.id),
+      },
+    ]);
   };
 
   return (
@@ -111,7 +102,9 @@ const WalletScreen = () => {
                     style={[styles.progressFill, { width: `${spentPercentage}%`, backgroundColor: getProgressColor() }]}
                   />
                 </View>
-                <Text style={styles.progressText}>{spentPercentage.toFixed(0)}% {t.wallet.spent}</Text>
+                <Text style={styles.progressText}>
+                  {spentPercentage.toFixed(0)}% {t.wallet.spent}
+                </Text>
               </View>
 
               {/* Income / Expense summary row */}
@@ -142,21 +135,30 @@ const WalletScreen = () => {
             {/* Quick action row */}
             <View style={styles.actionRow}>
               <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+                ]}
                 onPress={() => navigation.navigate('AddExpense', {})}
               >
                 <MaterialCommunityIcons name="minus-circle" size={28} color={theme.colors.error} />
                 <Text style={[styles.actionText, { color: theme.colors.text }]}>{t.wallet.addExpense}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+                ]}
                 onPress={() => navigation.navigate('WalletSetup')}
               >
                 <MaterialCommunityIcons name="plus-circle" size={28} color={theme.colors.success} />
                 <Text style={[styles.actionText, { color: theme.colors.text }]}>{t.wallet.createWallet}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+                ]}
                 onPress={() => navigation.navigate('BudgetSetup')}
               >
                 <MaterialCommunityIcons name="target" size={28} color={theme.colors.warning} />
@@ -173,8 +175,8 @@ const WalletScreen = () => {
             {wallets.map((wallet) => {
               const typeMeta = WALLET_TYPE_META[wallet.type] || WALLET_TYPE_META.other;
               const walletSpent = wallet.initialBalance - wallet.currentBalance;
-              const walletPct = wallet.initialBalance > 0
-                ? Math.min((walletSpent / wallet.initialBalance) * 100, 100) : 0;
+              const walletPct =
+                wallet.initialBalance > 0 ? Math.min((walletSpent / wallet.initialBalance) * 100, 100) : 0;
               return (
                 <TouchableOpacity
                   key={wallet.id}
@@ -186,6 +188,7 @@ const WalletScreen = () => {
                     <View style={styles.walletRow}>
                       {/* Wallet icon with color background */}
                       <View style={[styles.walletIcon, { backgroundColor: wallet.color + '20' }]}>
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         <MaterialCommunityIcons name={wallet.iconName as any} size={26} color={wallet.color} />
                       </View>
 
@@ -206,7 +209,12 @@ const WalletScreen = () => {
                         </View>
                         {/* Type badge with icon */}
                         <View style={styles.typeBadge}>
-                          <MaterialCommunityIcons name={typeMeta.icon as any} size={12} color={theme.colors.textTertiary} />
+                          <MaterialCommunityIcons
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            name={typeMeta.icon as any}
+                            size={12}
+                            color={theme.colors.textTertiary}
+                          />
                           <Text style={[styles.typeText, { color: theme.colors.textTertiary }]}>
                             {typeMeta.label}
                             {wallet.bankName ? ` · ${wallet.bankName}` : ''}
@@ -214,7 +222,9 @@ const WalletScreen = () => {
                         </View>
                         {/* Mini progress bar */}
                         <View style={[styles.miniProgress, { backgroundColor: theme.colors.border }]}>
-                          <View style={[styles.miniProgressFill, { width: `${walletPct}%`, backgroundColor: wallet.color }]} />
+                          <View
+                            style={[styles.miniProgressFill, { width: `${walletPct}%`, backgroundColor: wallet.color }]}
+                          />
                         </View>
                       </View>
 
@@ -299,9 +309,12 @@ const styles = StyleSheet.create({
   },
   summaryItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   summaryIcon: {
-    width: 28, height: 28, borderRadius: 14,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   summaryItemLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 11 },
   summaryItemAmount: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
@@ -313,8 +326,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   actionButton: {
-    flex: 1, padding: 14, borderRadius: 16,
-    alignItems: 'center', borderWidth: 0.5, gap: 6,
+    flex: 1,
+    padding: 14,
+    borderRadius: 16,
+    alignItems: 'center',
+    borderWidth: 0.5,
+    gap: 6,
   },
   actionText: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
   // Section header
@@ -324,8 +341,12 @@ const styles = StyleSheet.create({
   walletCard: { paddingVertical: 12, paddingHorizontal: 4 },
   walletRow: { flexDirection: 'row', alignItems: 'center' },
   walletIcon: {
-    width: 48, height: 48, borderRadius: 14,
-    justifyContent: 'center', alignItems: 'center', marginRight: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   walletInfo: { flex: 1, marginRight: 8 },
   walletNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -345,18 +366,30 @@ const styles = StyleSheet.create({
   setupTitle: { fontSize: 22, fontWeight: '700' },
   setupSubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 20, paddingHorizontal: 16 },
   createBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 24, paddingVertical: 14, borderRadius: 14, marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginTop: 8,
   },
   createBtnText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
   // FAB
   fab: {
-    position: 'absolute', bottom: 20, right: 20,
-    width: 56, height: 56, borderRadius: 28,
-    justifyContent: 'center', alignItems: 'center',
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
     elevation: 6,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3, shadowRadius: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
 });
 

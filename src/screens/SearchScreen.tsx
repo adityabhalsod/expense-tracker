@@ -2,9 +2,7 @@
 // Provides real-time search with results list
 
 import React, { useState, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme';
@@ -16,6 +14,7 @@ import { formatCurrency, formatRelativeDate } from '../utils/helpers';
 const SearchScreen = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
   const searchExpenses = useAppStore((s) => s.searchExpenses); // Action — stable reference
   const categories = useAppStore(selectCategories); // Only subscribe to categories slice
@@ -26,22 +25,24 @@ const SearchScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null); // Category filter
 
   // Execute search when input changes or category filter is applied
-  const handleSearch = useCallback(async (text: string) => {
-    setQuery(text);
-    if (text.length >= 2) {
-      // Search requires minimum 2 characters to reduce noise
-      const data = await searchExpenses(text);
-      // Apply optional category filter to search results
-      const filtered = selectedCategory
-        ? data.filter(e => e.category === selectedCategory)
-        : data;
-      setResults(filtered);
-      setSearched(true);
-    } else {
-      setResults([]);
-      setSearched(false);
-    }
-  }, [selectedCategory]);
+  const handleSearch = useCallback(
+    async (text: string) => {
+      setQuery(text);
+      if (text.length >= 2) {
+        // Search requires minimum 2 characters to reduce noise
+        const data = await searchExpenses(text);
+        // Apply optional category filter to search results
+        const filtered = selectedCategory ? data.filter((e) => e.category === selectedCategory) : data;
+        setResults(filtered);
+        setSearched(true);
+      } else {
+        setResults([]);
+        setSearched(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedCategory],
+  );
 
   // Toggle category filter on/off
   const toggleCategoryFilter = async (catName: string) => {
@@ -51,13 +52,13 @@ const SearchScreen = () => {
     if (query.length >= 2) {
       const data = await searchExpenses(query);
       // Apply category filter to existing results
-      setResults(newCat ? data.filter(e => e.category === newCat) : data);
+      setResults(newCat ? data.filter((e) => e.category === newCat) : data);
     }
   };
 
   // Find category info for icon and color display
   const getCategoryInfo = (categoryName: string) => {
-    const cat = categories.find(c => c.name === categoryName);
+    const cat = categories.find((c) => c.name === categoryName);
     return { icon: cat?.icon || 'help-circle', color: cat?.color || '#999' };
   };
 
@@ -102,8 +103,14 @@ const SearchScreen = () => {
             ]}
             onPress={() => toggleCategoryFilter(item.name)}
           >
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <MaterialCommunityIcons name={item.icon as any} size={16} color={item.color} />
-            <Text style={[styles.filterChipText, { color: selectedCategory === item.name ? item.color : theme.colors.text }]}>
+            <Text
+              style={[
+                styles.filterChipText,
+                { color: selectedCategory === item.name ? item.color : theme.colors.text },
+              ]}
+            >
               {item.name}
             </Text>
           </TouchableOpacity>
@@ -124,13 +131,15 @@ const SearchScreen = () => {
               <View style={styles.resultRow}>
                 {/* Category icon */}
                 <View style={[styles.iconCircle, { backgroundColor: catInfo.color + '20' }]}>
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   <MaterialCommunityIcons name={catInfo.icon as any} size={22} color={catInfo.color} />
                 </View>
                 {/* Expense details */}
                 <View style={styles.resultInfo}>
                   <Text style={[styles.resultCategory, { color: theme.colors.text }]}>{item.category}</Text>
                   <Text style={[styles.resultMeta, { color: theme.colors.textSecondary }]}>
-                    {formatRelativeDate(item.date)}{item.notes ? ` • ${item.notes}` : ''}
+                    {formatRelativeDate(item.date)}
+                    {item.notes ? ` • ${item.notes}` : ''}
                   </Text>
                   {/* Show tags if present */}
                   {item.tags.length > 0 && (
@@ -159,20 +168,14 @@ const SearchScreen = () => {
             <View style={styles.emptyState}>
               <MaterialCommunityIcons name="magnify" size={48} color={theme.colors.textTertiary} />
               <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>{t.search.noResults}</Text>
-              <Text style={[styles.emptySubtext, { color: theme.colors.textTertiary }]}>
-                {t.search.noResultsHint}
-              </Text>
+              <Text style={[styles.emptySubtext, { color: theme.colors.textTertiary }]}>{t.search.noResultsHint}</Text>
             </View>
           ) : (
             // Initial prompt before searching
             <View style={styles.emptyState}>
               <MaterialCommunityIcons name="magnify" size={48} color={theme.colors.textTertiary} />
-              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
-                {t.search.searchExpenses}
-              </Text>
-              <Text style={[styles.emptySubtext, { color: theme.colors.textTertiary }]}>
-                {t.search.searchHint}
-              </Text>
+              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>{t.search.searchExpenses}</Text>
+              <Text style={[styles.emptySubtext, { color: theme.colors.textTertiary }]}>{t.search.searchHint}</Text>
             </View>
           )
         }

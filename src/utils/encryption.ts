@@ -64,7 +64,7 @@ const deriveKeyStream = async (masterKey: string, salt: Uint8Array, length: numb
     const hash = await Crypto.digestStringAsync(
       Crypto.CryptoDigestAlgorithm.SHA256,
       `${masterKey}:${bytesToBase64(salt)}:${counter}`,
-      { encoding: Crypto.CryptoEncoding.HEX }
+      { encoding: Crypto.CryptoEncoding.HEX },
     );
     // Convert hex hash to bytes (32 bytes per iteration)
     for (let i = 0; i < hash.length && offset < length; i += 2) {
@@ -80,7 +80,7 @@ const computeIntegrityTag = async (masterKey: string, data: Uint8Array): Promise
   const tag = await Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA256,
     `${masterKey}:integrity:${bytesToBase64(data)}`,
-    { encoding: Crypto.CryptoEncoding.HEX }
+    { encoding: Crypto.CryptoEncoding.HEX },
   );
   // Take first 16 bytes (32 hex chars) as the tag
   const tagBytes = new Uint8Array(16);
@@ -114,9 +114,9 @@ export const encryptData = async (plaintext: string): Promise<string> => {
 
     // Pack: salt(16) + tag(16) + ciphertext(N)
     const combined = new Uint8Array(16 + 16 + ciphertext.length);
-    combined.set(salt, 0);          // First 16 bytes: random salt
-    combined.set(tag, 16);          // Next 16 bytes: integrity tag
-    combined.set(ciphertext, 32);   // Rest: encrypted data
+    combined.set(salt, 0); // First 16 bytes: random salt
+    combined.set(tag, 16); // Next 16 bytes: integrity tag
+    combined.set(ciphertext, 32); // Rest: encrypted data
 
     return bytesToBase64(combined);
   } catch (error) {
@@ -166,12 +166,14 @@ export const decryptData = async (encryptedBase64: string): Promise<string> => {
 };
 
 // Encrypt a JSON object and return base64-encoded string
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const encryptJSON = async (data: Record<string, any>): Promise<string> => {
   const jsonString = JSON.stringify(data);
   return encryptData(jsonString);
 };
 
 // Decrypt a base64-encoded string back to a JSON object
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const decryptJSON = async <T = Record<string, any>>(encryptedBase64: string): Promise<T> => {
   const jsonString = await decryptData(encryptedBase64);
   return JSON.parse(jsonString) as T;

@@ -3,23 +3,44 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, TouchableWithoutFeedback, Alert, Platform, Keyboard,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  Alert,
+  Platform,
+  Keyboard,
+  Image,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
-import { useAppStore, selectCategories, selectWallets, selectCurrentWallet, selectExpenses, selectSettings } from '../store';
+import {
+  useAppStore,
+  selectCategories,
+  selectWallets,
+  selectCurrentWallet,
+  selectExpenses,
+  selectSettings,
+} from '../store';
 import { RecurringFrequency } from '../types';
 import { format, parse } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Button from '../components/common/Button';
 import { formatAmountInput } from '../utils/helpers';
+import * as ImagePicker from 'expo-image-picker';
+import * as db from '../database';
 
 const AddExpenseScreen = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const route = useRoute<any>();
   const expenseId = route.params?.expenseId; // Null for new expense, ID for editing
 
@@ -36,7 +57,7 @@ const AddExpenseScreen = () => {
   const [amount, setAmount] = useState(''); // Expense amount as string for input
   // Pre-select the default category (isDefault=true) or empty for new expenses
   const [selectedCategory, setSelectedCategory] = useState(() => {
-    const defaultCat = categories.find(c => c.isDefault);
+    const defaultCat = categories.find((c) => c.isDefault);
     return defaultCat?.name || ''; // Use default category name if available
   });
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd')); // Selected date
@@ -46,9 +67,12 @@ const AddExpenseScreen = () => {
   const [recurringFrequency, setRecurringFrequency] = useState<RecurringFrequency>('monthly'); // Recurrence interval
   const [loading, setLoading] = useState(false); // Submission loading state
   const [showDatePicker, setShowDatePicker] = useState(false); // Date picker visibility
+  const [receiptUris, setReceiptUris] = useState<string[]>([]); // Attached receipt photo URIs (both existing + new)
+  const [existingReceiptIds, setExistingReceiptIds] = useState<Map<string, string>>(new Map()); // Map<uri, receiptId> for receipts already saved in DB
+  const [removedReceiptIds, setRemovedReceiptIds] = useState<string[]>([]); // Receipt IDs to delete on save
   // Eagerly init wallet selection from store to prevent flash of unselected state
   const [selectedWalletId, setSelectedWalletId] = useState(() => {
-    const defaultW = wallets.find(w => w.isDefault) || wallets[0];
+    const defaultW = wallets.find((w) => w.isDefault) || wallets[0];
     return defaultW?.id || '';
   });
 
@@ -73,15 +97,16 @@ const AddExpenseScreen = () => {
   // Sync wallet selection if wallets load after initial render (e.g., slow DB)
   useEffect(() => {
     if (!selectedWalletId && wallets.length > 0) {
-      const defaultWallet = wallets.find(w => w.isDefault) || wallets[0];
+      const defaultWallet = wallets.find((w) => w.isDefault) || wallets[0];
       setSelectedWalletId(defaultWallet.id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wallets.length]);
 
   // Deduplicate categories by name to prevent duplicate chips
   const uniqueCategories = useMemo(() => {
     const seen = new Set<string>();
-    return categories.filter(cat => {
+    return categories.filter((cat) => {
       if (seen.has(cat.name)) return false; // Skip duplicate names
       seen.add(cat.name);
       return true;
@@ -96,7 +121,7 @@ const AddExpenseScreen = () => {
   // Pre-fill form fields when editing an existing expense
   useEffect(() => {
     if (expenseId) {
-      const expense = expenses.find(e => e.id === expenseId);
+      const expense = expenses.find((e) => e.id === expenseId);
       if (expense) {
         setAmount(expense.amount.toString());
         setSelectedCategory(expense.category);
@@ -108,8 +133,19 @@ const AddExpenseScreen = () => {
         if (expense.walletId) setSelectedWalletId(expense.walletId); // Restore wallet selection
         // Update header title to indicate edit mode
         navigation.setOptions({ title: t.addExpense.editTitle });
+
+        // Load existing receipt attachments from the database for this expense
+        db.getReceiptsByExpense(expenseId).then((receipts) => {
+          const uris = receipts.map((r) => r.uri); // Extract URIs for display
+          setReceiptUris(uris);
+          // Build a map of URI → receipt ID so we can distinguish existing from new
+          const idMap = new Map<string, string>();
+          receipts.forEach((r) => idMap.set(r.uri, r.id));
+          setExistingReceiptIds(idMap);
+        });
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expenseId]);
 
   // Validate and submit the expense form
@@ -131,7 +167,10 @@ const AddExpenseScreen = () => {
         category: selectedCategory,
         date,
         notes: notes.trim(),
-        tags: tags.split(',').map(t => t.trim()).filter(Boolean), // Parse comma-separated tags
+        tags: tags
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean), // Parse comma-separated tags
         currency: settings.defaultCurrency,
         isRecurring,
         recurringFrequency: isRecurring ? recurringFrequency : undefined,
@@ -141,12 +180,28 @@ const AddExpenseScreen = () => {
       if (expenseId) {
         // Update existing expense record
         await updateExpense(expenseId, expenseData);
+        // Delete receipts that the user removed during this edit session
+        for (const id of removedReceiptIds) {
+          await db.deleteReceipt(id);
+        }
+        // Save only newly added receipt attachments (skip URIs that already exist in DB)
+        for (const uri of receiptUris) {
+          if (!existingReceiptIds.has(uri)) {
+            await db.addReceipt({ expenseId, uri });
+          }
+        }
       } else {
         // Create new expense record
-        await addExpense(expenseData);
+        const newExpense = await addExpense(expenseData);
+        // Save receipt attachments linked to the new expense
+        if (newExpense && receiptUris.length > 0) {
+          for (const uri of receiptUris) {
+            await db.addReceipt({ expenseId: newExpense.id, uri });
+          }
+        }
       }
       navigation.goBack(); // Return to previous screen on success
-    } catch (error) {
+    } catch {
       Alert.alert(t.common.error, t.addExpense.saveFailed);
     } finally {
       setLoading(false);
@@ -224,7 +279,13 @@ const AddExpenseScreen = () => {
         {/* Category selection grid with scrollable chips */}
         <View style={styles.section}>
           <Text style={[styles.label, { color: theme.colors.text }]}>{t.addExpense.category}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll} keyboardShouldPersistTaps="always" nestedScrollEnabled>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoryScroll}
+            keyboardShouldPersistTaps="always"
+            nestedScrollEnabled
+          >
             {uniqueCategories.map((cat) => (
               <TouchableOpacity
                 key={cat.id}
@@ -238,6 +299,7 @@ const AddExpenseScreen = () => {
                 ]}
                 onPress={() => setSelectedCategory(cat.name)} // Set category on tap
               >
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 <MaterialCommunityIcons name={cat.icon as any} size={20} color={cat.color} />
                 <Text
                   style={[
@@ -256,7 +318,12 @@ const AddExpenseScreen = () => {
         {wallets.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.label, { color: theme.colors.text }]}>{t.wallet.title}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always" nestedScrollEnabled>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="always"
+              nestedScrollEnabled
+            >
               {wallets.map((w) => (
                 <TouchableOpacity
                   key={w.id}
@@ -270,15 +337,16 @@ const AddExpenseScreen = () => {
                   ]}
                   onPress={() => setSelectedWalletId(w.id)}
                 >
+                  {/* eslint-disable @typescript-eslint/no-explicit-any */}
                   <MaterialCommunityIcons
                     name={w.iconName as any}
                     size={18}
                     color={selectedWalletId === w.id ? w.color : theme.colors.textSecondary}
                   />
-                  <Text style={[
-                    styles.methodChipText,
-                    { color: selectedWalletId === w.id ? w.color : theme.colors.text },
-                  ]}>
+                  {/* eslint-enable @typescript-eslint/no-explicit-any */}
+                  <Text
+                    style={[styles.methodChipText, { color: selectedWalletId === w.id ? w.color : theme.colors.text }]}
+                  >
                     {w.nickname || w.name}
                   </Text>
                 </TouchableOpacity>
@@ -291,7 +359,14 @@ const AddExpenseScreen = () => {
         <View style={styles.section}>
           <Text style={[styles.label, { color: theme.colors.text }]}>{t.addExpense.notes}</Text>
           <TextInput
-            style={[styles.textArea, { backgroundColor: theme.colors.inputBackground, color: theme.colors.text, borderColor: theme.colors.border }]}
+            style={[
+              styles.textArea,
+              {
+                backgroundColor: theme.colors.inputBackground,
+                color: theme.colors.text,
+                borderColor: theme.colors.border,
+              },
+            ]}
             value={notes}
             onChangeText={setNotes}
             placeholder={t.addExpense.notesPlaceholder}
@@ -306,7 +381,14 @@ const AddExpenseScreen = () => {
         <View style={styles.section}>
           <Text style={[styles.label, { color: theme.colors.text }]}>{t.addExpense.tags}</Text>
           <TextInput
-            style={[styles.input, { backgroundColor: theme.colors.inputBackground, color: theme.colors.text, borderColor: theme.colors.border }]}
+            style={[
+              styles.input,
+              {
+                backgroundColor: theme.colors.inputBackground,
+                color: theme.colors.text,
+                borderColor: theme.colors.border,
+              },
+            ]}
             value={tags}
             onChangeText={setTags}
             placeholder={t.addExpense.tagsPlaceholder}
@@ -318,7 +400,10 @@ const AddExpenseScreen = () => {
         {/* Recurring expense toggle and frequency selector */}
         <View style={styles.section}>
           <TouchableOpacity
-            style={[styles.recurringToggle, { backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.border }]}
+            style={[
+              styles.recurringToggle,
+              { backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.border },
+            ]}
             onPress={() => setIsRecurring(!isRecurring)} // Toggle recurring state
           >
             <MaterialCommunityIcons
@@ -338,7 +423,8 @@ const AddExpenseScreen = () => {
                   style={[
                     styles.frequencyChip,
                     {
-                      backgroundColor: recurringFrequency === freq.value ? theme.colors.primary : theme.colors.surfaceVariant,
+                      backgroundColor:
+                        recurringFrequency === freq.value ? theme.colors.primary : theme.colors.surfaceVariant,
                       borderColor: recurringFrequency === freq.value ? theme.colors.primary : theme.colors.border,
                     },
                   ]}
@@ -357,6 +443,88 @@ const AddExpenseScreen = () => {
               ))}
             </View>
           )}
+        </View>
+
+        {/* Receipt photo attachment section */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: theme.colors.text }]}>{t.receipts.addReceipt}</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+            {/* Thumbnail previews of attached receipt photos */}
+            {receiptUris.map((uri, idx) => (
+              <TouchableOpacity
+                key={idx}
+                onPress={() => {
+                  // Track removal of existing DB receipts for deletion on save
+                  const receiptId = existingReceiptIds.get(uri);
+                  if (receiptId) {
+                    setRemovedReceiptIds((prev) => [...prev, receiptId]);
+                    // Remove from the existing map so it won't be skipped if re-added
+                    setExistingReceiptIds((prev) => {
+                      const next = new Map(prev);
+                      next.delete(uri);
+                      return next;
+                    });
+                  }
+                  // Remove URI from the display list
+                  setReceiptUris(receiptUris.filter((_, i) => i !== idx));
+                }}
+              >
+                <View
+                  style={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: 10,
+                    overflow: 'hidden',
+                    backgroundColor: theme.colors.inputBackground,
+                  }}
+                >
+                  {/* Render actual receipt image from local file URI */}
+                  <Image source={{ uri }} style={{ width: 72, height: 72 }} resizeMode="cover" />
+                  {/* Red X button overlay to remove this receipt */}
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      right: 2,
+                      backgroundColor: '#EF4444',
+                      borderRadius: 10,
+                      width: 20,
+                      height: 20,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <MaterialCommunityIcons name="close" size={12} color="#FFF" />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+            {/* Add photo button */}
+            <TouchableOpacity
+              style={{
+                width: 72,
+                height: 72,
+                borderRadius: 10,
+                borderWidth: 1.5,
+                borderStyle: 'dashed',
+                borderColor: theme.colors.border,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              onPress={async () => {
+                const result = await ImagePicker.launchImageLibraryAsync({
+                  mediaTypes: ['images'],
+                  quality: 0.7,
+                  allowsMultipleSelection: true,
+                });
+                if (!result.canceled && result.assets) {
+                  setReceiptUris([...receiptUris, ...result.assets.map((a) => a.uri)]);
+                }
+              }}
+            >
+              <MaterialCommunityIcons name="camera-plus" size={24} color={theme.colors.textTertiary} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Save button to submit the form */}

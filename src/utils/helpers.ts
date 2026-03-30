@@ -1,12 +1,24 @@
 // Utility functions for formatting, date calculations, and data transformations
 
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subDays, subMonths } from 'date-fns';
-import { TimeRange, Currency } from '../types';
+import {
+  format,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  startOfQuarter,
+  endOfQuarter,
+  startOfYear,
+  endOfYear,
+  subDays,
+  subMonths,
+} from 'date-fns';
+import { TimeRange } from '../types';
 import { CURRENCIES } from '../constants';
 
 // Format a number as currency string with the appropriate symbol
 export const formatCurrency = (amount: number, currencyCode: string = 'INR'): string => {
-  const currency = CURRENCIES.find(c => c.code === currencyCode); // Find matching currency
+  const currency = CURRENCIES.find((c) => c.code === currencyCode); // Find matching currency
   const symbol = currency?.symbol || '₹'; // Default to rupee if not found
 
   // Format with locale-appropriate thousand separators
@@ -57,7 +69,7 @@ const formatIndianNumber = (num: number): string => {
 
 // Format a number as compact string (e.g., 1.2K, 3.5L for Indian)
 export const formatCompactNumber = (num: number, currencyCode: string = 'INR'): string => {
-  const currency = CURRENCIES.find(c => c.code === currencyCode);
+  const currency = CURRENCIES.find((c) => c.code === currencyCode);
   const symbol = currency?.symbol || '₹';
 
   if (currencyCode === 'INR') {
@@ -91,7 +103,11 @@ export const formatRelativeDate = (dateString: string): string => {
 };
 
 // Calculate start and end dates for a given time range filter
-export const getDateRange = (range: TimeRange, customStart?: Date, customEnd?: Date): { start: string; end: string } => {
+export const getDateRange = (
+  range: TimeRange,
+  customStart?: Date,
+  customEnd?: Date,
+): { start: string; end: string } => {
   const now = new Date();
 
   switch (range) {
@@ -100,7 +116,10 @@ export const getDateRange = (range: TimeRange, customStart?: Date, customEnd?: D
       return { start: format(now, 'yyyy-MM-dd'), end: format(now, 'yyyy-MM-dd') };
     case 'weekly':
       // Current week (Monday to Sunday)
-      return { start: format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'), end: format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd') };
+      return {
+        start: format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+        end: format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+      };
     case 'monthly':
       // Current month
       return { start: format(startOfMonth(now), 'yyyy-MM-dd'), end: format(endOfMonth(now), 'yyyy-MM-dd') };
@@ -146,6 +165,6 @@ export const truncateText = (text: string, maxLength: number): string => {
 
 // Get the currency symbol for a given currency code
 export const getCurrencySymbol = (code: string): string => {
-  const currency = CURRENCIES.find(c => c.code === code);
+  const currency = CURRENCIES.find((c) => c.code === code);
   return currency?.symbol || '₹'; // Default to rupee symbol
 };

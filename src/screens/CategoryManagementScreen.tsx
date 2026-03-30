@@ -2,9 +2,7 @@
 // Supports multi-select for batch deletion and setting a single default category
 
 import React, { useState, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme';
@@ -15,24 +13,66 @@ import { formatCurrency } from '../utils/helpers';
 
 // Predefined icon options for category selection
 const ICON_OPTIONS = [
-  'food', 'car', 'shopping', 'movie-open', 'flash', 'hospital-box',
-  'school', 'airplane', 'cart', 'home', 'shield-check', 'face-man-shimmer',
-  'gift', 'repeat', 'dots-horizontal', 'coffee', 'book-open', 'dumbbell',
-  'music', 'palette', 'tools', 'phone', 'television', 'gamepad-variant',
-  'baby-carriage', 'paw', 'flower', 'smoking', 'glass-cocktail', 'bank',
+  'food',
+  'car',
+  'shopping',
+  'movie-open',
+  'flash',
+  'hospital-box',
+  'school',
+  'airplane',
+  'cart',
+  'home',
+  'shield-check',
+  'face-man-shimmer',
+  'gift',
+  'repeat',
+  'dots-horizontal',
+  'coffee',
+  'book-open',
+  'dumbbell',
+  'music',
+  'palette',
+  'tools',
+  'phone',
+  'television',
+  'gamepad-variant',
+  'baby-carriage',
+  'paw',
+  'flower',
+  'smoking',
+  'glass-cocktail',
+  'bank',
 ];
 
 // Predefined color options for category visual identification
 const COLOR_OPTIONS = [
-  '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD',
-  '#98D8C8', '#F7DC6F', '#82E0AA', '#F0B27A', '#85C1E9', '#D7BDE2',
-  '#F5B7B1', '#AED6F1', '#BDC3C7', '#E74C3C', '#3498DB', '#2ECC71',
-  '#9B59B6', '#F39C12',
+  '#FF6B6B',
+  '#4ECDC4',
+  '#45B7D1',
+  '#96CEB4',
+  '#FFEAA7',
+  '#DDA0DD',
+  '#98D8C8',
+  '#F7DC6F',
+  '#82E0AA',
+  '#F0B27A',
+  '#85C1E9',
+  '#D7BDE2',
+  '#F5B7B1',
+  '#AED6F1',
+  '#BDC3C7',
+  '#E74C3C',
+  '#3498DB',
+  '#2ECC71',
+  '#9B59B6',
+  '#F39C12',
 ];
 
 const CategoryManagementScreen = () => {
   const { theme } = useTheme();
   const { t } = useLanguage();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
   // Subscribe to individual store slices to avoid full-store re-renders
   const categories = useAppStore(selectCategories);
@@ -57,9 +97,10 @@ const CategoryManagementScreen = () => {
 
   // Toggle a category in the selection set
   const toggleSelection = useCallback((id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); // Deselect if already selected
+      if (next.has(id))
+        next.delete(id); // Deselect if already selected
       else next.add(id); // Add to selection
       return next;
     });
@@ -73,8 +114,8 @@ const CategoryManagementScreen = () => {
 
   // Confirm and delete all selected categories (skip default ones)
   const handleBatchDelete = useCallback(() => {
-    const nonDefaultIds = [...selectedIds].filter(id => {
-      const cat = categories.find(c => c.id === id);
+    const nonDefaultIds = [...selectedIds].filter((id) => {
+      const cat = categories.find((c) => c.id === id);
       return cat && !cat.isDefault; // Only delete non-default categories
     });
     if (nonDefaultIds.length === 0) {
@@ -87,7 +128,8 @@ const CategoryManagementScreen = () => {
       [
         { text: t.common.cancel, style: 'cancel' },
         {
-          text: t.common.delete, style: 'destructive',
+          text: t.common.delete,
+          style: 'destructive',
           onPress: async () => {
             await deleteMultipleCategories(nonDefaultIds);
             exitSelectMode(); // Clear selection after deletion
@@ -135,7 +177,7 @@ const CategoryManagementScreen = () => {
   };
 
   // Open modal pre-filled with existing category data for editing
-  const openEditModal = (category: typeof categories[0]) => {
+  const openEditModal = (category: (typeof categories)[0]) => {
     setEditingId(category.id);
     setName(category.name);
     setSelectedIcon(category.icon);
@@ -174,7 +216,7 @@ const CategoryManagementScreen = () => {
   };
 
   // Confirm and delete a category
-  const handleDelete = (id: string, isDefault: boolean) => {
+  const _handleDelete = (id: string, isDefault: boolean) => {
     if (isDefault) {
       Alert.alert('Cannot Delete', 'Default categories cannot be deleted.');
       return;
@@ -188,10 +230,7 @@ const CategoryManagementScreen = () => {
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Add new category button */}
-      <TouchableOpacity
-        style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
-        onPress={openAddModal}
-      >
+      <TouchableOpacity style={[styles.addButton, { backgroundColor: theme.colors.primary }]} onPress={openAddModal}>
         <MaterialCommunityIcons name="plus" size={20} color="#FFF" />
         <Text style={styles.addButtonText}>{t.categoryManagement.addCategory}</Text>
       </TouchableOpacity>
@@ -233,6 +272,7 @@ const CategoryManagementScreen = () => {
             )}
             {/* Color-coded category icon */}
             <View style={[styles.iconCircle, { backgroundColor: cat.color + '20' }]}>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               <MaterialCommunityIcons name={cat.icon as any} size={24} color={cat.color} />
             </View>
             {/* Category name and budget display */}
@@ -247,24 +287,22 @@ const CategoryManagementScreen = () => {
             {/* Default badge indicator */}
             {cat.isDefault && (
               <View style={[styles.defaultBadge, { backgroundColor: theme.colors.chipBackground }]}>
-                <Text style={[styles.defaultText, { color: theme.colors.chipText }]}>{t.categoryManagement.defaultLabel}</Text>
+                <Text style={[styles.defaultText, { color: theme.colors.chipText }]}>
+                  {t.categoryManagement.defaultLabel}
+                </Text>
               </View>
             )}
             {/* Set as default button — only shown for non-default categories when not in select mode */}
             {!isSelectMode && !cat.isDefault && (
               <TouchableOpacity
                 onPress={() => {
-                  Alert.alert(
-                    'Set Default',
-                    `Set "${cat.name}" as the default category?`,
-                    [
-                      { text: t.common.cancel, style: 'cancel' },
-                      {
-                        text: t.common.ok,
-                        onPress: () => setDefaultCategory(cat.id), // Update default in DB
-                      },
-                    ],
-                  );
+                  Alert.alert('Set Default', `Set "${cat.name}" as the default category?`, [
+                    { text: t.common.cancel, style: 'cancel' },
+                    {
+                      text: t.common.ok,
+                      onPress: () => setDefaultCategory(cat.id), // Update default in DB
+                    },
+                  ]);
                 }}
                 style={{ marginRight: 4, padding: 4 }}
               >
@@ -301,7 +339,14 @@ const CategoryManagementScreen = () => {
               {/* Category name input */}
               <Text style={[styles.label, { color: theme.colors.text }]}>{t.categoryManagement.name}</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: theme.colors.inputBackground, color: theme.colors.text, borderColor: theme.colors.border }]}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: theme.colors.inputBackground,
+                    color: theme.colors.text,
+                    borderColor: theme.colors.border,
+                  },
+                ]}
                 value={name}
                 onChangeText={setName}
                 placeholder={t.categoryManagement.namePlaceholder}
@@ -324,7 +369,12 @@ const CategoryManagementScreen = () => {
                     ]}
                     onPress={() => setSelectedIcon(icon)} // Set selected icon
                   >
-                    <MaterialCommunityIcons name={icon as any} size={24} color={selectedIcon === icon ? selectedColor : theme.colors.textSecondary} />
+                    <MaterialCommunityIcons
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      name={icon as any}
+                      size={24}
+                      color={selectedIcon === icon ? selectedColor : theme.colors.textSecondary}
+                    />
                   </TouchableOpacity>
                 ))}
               </View>
@@ -351,7 +401,14 @@ const CategoryManagementScreen = () => {
               {/* Optional budget limit input */}
               <Text style={[styles.label, { color: theme.colors.text }]}>{t.categoryManagement.monthlyBudget}</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: theme.colors.inputBackground, color: theme.colors.text, borderColor: theme.colors.border }]}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: theme.colors.inputBackground,
+                    color: theme.colors.text,
+                    borderColor: theme.colors.border,
+                  },
+                ]}
                 value={budget}
                 onChangeText={setBudget}
                 placeholder="0.00"

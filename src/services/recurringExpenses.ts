@@ -3,7 +3,7 @@
 
 import { getDatabase } from '../database';
 import * as db from '../database';
-import { Expense, RecurringFrequency } from '../types';
+import { RecurringFrequency } from '../types';
 import { addDays, addWeeks, addMonths, addYears, isAfter, isBefore, startOfDay, format } from 'date-fns';
 
 // Calculate the next occurrence date based on frequency
@@ -34,12 +34,14 @@ export const processRecurringExpenses = async (): Promise<number> => {
   let generatedCount = 0;
 
   // Find all active recurring expenses
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recurringExpenses = await database.getAllAsync<any>(
     `SELECT * FROM expenses WHERE isRecurring = 1 AND recurringFrequency IS NOT NULL
-     ORDER BY date DESC`
+     ORDER BY date DESC`,
   );
 
   // Group by category + amount + walletId to find the most recent instance of each recurring pattern
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const patterns = new Map<string, any>();
   for (const expense of recurringExpenses) {
     const key = `${expense.category}_${expense.amount}_${expense.walletId || ''}_${expense.recurringFrequency}`;
@@ -64,7 +66,7 @@ export const processRecurringExpenses = async (): Promise<number> => {
       const existing = await database.getFirstAsync<{ count: number }>(
         `SELECT COUNT(*) as count FROM expenses
          WHERE category = ? AND amount = ? AND date = ? AND isRecurring = 1`,
-        [latestExpense.category, latestExpense.amount, format(nextDate, 'yyyy-MM-dd')]
+        [latestExpense.category, latestExpense.amount, format(nextDate, 'yyyy-MM-dd')],
       );
 
       if (!existing || existing.count === 0) {
