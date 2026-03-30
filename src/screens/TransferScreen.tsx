@@ -123,8 +123,9 @@ const TransferScreen = () => {
   };
 
   // Render a wallet selection card — accepts filtered wallet list to prevent same-wallet picks
-  const renderWalletCard = (walletId: string, onSelect: (id: string) => void, label: string, walletList: typeof wallets) => (
-    <View style={styles.section}>
+  // isTo flag removes top margin for the destination card so the swap button stays centered
+  const renderWalletCard = (walletId: string, onSelect: (id: string) => void, label: string, walletList: typeof wallets, isTo?: boolean) => (
+    <View style={[styles.section, isTo && { marginTop: 4 }]}>
       <Text style={[styles.label, { color: theme.colors.text }]}>{label}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always">
         {walletList.map((w) => (
@@ -192,7 +193,7 @@ const TransferScreen = () => {
         {/* Source wallet selection — filtered to exclude destination */}
         {renderWalletCard(fromWalletId, setFromWalletId, t.transfer.from, fromWalletOptions)}
 
-        {/* Swap button between source and destination */}
+        {/* Swap button — absolutely positioned to float at the exact midpoint */}
         <View style={styles.swapContainer}>
           <TouchableOpacity
             style={[styles.swapButton, { backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.border }]}
@@ -202,8 +203,8 @@ const TransferScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Destination wallet selection — filtered to exclude source */}
-        {renderWalletCard(toWalletId, setToWalletId, t.transfer.to, toWalletOptions)}
+        {/* Destination wallet selection — reduced top margin so swap icon stays centered */}
+        {renderWalletCard(toWalletId, setToWalletId, t.transfer.to, toWalletOptions, true)}
 
         {/* Date picker field */}
         <View style={styles.section}>
@@ -315,9 +316,9 @@ const styles = StyleSheet.create({
   walletBalance: { fontSize: 12, fontWeight: '500' },
   swapContainer: {
     alignItems: 'center',
-    // Pull the button up into the gap between the two wallet sections
-    marginTop: -10,
-    marginBottom: -10,
+    // Symmetric vertical spacing so button sits exactly between both wallet rows
+    marginTop: 20,
+    marginBottom: 0,
     zIndex: 10,
   },
   swapButton: {
