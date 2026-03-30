@@ -315,8 +315,10 @@ const styles = StyleSheet.create({
   walletBalance: { fontSize: 12, fontWeight: '500' },
   swapContainer: {
     alignItems: 'center',
-    marginVertical: -4,
-    zIndex: 1,
+    // Pull the button up into the gap between the two wallet sections
+    marginTop: -10,
+    marginBottom: -10,
+    zIndex: 10,
   },
   swapButton: {
     width: 44,
@@ -325,11 +327,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    elevation: 2,
+    // Elevated shadow to float above wallet cards
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
   },
   saveContainer: { paddingHorizontal: 16, marginTop: 32 },
 });
