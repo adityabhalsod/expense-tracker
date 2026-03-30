@@ -50,9 +50,21 @@ export const CURRENCIES: Currency[] = [
 
 // Color palette used for chart segments and category defaults
 export const CHART_COLORS = [
-  '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-  '#DDA0DD', '#98D8C8', '#F7DC6F', '#82E0AA', '#F0B27A',
-  '#85C1E9', '#D7BDE2', '#F5B7B1', '#AED6F1', '#BDC3C7',
+  '#FF6B6B',
+  '#4ECDC4',
+  '#45B7D1',
+  '#96CEB4',
+  '#FFEAA7',
+  '#DDA0DD',
+  '#98D8C8',
+  '#F7DC6F',
+  '#82E0AA',
+  '#F0B27A',
+  '#85C1E9',
+  '#D7BDE2',
+  '#F5B7B1',
+  '#AED6F1',
+  '#BDC3C7',
 ];
 
 // Default app settings applied on first launch
@@ -68,6 +80,16 @@ export const DEFAULT_SETTINGS = {
 
 // Month names for display in wallet and analytics screens
 export const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];

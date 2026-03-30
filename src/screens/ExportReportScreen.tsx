@@ -37,16 +37,33 @@ const ExportReportScreen = () => {
   const { t } = useLanguage();
 
   // Translated time range labels
-  const TIME_RANGES = TIME_RANGE_VALUES.map(r => ({
+  const TIME_RANGES = TIME_RANGE_VALUES.map((r) => ({
     ...r,
-    label: ({ daily: t.exportReport.today, weekly: t.exportReport.thisWeek, monthly: t.exportReport.thisMonth, quarterly: t.exportReport.quarter, half_yearly: t.exportReport.sixMonths, yearly: t.exportReport.thisYear } as Record<string, string>)[r.value] || r.value,
+    label:
+      (
+        {
+          daily: t.exportReport.today,
+          weekly: t.exportReport.thisWeek,
+          monthly: t.exportReport.thisMonth,
+          quarterly: t.exportReport.quarter,
+          half_yearly: t.exportReport.sixMonths,
+          yearly: t.exportReport.thisYear,
+        } as Record<string, string>
+      )[r.value] || r.value,
   }));
 
   // Translated format labels and descriptions
-  const FORMATS = FORMAT_VALUES.map(f => ({
+  const FORMATS = FORMAT_VALUES.map((f) => ({
     ...f,
-    label: { json: t.exportReport.json, csv: t.exportReport.csv, xlsx: t.exportReport.excel, pdf: t.exportReport.pdf }[f.value],
-    description: { json: t.exportReport.jsonDesc, csv: t.exportReport.csvDesc, xlsx: t.exportReport.excelDesc, pdf: t.exportReport.pdfDesc }[f.value],
+    label: { json: t.exportReport.json, csv: t.exportReport.csv, xlsx: t.exportReport.excel, pdf: t.exportReport.pdf }[
+      f.value
+    ],
+    description: {
+      json: t.exportReport.jsonDesc,
+      csv: t.exportReport.csvDesc,
+      xlsx: t.exportReport.excelDesc,
+      pdf: t.exportReport.pdfDesc,
+    }[f.value],
   }));
 
   // Export configuration state

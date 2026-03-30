@@ -31,12 +31,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../theme';
-import {
-  useAppStore,
-  selectCategories,
-  selectWallets,
-  selectSettings,
-} from '../store';
+import { useAppStore, selectCategories, selectWallets, selectSettings } from '../store';
 import { formatAmountInput } from '../utils/helpers';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -57,18 +52,16 @@ const QuickAddScreen = () => {
   const route = useRoute<any>();
 
   // ── Mode: pre-seeded by deep-link param, switchable inside the form ────────
-  const [mode, setMode] = useState<QuickAddType>(
-    route.params?.type === 'income' ? 'income' : 'expense'
-  );
+  const [mode, setMode] = useState<QuickAddType>(route.params?.type === 'income' ? 'income' : 'expense');
   const isExpense = mode === 'expense'; // convenience flag used throughout render
 
   // ── Store subscriptions ────────────────────────────────────────────────────
-  const categories   = useAppStore(selectCategories);
-  const wallets      = useAppStore(selectWallets);
-  const settings     = useAppStore(selectSettings);
-  const addExpense   = useAppStore((s) => s.addExpense);
+  const categories = useAppStore(selectCategories);
+  const wallets = useAppStore(selectWallets);
+  const settings = useAppStore(selectSettings);
+  const addExpense = useAppStore((s) => s.addExpense);
   const updateWallet = useAppStore((s) => s.updateWallet);
-  const loadWallets  = useAppStore((s) => s.loadWallets);
+  const loadWallets = useAppStore((s) => s.loadWallets);
 
   // ── Form state ─────────────────────────────────────────────────────────────
   const [amount, setAmount] = useState('');
@@ -82,30 +75,30 @@ const QuickAddScreen = () => {
     const def = wallets.find((w) => w.isDefault) || wallets[0];
     return def?.id || '';
   });
-  const [source, setSource] = useState('');  // income-only: free-text source label
-  const [notes,  setNotes]  = useState('');  // optional memo for both modes
+  const [source, setSource] = useState(''); // income-only: free-text source label
+  const [notes, setNotes] = useState(''); // optional memo for both modes
   const [saving, setSaving] = useState(false); // prevent double-tap during async save
-  const [saved,  setSaved]  = useState(false); // success state — triggers checkmark animation
+  const [saved, setSaved] = useState(false); // success state — triggers checkmark animation
 
   // ── Refs ────────────────────────────────────────────────────────────────────
-  const amountRef   = useRef<TextInput>(null);          // focus amount after sheet settles
-  const savedScale  = useRef(new Animated.Value(0)).current; // scale-in for checkmark icon
+  const amountRef = useRef<TextInput>(null); // focus amount after sheet settles
+  const savedScale = useRef(new Animated.Value(0)).current; // scale-in for checkmark icon
 
   // ── Animations: backdrop fade + sheet slide-up fire in parallel ───────────
-  const slideAnim    = useRef(new Animated.Value(520)).current; // starts below viewport
+  const slideAnim = useRef(new Animated.Value(520)).current; // starts below viewport
   const backdropOpacity = useRef(new Animated.Value(0)).current; // starts invisible
 
   useEffect(() => {
     // Run both animations simultaneously for a polished entrance
     Animated.parallel([
       Animated.spring(slideAnim, {
-        toValue: 0,          // slide sheet to its resting position
+        toValue: 0, // slide sheet to its resting position
         useNativeDriver: true,
-        tension: 68,         // spring stiffness — snappy but not jarring
-        friction: 12,        // damping — minimal overshoot
+        tension: 68, // spring stiffness — snappy but not jarring
+        friction: 12, // damping — minimal overshoot
       }),
       Animated.timing(backdropOpacity, {
-        toValue: 1,          // fade backdrop to full opacity
+        toValue: 1, // fade backdrop to full opacity
         duration: 280,
         useNativeDriver: true,
       }),
@@ -121,11 +114,15 @@ const QuickAddScreen = () => {
 
   // ── Currency symbol derived from settings ────────────────────────────────
   const currencySymbol =
-    settings.defaultCurrency === 'INR' ? '₹'
-    : settings.defaultCurrency === 'USD' ? '$'
-    : settings.defaultCurrency === 'EUR' ? '€'
-    : settings.defaultCurrency === 'GBP' ? '£'
-    : settings.defaultCurrency; // fallback: show the code itself
+    settings.defaultCurrency === 'INR'
+      ? '₹'
+      : settings.defaultCurrency === 'USD'
+        ? '$'
+        : settings.defaultCurrency === 'EUR'
+          ? '€'
+          : settings.defaultCurrency === 'GBP'
+            ? '£'
+            : settings.defaultCurrency; // fallback: show the code itself
 
   // ── Amount sanitisation ────────────────────────────────────────────────────
   /** Strip non-numeric chars; enforce one decimal point; cap at 10 int + 2 decimal digits */
@@ -133,7 +130,7 @@ const QuickAddScreen = () => {
     let cleaned = text.replace(/[^0-9.]/g, ''); // remove anything that isn't a digit or dot
     const parts = cleaned.split('.');
     if (parts.length > 2) cleaned = parts[0] + '.' + parts.slice(1).join(''); // keep first dot only
-    if (parts[0].length > 10) parts[0] = parts[0].slice(0, 10);              // cap integer digits
+    if (parts[0].length > 10) parts[0] = parts[0].slice(0, 10); // cap integer digits
     if (parts.length === 2 && parts[1].length > 2) parts[1] = parts[1].slice(0, 2); // cap decimals
     setAmount(parts.length === 2 ? `${parts[0]}.${parts[1]}` : parts[0]);
   }, []);
@@ -141,7 +138,7 @@ const QuickAddScreen = () => {
   /** Tap a preset chip to fill the amount field instantly */
   const applyPreset = useCallback((value: number) => {
     setAmount(value.toString()); // set raw numeric string (no formatting)
-    amountRef.current?.focus();  // bring keyboard back if dismissed
+    amountRef.current?.focus(); // bring keyboard back if dismissed
   }, []);
 
   // ── Close with reverse animations ─────────────────────────────────────────
@@ -149,12 +146,12 @@ const QuickAddScreen = () => {
     Keyboard.dismiss();
     Animated.parallel([
       Animated.timing(slideAnim, {
-        toValue: 560,        // slide sheet back below viewport
+        toValue: 560, // slide sheet back below viewport
         duration: 240,
         useNativeDriver: true,
       }),
       Animated.timing(backdropOpacity, {
-        toValue: 0,          // fade backdrop back to transparent
+        toValue: 0, // fade backdrop back to transparent
         duration: 200,
         useNativeDriver: true,
       }),
@@ -203,7 +200,9 @@ const QuickAddScreen = () => {
       try {
         NativeModules.WidgetBridge?.refreshWidgets();
         NativeModules.WidgetBridge?.clearPendingEntry();
-      } catch { /* ignore: bridge only available on Android with native build */ }
+      } catch {
+        /* ignore: bridge only available on Android with native build */
+      }
 
       // Show animated checkmark then auto-dismiss
       setSaved(true);
@@ -219,16 +218,25 @@ const QuickAddScreen = () => {
       setSaving(false);
     }
   }, [
-    amount, selectedCategoryName, selectedWalletId, source, notes,
-    isExpense, addExpense, updateWallet, loadWallets, wallets,
-    settings, handleClose, savedScale,
+    amount,
+    selectedCategoryName,
+    selectedWalletId,
+    source,
+    notes,
+    isExpense,
+    addExpense,
+    updateWallet,
+    loadWallets,
+    wallets,
+    settings,
+    handleClose,
+    savedScale,
   ]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <View style={styles.overlay}>
-
       {/* ── Animated backdrop: fades in behind the sheet ── */}
       <TouchableWithoutFeedback onPress={handleClose}>
         <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} />
@@ -245,7 +253,6 @@ const QuickAddScreen = () => {
         ]}
       >
         <SafeAreaView edges={['bottom']}>
-
           {/* ── Drag handle pill — visual affordance for "swipe to dismiss" ── */}
           <View style={styles.dragHandleRow}>
             <View style={[styles.dragPill, { backgroundColor: theme.colors.border }]} />
@@ -298,9 +305,7 @@ const QuickAddScreen = () => {
           <TouchableWithoutFeedback onPress={() => amountRef.current?.focus()}>
             <View style={[styles.amountSection, { borderBottomColor: theme.colors.border }]}>
               {/* Currency prefix: colored with accent to reinforce active mode */}
-              <Text style={[styles.currencySymbol, { color: accentColor }]}>
-                {currencySymbol}
-              </Text>
+              <Text style={[styles.currencySymbol, { color: accentColor }]}>{currencySymbol}</Text>
               <TextInput
                 ref={amountRef}
                 style={[styles.amountInput, { color: theme.colors.text }]}
@@ -328,7 +333,7 @@ const QuickAddScreen = () => {
                     styles.presetChip,
                     {
                       backgroundColor: isActive
-                        ? accentColor + '18'  // very faint accent fill when active
+                        ? accentColor + '18' // very faint accent fill when active
                         : theme.colors.inputBackground,
                       borderColor: isActive ? accentColor : 'transparent',
                       borderWidth: isActive ? 1.5 : 0,
@@ -336,14 +341,10 @@ const QuickAddScreen = () => {
                   ]}
                   onPress={() => applyPreset(v)}
                 >
-                  <Text
-                    style={[
-                      styles.presetText,
-                      { color: isActive ? accentColor : theme.colors.textSecondary },
-                    ]}
-                  >
+                  <Text style={[styles.presetText, { color: isActive ? accentColor : theme.colors.textSecondary }]}>
                     {/* Format: ₹100, ₹500, ₹1k, ₹2k */}
-                    {currencySymbol}{v >= 1000 ? `${v / 1000}k` : v}
+                    {currencySymbol}
+                    {v >= 1000 ? `${v / 1000}k` : v}
                   </Text>
                 </TouchableOpacity>
               );
@@ -358,7 +359,6 @@ const QuickAddScreen = () => {
           >
             {/* ── Grouped form card ── */}
             <View style={[styles.formCard, { backgroundColor: theme.colors.surfaceVariant }]}>
-
               {/* CATEGORY — visible only for Expense mode */}
               {isExpense && (
                 <>
@@ -391,12 +391,7 @@ const QuickAddScreen = () => {
                             size={13}
                             color={sel ? cat.color : theme.colors.textSecondary}
                           />
-                          <Text
-                            style={[
-                              styles.chipText,
-                              { color: sel ? cat.color : theme.colors.textSecondary },
-                            ]}
-                          >
+                          <Text style={[styles.chipText, { color: sel ? cat.color : theme.colors.textSecondary }]}>
                             {cat.name}
                           </Text>
                         </TouchableOpacity>
@@ -455,10 +450,7 @@ const QuickAddScreen = () => {
                         color={sel ? theme.colors.primary : theme.colors.textSecondary}
                       />
                       <Text
-                        style={[
-                          styles.chipText,
-                          { color: sel ? theme.colors.primary : theme.colors.textSecondary },
-                        ]}
+                        style={[styles.chipText, { color: sel ? theme.colors.primary : theme.colors.textSecondary }]}
                         numberOfLines={1}
                       >
                         {w.name}
@@ -472,11 +464,7 @@ const QuickAddScreen = () => {
               {/* NOTES — optional memo, always shown */}
               <Text style={[styles.formLabel, { color: theme.colors.textTertiary }]}>NOTES</Text>
               <TextInput
-                style={[
-                  styles.inlineInput,
-                  styles.notesInput,
-                  { color: theme.colors.text },
-                ]}
+                style={[styles.inlineInput, styles.notesInput, { color: theme.colors.text }]}
                 value={notes}
                 onChangeText={setNotes}
                 placeholder="Optional note…"
@@ -487,8 +475,8 @@ const QuickAddScreen = () => {
                 blurOnSubmit
                 textAlignVertical="top" // Android: pin text to top of multiline field
               />
-
-            </View>{/* end formCard */}
+            </View>
+            {/* end formCard */}
 
             {/* ── Save button — full-width, accent-colored, shows check on success ── */}
             <TouchableOpacity
@@ -512,13 +500,7 @@ const QuickAddScreen = () => {
                 <>
                   {/* Mode-appropriate icon to the left of the label */}
                   <MaterialCommunityIcons
-                    name={
-                      saving
-                        ? 'loading'
-                        : isExpense
-                        ? 'arrow-top-right'
-                        : 'arrow-bottom-left'
-                    }
+                    name={saving ? 'loading' : isExpense ? 'arrow-top-right' : 'arrow-bottom-left'}
                     size={18}
                     color="#fff"
                   />
@@ -528,9 +510,7 @@ const QuickAddScreen = () => {
                 </>
               )}
             </TouchableOpacity>
-
           </ScrollView>
-
         </SafeAreaView>
       </Animated.View>
     </View>
@@ -571,7 +551,7 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   dragPill: {
-    width: 36,    // wide enough to be obvious
+    width: 36, // wide enough to be obvious
     height: 4,
     borderRadius: 2,
   },
@@ -592,7 +572,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 9,
-    borderRadius: 9,  // slightly smaller radius than the container for the inset look
+    borderRadius: 9, // slightly smaller radius than the container for the inset look
   },
   modeTabText: {
     fontSize: 14,
@@ -619,7 +599,7 @@ const styles = StyleSheet.create({
     fontSize: 52,
     fontWeight: '700',
     letterSpacing: -1.5, // tight tracking for a bold hero-number feel
-    paddingVertical: 0,   // remove default Android input padding
+    paddingVertical: 0, // remove default Android input padding
   },
 
   // Quick-preset chips row below the amount input

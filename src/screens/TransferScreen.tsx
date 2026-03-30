@@ -3,8 +3,16 @@
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
-  TouchableWithoutFeedback, Alert, Platform, Keyboard,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  Alert,
+  Platform,
+  Keyboard,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -42,24 +50,16 @@ const TransferScreen = () => {
   // Guard: if fewer than 2 wallets, show alert and go back immediately
   useEffect(() => {
     if (wallets.length < 2) {
-      Alert.alert(t.transfer.noWallet, t.transfer.noWalletMsg, [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      Alert.alert(t.transfer.noWallet, t.transfer.noWalletMsg, [{ text: 'OK', onPress: () => navigation.goBack() }]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Filter destination options — exclude the currently selected source wallet
-  const toWalletOptions = useMemo(
-    () => wallets.filter((w) => w.id !== fromWalletId),
-    [wallets, fromWalletId]
-  );
+  const toWalletOptions = useMemo(() => wallets.filter((w) => w.id !== fromWalletId), [wallets, fromWalletId]);
 
   // Filter source options — exclude the currently selected destination wallet
-  const fromWalletOptions = useMemo(
-    () => wallets.filter((w) => w.id !== toWalletId),
-    [wallets, toWalletId]
-  );
+  const fromWalletOptions = useMemo(() => wallets.filter((w) => w.id !== toWalletId), [wallets, toWalletId]);
 
   // Sanitize amount input
   const handleAmountChange = useCallback((text: string) => {
@@ -91,7 +91,7 @@ const TransferScreen = () => {
       return;
     }
     // Check source wallet has sufficient balance
-    const fromWallet = wallets.find(w => w.id === fromWalletId);
+    const fromWallet = wallets.find((w) => w.id === fromWalletId);
     if (fromWallet && fromWallet.currentBalance < parsedAmount) {
       Alert.alert(t.transfer.insufficientBalance, t.transfer.insufficientBalanceMsg);
       return;
@@ -124,7 +124,13 @@ const TransferScreen = () => {
 
   // Render a wallet selection card — accepts filtered wallet list to prevent same-wallet picks
   // isTo flag removes top margin for the destination card so the swap button stays centered
-  const renderWalletCard = (walletId: string, onSelect: (id: string) => void, label: string, walletList: typeof wallets, isTo?: boolean) => (
+  const renderWalletCard = (
+    walletId: string,
+    onSelect: (id: string) => void,
+    label: string,
+    walletList: typeof wallets,
+    isTo?: boolean,
+  ) => (
     <View style={[styles.section, isTo && { marginTop: 4 }]}>
       <Text style={[styles.label, { color: theme.colors.text }]}>{label}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always">
@@ -196,7 +202,10 @@ const TransferScreen = () => {
         {/* Swap button — absolutely positioned to float at the exact midpoint */}
         <View style={styles.swapContainer}>
           <TouchableOpacity
-            style={[styles.swapButton, { backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.border }]}
+            style={[
+              styles.swapButton,
+              { backgroundColor: theme.colors.surfaceVariant, borderColor: theme.colors.border },
+            ]}
             onPress={handleSwapWallets}
           >
             <MaterialCommunityIcons name="swap-vertical" size={24} color={theme.colors.primary} />
@@ -232,7 +241,14 @@ const TransferScreen = () => {
         <View style={styles.section}>
           <Text style={[styles.label, { color: theme.colors.text }]}>{t.transfer.notes}</Text>
           <TextInput
-            style={[styles.textArea, { backgroundColor: theme.colors.inputBackground, color: theme.colors.text, borderColor: theme.colors.border }]}
+            style={[
+              styles.textArea,
+              {
+                backgroundColor: theme.colors.inputBackground,
+                color: theme.colors.text,
+                borderColor: theme.colors.border,
+              },
+            ]}
             value={notes}
             onChangeText={setNotes}
             placeholder={t.transfer.notesPlaceholder}

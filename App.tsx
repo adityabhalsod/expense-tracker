@@ -10,7 +10,12 @@ import { LanguageProvider, useLanguage } from './src/i18n';
 import AppNavigator from './src/navigation';
 import { useAppStore, selectIsInitialized, selectSettings } from './src/store';
 import { processRecurringExpenses } from './src/services/recurringExpenses';
-import { requestNotificationPermissions, checkBudgetNotifications, scheduleWeeklyDigest } from './src/services/notifications';
+import {
+  requestNotificationPermissions,
+  checkBudgetNotifications,
+  scheduleWeeklyDigest,
+} from './src/services/notifications';
+import { checkForUpdate } from './src/services/updateChecker';
 import PinLockScreen from './src/components/PinLockScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -23,9 +28,7 @@ const LoadingScreen = () => {
   return (
     <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
       <ActivityIndicator size="large" color={theme.colors.primary} />
-      <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
-        {t.common.loading}
-      </Text>
+      <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>{t.common.loading}</Text>
     </View>
   );
 };
@@ -33,6 +36,7 @@ const LoadingScreen = () => {
 // Inner app component that handles store initialization and security gate
 const AppContent = () => {
   const { theme, isDark } = useTheme();
+  const { t } = useLanguage(); // Access translations for update checker alert
   const isInitialized = useAppStore(selectIsInitialized);
   const settings = useAppStore(selectSettings);
   const initialize = useAppStore((s) => s.initialize);
@@ -71,6 +75,9 @@ const AppContent = () => {
       } catch (e) {
         console.warn('Notification setup skipped:', e);
       }
+
+      // Check GitHub releases for a newer app version (non-blocking)
+      checkForUpdate(t.updateChecker);
     };
     boot();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -78,10 +85,7 @@ const AppContent = () => {
 
   return (
     <>
-      <StatusBar
-        barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor={theme.colors.background}
-      />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.colors.background} />
       {!isInitialized ? (
         <LoadingScreen />
       ) : needsAuth ? (

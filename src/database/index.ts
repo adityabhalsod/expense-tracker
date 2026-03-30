@@ -288,9 +288,10 @@ const initializeDatabase = async (database: SQLite.SQLiteDatabase): Promise<void
   // Seed initial streak row if it doesn't exist
   const streakRow = await database.getFirstAsync<{ id: number }>('SELECT id FROM user_streaks WHERE id = 1');
   if (!streakRow) {
-    await database.runAsync('INSERT INTO user_streaks (id, currentStreak, longestStreak, totalDaysActive) VALUES (1, 0, 0, 0)');
+    await database.runAsync(
+      'INSERT INTO user_streaks (id, currentStreak, longestStreak, totalDaysActive) VALUES (1, 0, 0, 0)',
+    );
   }
-
 
   // --- Migrations: add new wallet columns for existing databases upgrading from v1 ---
   // These must run BEFORE index creation since indexes reference these new columns
@@ -314,10 +315,8 @@ const initializeDatabase = async (database: SQLite.SQLiteDatabase): Promise<void
   // Migration: drop legacy NOT NULL month/year columns by recreating wallets table
   // SQLite cannot ALTER columns, so we copy data to temp, recreate, and copy back
   try {
-    const colCheck = await database.getAllAsync<{ name: string }>(
-      "PRAGMA table_info(wallets)"
-    );
-    const hasMonth = colCheck.some(c => c.name === 'month');
+    const colCheck = await database.getAllAsync<{ name: string }>('PRAGMA table_info(wallets)');
+    const hasMonth = colCheck.some((c) => c.name === 'month');
     if (hasMonth) {
       // Old schema has month/year — need to recreate table without them
       await database.execAsync(`
@@ -399,7 +398,7 @@ const initializeDatabase = async (database: SQLite.SQLiteDatabase): Promise<void
     for (const cat of DEFAULT_CATEGORIES) {
       await database.runAsync(
         'INSERT INTO categories (id, name, icon, color, isDefault, "order") VALUES (?, ?, ?, ?, ?, ?)',
-        [generateId(), cat.name, cat.icon, cat.color, cat.isDefault ? 1 : 0, cat.order]
+        [generateId(), cat.name, cat.icon, cat.color, cat.isDefault ? 1 : 0, cat.order],
       );
     }
   }
@@ -412,7 +411,7 @@ export const getAllCategories = async (): Promise<Category[]> => {
   const database = await getDatabase();
   const rows = await database.getAllAsync<RawCategoryRow>('SELECT * FROM categories ORDER BY "order" ASC');
   // Map raw rows to typed Category objects
-  return rows.map(row => ({
+  return rows.map((row) => ({
     ...row,
     isDefault: row.isDefault === 1,
     budget: row.budget ?? undefined,
@@ -425,7 +424,15 @@ export const addCategory = async (category: Omit<Category, 'id'>): Promise<Categ
   const id = generateId(); // Generate unique ID
   await database.runAsync(
     'INSERT INTO categories (id, name, icon, color, isDefault, budget, "order") VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [id, category.name, category.icon, category.color, category.isDefault ? 1 : 0, category.budget || null, category.order]
+    [
+      id,
+      category.name,
+      category.icon,
+      category.color,
+      category.isDefault ? 1 : 0,
+      category.budget || null,
+      category.order,
+    ],
   );
   return { id, ...category }; // Return complete category with generated ID
 };
@@ -437,12 +444,30 @@ export const updateCategory = async (id: string, category: Partial<Category>): P
   const fields: string[] = [];
   const values: BindValue[] = [];
 
-  if (category.name !== undefined) { fields.push('name = ?'); values.push(category.name); }
-  if (category.icon !== undefined) { fields.push('icon = ?'); values.push(category.icon); }
-  if (category.color !== undefined) { fields.push('color = ?'); values.push(category.color); }
-  if (category.isDefault !== undefined) { fields.push('isDefault = ?'); values.push(category.isDefault ? 1 : 0); }
-  if (category.budget !== undefined) { fields.push('budget = ?'); values.push(category.budget); }
-  if (category.order !== undefined) { fields.push('"order" = ?'); values.push(category.order); }
+  if (category.name !== undefined) {
+    fields.push('name = ?');
+    values.push(category.name);
+  }
+  if (category.icon !== undefined) {
+    fields.push('icon = ?');
+    values.push(category.icon);
+  }
+  if (category.color !== undefined) {
+    fields.push('color = ?');
+    values.push(category.color);
+  }
+  if (category.isDefault !== undefined) {
+    fields.push('isDefault = ?');
+    values.push(category.isDefault ? 1 : 0);
+  }
+  if (category.budget !== undefined) {
+    fields.push('budget = ?');
+    values.push(category.budget);
+  }
+  if (category.order !== undefined) {
+    fields.push('"order" = ?');
+    values.push(category.order);
+  }
 
   if (fields.length === 0) return; // No fields to update
   values.push(id); // Append ID for WHERE clause
@@ -500,7 +525,7 @@ export const getExpensesByDateRange = async (startDate: string, endDate: string)
   const database = await getDatabase();
   const rows = await database.getAllAsync<RawExpenseRow>(
     'SELECT * FROM expenses WHERE date >= ? AND date <= ? ORDER BY date DESC',
-    [startDate, endDate]
+    [startDate, endDate],
   );
   return rows.map(parseExpenseRow);
 };
@@ -510,7 +535,7 @@ export const getExpensesByCategory = async (category: string): Promise<Expense[]
   const database = await getDatabase();
   const rows = await database.getAllAsync<RawExpenseRow>(
     'SELECT * FROM expenses WHERE category = ? ORDER BY date DESC',
-    [category]
+    [category],
   );
   return rows.map(parseExpenseRow);
 };
@@ -521,7 +546,7 @@ export const searchExpenses = async (query: string): Promise<Expense[]> => {
   const searchTerm = `%${query}%`; // Wildcard match for LIKE queries
   const rows = await database.getAllAsync<RawExpenseRow>(
     'SELECT * FROM expenses WHERE notes LIKE ? OR category LIKE ? OR tags LIKE ? ORDER BY date DESC',
-    [searchTerm, searchTerm, searchTerm]
+    [searchTerm, searchTerm, searchTerm],
   );
   return rows.map(parseExpenseRow);
 };
@@ -536,20 +561,30 @@ export const addExpense = async (expense: Omit<Expense, 'id' | 'createdAt' | 'up
     `INSERT INTO expenses (id, amount, category, subcategory, date, notes, tags, currency, isRecurring, recurringFrequency, recurringEndDate, createdAt, updatedAt, walletId)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      id, expense.amount, expense.category, expense.subcategory || null,
-      expense.date, expense.notes || null,
-      JSON.stringify(expense.tags), expense.currency, expense.isRecurring ? 1 : 0,
-      expense.recurringFrequency || null, expense.recurringEndDate || null,
-      now, now, expense.walletId || null,
-    ]
+      id,
+      expense.amount,
+      expense.category,
+      expense.subcategory || null,
+      expense.date,
+      expense.notes || null,
+      JSON.stringify(expense.tags),
+      expense.currency,
+      expense.isRecurring ? 1 : 0,
+      expense.recurringFrequency || null,
+      expense.recurringEndDate || null,
+      now,
+      now,
+      expense.walletId || null,
+    ],
   );
 
   // Deduct expense amount from the associated wallet
   if (expense.walletId) {
-    await database.runAsync(
-      'UPDATE wallets SET currentBalance = currentBalance - ?, updatedAt = ? WHERE id = ?',
-      [expense.amount, now, expense.walletId]
-    );
+    await database.runAsync('UPDATE wallets SET currentBalance = currentBalance - ?, updatedAt = ? WHERE id = ?', [
+      expense.amount,
+      now,
+      expense.walletId,
+    ]);
   }
 
   return { id, ...expense, createdAt: now, updatedAt: now };
@@ -568,14 +603,38 @@ export const updateExpense = async (id: string, updates: Partial<Expense>): Prom
   const values: BindValue[] = [now];
 
   // Build dynamic update query from provided fields
-  if (updates.amount !== undefined) { fields.push('amount = ?'); values.push(updates.amount); }
-  if (updates.category !== undefined) { fields.push('category = ?'); values.push(updates.category); }
-  if (updates.subcategory !== undefined) { fields.push('subcategory = ?'); values.push(updates.subcategory); }
-  if (updates.date !== undefined) { fields.push('date = ?'); values.push(updates.date); }
-  if (updates.notes !== undefined) { fields.push('notes = ?'); values.push(updates.notes); }
-  if (updates.tags !== undefined) { fields.push('tags = ?'); values.push(JSON.stringify(updates.tags)); }
-  if (updates.isRecurring !== undefined) { fields.push('isRecurring = ?'); values.push(updates.isRecurring ? 1 : 0); }
-  if (updates.recurringFrequency !== undefined) { fields.push('recurringFrequency = ?'); values.push(updates.recurringFrequency); }
+  if (updates.amount !== undefined) {
+    fields.push('amount = ?');
+    values.push(updates.amount);
+  }
+  if (updates.category !== undefined) {
+    fields.push('category = ?');
+    values.push(updates.category);
+  }
+  if (updates.subcategory !== undefined) {
+    fields.push('subcategory = ?');
+    values.push(updates.subcategory);
+  }
+  if (updates.date !== undefined) {
+    fields.push('date = ?');
+    values.push(updates.date);
+  }
+  if (updates.notes !== undefined) {
+    fields.push('notes = ?');
+    values.push(updates.notes);
+  }
+  if (updates.tags !== undefined) {
+    fields.push('tags = ?');
+    values.push(JSON.stringify(updates.tags));
+  }
+  if (updates.isRecurring !== undefined) {
+    fields.push('isRecurring = ?');
+    values.push(updates.isRecurring ? 1 : 0);
+  }
+  if (updates.recurringFrequency !== undefined) {
+    fields.push('recurringFrequency = ?');
+    values.push(updates.recurringFrequency);
+  }
 
   values.push(id);
   await database.runAsync(`UPDATE expenses SET ${fields.join(', ')} WHERE id = ?`, values);
@@ -583,10 +642,11 @@ export const updateExpense = async (id: string, updates: Partial<Expense>): Prom
   // Adjust wallet balance if the amount changed
   if (updates.amount !== undefined && existing.walletId) {
     const diff = updates.amount - existing.amount; // Positive = more spent, negative = less spent
-    await database.runAsync(
-      'UPDATE wallets SET currentBalance = currentBalance - ?, updatedAt = ? WHERE id = ?',
-      [diff, now, existing.walletId]
-    );
+    await database.runAsync('UPDATE wallets SET currentBalance = currentBalance - ?, updatedAt = ? WHERE id = ?', [
+      diff,
+      now,
+      existing.walletId,
+    ]);
   }
 };
 
@@ -602,10 +662,11 @@ export const deleteExpense = async (id: string): Promise<void> => {
   // Restore the deleted expense amount back to the wallet
   if (existing.walletId) {
     const now = new Date().toISOString();
-    await database.runAsync(
-      'UPDATE wallets SET currentBalance = currentBalance + ?, updatedAt = ? WHERE id = ?',
-      [existing.amount, now, existing.walletId]
-    );
+    await database.runAsync('UPDATE wallets SET currentBalance = currentBalance + ?, updatedAt = ? WHERE id = ?', [
+      existing.amount,
+      now,
+      existing.walletId,
+    ]);
   }
 };
 
@@ -618,7 +679,8 @@ export const deleteMultipleExpenses = async (ids: string[]): Promise<void> => {
 
   // Fetch all targeted expenses to restore wallet balances
   const rows = await database.getAllAsync<{ id: string; amount: number; walletId: string | null }>(
-    `SELECT id, amount, walletId FROM expenses WHERE id IN (${placeholders})`, ids
+    `SELECT id, amount, walletId FROM expenses WHERE id IN (${placeholders})`,
+    ids,
   );
 
   // Delete all matching expenses in one query
@@ -627,10 +689,11 @@ export const deleteMultipleExpenses = async (ids: string[]): Promise<void> => {
   // Restore each expense amount back to its respective wallet
   for (const row of rows) {
     if (row.walletId) {
-      await database.runAsync(
-        'UPDATE wallets SET currentBalance = currentBalance + ?, updatedAt = ? WHERE id = ?',
-        [row.amount, now, row.walletId]
-      );
+      await database.runAsync('UPDATE wallets SET currentBalance = currentBalance + ?, updatedAt = ? WHERE id = ?', [
+        row.amount,
+        now,
+        row.walletId,
+      ]);
     }
   }
 };
@@ -655,14 +718,10 @@ export const getExpenseCount = async (): Promise<number> => {
 export const getDefaultWallet = async (): Promise<Wallet | null> => {
   const database = await getDatabase();
   // Try to find the wallet marked as default first
-  let row = await database.getFirstAsync<RawWalletRow>(
-    'SELECT * FROM wallets WHERE isDefault = 1 LIMIT 1'
-  );
+  let row = await database.getFirstAsync<RawWalletRow>('SELECT * FROM wallets WHERE isDefault = 1 LIMIT 1');
   // Fall back to the first created wallet if no default is set
   if (!row) {
-    row = await database.getFirstAsync<RawWalletRow>(
-      'SELECT * FROM wallets ORDER BY createdAt ASC LIMIT 1'
-    );
+    row = await database.getFirstAsync<RawWalletRow>('SELECT * FROM wallets ORDER BY createdAt ASC LIMIT 1');
   }
   return row ? await parseWalletRow(row) : null;
 };
@@ -670,9 +729,7 @@ export const getDefaultWallet = async (): Promise<Wallet | null> => {
 // Get all wallets ordered by default first, then by name
 export const getAllWallets = async (): Promise<Wallet[]> => {
   const database = await getDatabase();
-  const rows = await database.getAllAsync<RawWalletRow>(
-    'SELECT * FROM wallets ORDER BY isDefault DESC, name ASC'
-  );
+  const rows = await database.getAllAsync<RawWalletRow>('SELECT * FROM wallets ORDER BY isDefault DESC, name ASC');
   // Decrypt sensitive fields for each wallet before returning
   const wallets: Wallet[] = [];
   for (const row of rows) {
@@ -694,11 +751,21 @@ export const addWallet = async (wallet: Omit<Wallet, 'id' | 'createdAt' | 'updat
     `INSERT INTO wallets (id, name, type, initialBalance, currentBalance, currency, bankName, nickname, iconName, color, isDefault, metadata, createdAt, updatedAt)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      id, wallet.name, wallet.type, wallet.initialBalance, wallet.currentBalance,
-      wallet.currency, wallet.bankName || null,
-      wallet.nickname || null, wallet.iconName, wallet.color,
-      wallet.isDefault ? 1 : 0, encryptedMetadata, now, now,
-    ]
+      id,
+      wallet.name,
+      wallet.type,
+      wallet.initialBalance,
+      wallet.currentBalance,
+      wallet.currency,
+      wallet.bankName || null,
+      wallet.nickname || null,
+      wallet.iconName,
+      wallet.color,
+      wallet.isDefault ? 1 : 0,
+      encryptedMetadata,
+      now,
+      now,
+    ],
   );
 
   return { id, ...wallet, createdAt: now, updatedAt: now };
@@ -712,15 +779,42 @@ export const updateWallet = async (id: string, updates: Partial<Wallet>): Promis
   const values: BindValue[] = [now];
 
   // Build dynamic SET clause from provided fields
-  if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
-  if (updates.type !== undefined) { fields.push('type = ?'); values.push(updates.type); }
-  if (updates.initialBalance !== undefined) { fields.push('initialBalance = ?'); values.push(updates.initialBalance); }
-  if (updates.currentBalance !== undefined) { fields.push('currentBalance = ?'); values.push(updates.currentBalance); }
-  if (updates.bankName !== undefined) { fields.push('bankName = ?'); values.push(updates.bankName); }
-  if (updates.nickname !== undefined) { fields.push('nickname = ?'); values.push(updates.nickname); }
-  if (updates.iconName !== undefined) { fields.push('iconName = ?'); values.push(updates.iconName); }
-  if (updates.color !== undefined) { fields.push('color = ?'); values.push(updates.color); }
-  if (updates.isDefault !== undefined) { fields.push('isDefault = ?'); values.push(updates.isDefault ? 1 : 0); }
+  if (updates.name !== undefined) {
+    fields.push('name = ?');
+    values.push(updates.name);
+  }
+  if (updates.type !== undefined) {
+    fields.push('type = ?');
+    values.push(updates.type);
+  }
+  if (updates.initialBalance !== undefined) {
+    fields.push('initialBalance = ?');
+    values.push(updates.initialBalance);
+  }
+  if (updates.currentBalance !== undefined) {
+    fields.push('currentBalance = ?');
+    values.push(updates.currentBalance);
+  }
+  if (updates.bankName !== undefined) {
+    fields.push('bankName = ?');
+    values.push(updates.bankName);
+  }
+  if (updates.nickname !== undefined) {
+    fields.push('nickname = ?');
+    values.push(updates.nickname);
+  }
+  if (updates.iconName !== undefined) {
+    fields.push('iconName = ?');
+    values.push(updates.iconName);
+  }
+  if (updates.color !== undefined) {
+    fields.push('color = ?');
+    values.push(updates.color);
+  }
+  if (updates.isDefault !== undefined) {
+    fields.push('isDefault = ?');
+    values.push(updates.isDefault ? 1 : 0);
+  }
 
   // Re-encrypt sensitive fields if they are being updated
   if (updates.metadata !== undefined) {
@@ -749,10 +843,7 @@ export const clearDefaultWallet = async (): Promise<void> => {
 // Get all budgets for a specific month and year
 export const getBudgetsByMonth = async (month: number, year: number): Promise<Budget[]> => {
   const database = await getDatabase();
-  return database.getAllAsync<Budget>(
-    'SELECT * FROM budgets WHERE month = ? AND year = ?',
-    [month, year]
-  );
+  return database.getAllAsync<Budget>('SELECT * FROM budgets WHERE month = ? AND year = ?', [month, year]);
 };
 
 // Create a new budget rule with optional wallet association
@@ -761,7 +852,16 @@ export const addBudget = async (budget: Omit<Budget, 'id'>): Promise<Budget> => 
   const id = generateId();
   await database.runAsync(
     'INSERT INTO budgets (id, categoryId, amount, period, month, year, notifyAt, walletId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [id, budget.categoryId || null, budget.amount, budget.period, budget.month, budget.year, budget.notifyAt, budget.walletId || null]
+    [
+      id,
+      budget.categoryId || null,
+      budget.amount,
+      budget.period,
+      budget.month,
+      budget.year,
+      budget.notifyAt,
+      budget.walletId || null,
+    ],
   );
   return { id, ...budget };
 };
@@ -772,11 +872,26 @@ export const updateBudget = async (id: string, updates: Partial<Budget>): Promis
   const fields: string[] = [];
   const values: BindValue[] = [];
 
-  if (updates.amount !== undefined) { fields.push('amount = ?'); values.push(updates.amount); }
-  if (updates.notifyAt !== undefined) { fields.push('notifyAt = ?'); values.push(updates.notifyAt); }
-  if (updates.categoryId !== undefined) { fields.push('categoryId = ?'); values.push(updates.categoryId); }
-  if (updates.period !== undefined) { fields.push('period = ?'); values.push(updates.period); }
-  if (updates.walletId !== undefined) { fields.push('walletId = ?'); values.push(updates.walletId || null); }
+  if (updates.amount !== undefined) {
+    fields.push('amount = ?');
+    values.push(updates.amount);
+  }
+  if (updates.notifyAt !== undefined) {
+    fields.push('notifyAt = ?');
+    values.push(updates.notifyAt);
+  }
+  if (updates.categoryId !== undefined) {
+    fields.push('categoryId = ?');
+    values.push(updates.categoryId);
+  }
+  if (updates.period !== undefined) {
+    fields.push('period = ?');
+    values.push(updates.period);
+  }
+  if (updates.walletId !== undefined) {
+    fields.push('walletId = ?');
+    values.push(updates.walletId || null);
+  }
 
   if (fields.length === 0) return;
   values.push(id);
@@ -817,16 +932,27 @@ export const addIncome = async (income: Omit<Income, 'id' | 'createdAt' | 'updat
   await database.runAsync(
     `INSERT INTO income (id, amount, source, date, notes, walletId, currency, isRecurring, recurringFrequency, createdAt, updatedAt)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, income.amount, income.source, income.date, income.notes || null,
-     income.walletId, income.currency, income.isRecurring ? 1 : 0,
-     income.recurringFrequency || null, now, now]
+    [
+      id,
+      income.amount,
+      income.source,
+      income.date,
+      income.notes || null,
+      income.walletId,
+      income.currency,
+      income.isRecurring ? 1 : 0,
+      income.recurringFrequency || null,
+      now,
+      now,
+    ],
   );
   // Credit income amount to the associated wallet
   if (income.walletId) {
-    await database.runAsync(
-      'UPDATE wallets SET currentBalance = currentBalance + ?, updatedAt = ? WHERE id = ?',
-      [income.amount, now, income.walletId]
-    );
+    await database.runAsync('UPDATE wallets SET currentBalance = currentBalance + ?, updatedAt = ? WHERE id = ?', [
+      income.amount,
+      now,
+      income.walletId,
+    ]);
   }
   return { id, ...income, createdAt: now, updatedAt: now };
 };
@@ -840,21 +966,40 @@ export const updateIncome = async (id: string, updates: Partial<Income>): Promis
   if (!existing) return;
   const fields: string[] = ['updatedAt = ?'];
   const values: BindValue[] = [now];
-  if (updates.amount !== undefined) { fields.push('amount = ?'); values.push(updates.amount); }
-  if (updates.source !== undefined) { fields.push('source = ?'); values.push(updates.source); }
-  if (updates.date !== undefined) { fields.push('date = ?'); values.push(updates.date); }
-  if (updates.notes !== undefined) { fields.push('notes = ?'); values.push(updates.notes); }
-  if (updates.isRecurring !== undefined) { fields.push('isRecurring = ?'); values.push(updates.isRecurring ? 1 : 0); }
-  if (updates.recurringFrequency !== undefined) { fields.push('recurringFrequency = ?'); values.push(updates.recurringFrequency); }
+  if (updates.amount !== undefined) {
+    fields.push('amount = ?');
+    values.push(updates.amount);
+  }
+  if (updates.source !== undefined) {
+    fields.push('source = ?');
+    values.push(updates.source);
+  }
+  if (updates.date !== undefined) {
+    fields.push('date = ?');
+    values.push(updates.date);
+  }
+  if (updates.notes !== undefined) {
+    fields.push('notes = ?');
+    values.push(updates.notes);
+  }
+  if (updates.isRecurring !== undefined) {
+    fields.push('isRecurring = ?');
+    values.push(updates.isRecurring ? 1 : 0);
+  }
+  if (updates.recurringFrequency !== undefined) {
+    fields.push('recurringFrequency = ?');
+    values.push(updates.recurringFrequency);
+  }
   values.push(id);
   await database.runAsync(`UPDATE income SET ${fields.join(', ')} WHERE id = ?`, values);
   // Adjust wallet balance if the amount changed
   if (updates.amount !== undefined && existing.walletId) {
     const diff = updates.amount - existing.amount;
-    await database.runAsync(
-      'UPDATE wallets SET currentBalance = currentBalance + ?, updatedAt = ? WHERE id = ?',
-      [diff, now, existing.walletId]
-    );
+    await database.runAsync('UPDATE wallets SET currentBalance = currentBalance + ?, updatedAt = ? WHERE id = ?', [
+      diff,
+      now,
+      existing.walletId,
+    ]);
   }
 };
 
@@ -867,10 +1012,11 @@ export const deleteIncome = async (id: string): Promise<void> => {
   // Reverse the income credit from the wallet
   if (existing.walletId) {
     const now = new Date().toISOString();
-    await database.runAsync(
-      'UPDATE wallets SET currentBalance = currentBalance - ?, updatedAt = ? WHERE id = ?',
-      [existing.amount, now, existing.walletId]
-    );
+    await database.runAsync('UPDATE wallets SET currentBalance = currentBalance - ?, updatedAt = ? WHERE id = ?', [
+      existing.amount,
+      now,
+      existing.walletId,
+    ]);
   }
 };
 
@@ -903,19 +1049,29 @@ export const addTransfer = async (transfer: Omit<Transfer, 'id' | 'createdAt'>):
   await database.runAsync(
     `INSERT INTO transfers (id, amount, fromWalletId, toWalletId, date, notes, currency, createdAt)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, transfer.amount, transfer.fromWalletId, transfer.toWalletId,
-     transfer.date, transfer.notes || null, transfer.currency, now]
+    [
+      id,
+      transfer.amount,
+      transfer.fromWalletId,
+      transfer.toWalletId,
+      transfer.date,
+      transfer.notes || null,
+      transfer.currency,
+      now,
+    ],
   );
   // Debit source wallet
-  await database.runAsync(
-    'UPDATE wallets SET currentBalance = currentBalance - ?, updatedAt = ? WHERE id = ?',
-    [transfer.amount, now, transfer.fromWalletId]
-  );
+  await database.runAsync('UPDATE wallets SET currentBalance = currentBalance - ?, updatedAt = ? WHERE id = ?', [
+    transfer.amount,
+    now,
+    transfer.fromWalletId,
+  ]);
   // Credit destination wallet
-  await database.runAsync(
-    'UPDATE wallets SET currentBalance = currentBalance + ?, updatedAt = ? WHERE id = ?',
-    [transfer.amount, now, transfer.toWalletId]
-  );
+  await database.runAsync('UPDATE wallets SET currentBalance = currentBalance + ?, updatedAt = ? WHERE id = ?', [
+    transfer.amount,
+    now,
+    transfer.toWalletId,
+  ]);
   return { id, ...transfer, createdAt: now };
 };
 
@@ -927,15 +1083,17 @@ export const deleteTransfer = async (id: string): Promise<void> => {
   await database.runAsync('DELETE FROM transfers WHERE id = ?', [id]);
   const now = new Date().toISOString();
   // Reverse: credit back to source wallet
-  await database.runAsync(
-    'UPDATE wallets SET currentBalance = currentBalance + ?, updatedAt = ? WHERE id = ?',
-    [existing.amount, now, existing.fromWalletId]
-  );
+  await database.runAsync('UPDATE wallets SET currentBalance = currentBalance + ?, updatedAt = ? WHERE id = ?', [
+    existing.amount,
+    now,
+    existing.fromWalletId,
+  ]);
   // Reverse: debit back from destination wallet
-  await database.runAsync(
-    'UPDATE wallets SET currentBalance = currentBalance - ?, updatedAt = ? WHERE id = ?',
-    [existing.amount, now, existing.toWalletId]
-  );
+  await database.runAsync('UPDATE wallets SET currentBalance = currentBalance - ?, updatedAt = ? WHERE id = ?', [
+    existing.amount,
+    now,
+    existing.toWalletId,
+  ]);
 };
 
 // ==================== ANALYTICS QUERIES ====================
@@ -945,52 +1103,64 @@ export const getTotalIncome = async (startDate: string, endDate: string): Promis
   const database = await getDatabase();
   const result = await database.getFirstAsync<{ total: number }>(
     'SELECT COALESCE(SUM(amount), 0) as total FROM income WHERE date >= ? AND date <= ?',
-    [startDate, endDate]
+    [startDate, endDate],
   );
   return result?.total || 0;
 };
 
 // Get income grouped by source for a date range
-export const getIncomeBySource = async (startDate: string, endDate: string): Promise<{ source: string; total: number; count: number }[]> => {
+export const getIncomeBySource = async (
+  startDate: string,
+  endDate: string,
+): Promise<{ source: string; total: number; count: number }[]> => {
   const database = await getDatabase();
   return database.getAllAsync<{ source: string; total: number; count: number }>(
     `SELECT source, SUM(amount) as total, COUNT(*) as count
      FROM income WHERE date >= ? AND date <= ?
      GROUP BY source ORDER BY total DESC`,
-    [startDate, endDate]
+    [startDate, endDate],
   );
 };
 
 // Get total spending for a date range, grouped by category
-export const getCategoryTotals = async (startDate: string, endDate: string): Promise<{ category: string; total: number; count: number }[]> => {
+export const getCategoryTotals = async (
+  startDate: string,
+  endDate: string,
+): Promise<{ category: string; total: number; count: number }[]> => {
   const database = await getDatabase();
   return database.getAllAsync<{ category: string; total: number; count: number }>(
     `SELECT category, SUM(amount) as total, COUNT(*) as count
      FROM expenses WHERE date >= ? AND date <= ?
      GROUP BY category ORDER BY total DESC`,
-    [startDate, endDate]
+    [startDate, endDate],
   );
 };
 
 // Get category spending grouped by week number for stacked bar charts
-export const getCategoryTotalsByWeek = async (startDate: string, endDate: string): Promise<{ week: string; category: string; total: number }[]> => {
+export const getCategoryTotalsByWeek = async (
+  startDate: string,
+  endDate: string,
+): Promise<{ week: string; category: string; total: number }[]> => {
   const database = await getDatabase();
   return database.getAllAsync<{ week: string; category: string; total: number }>(
     `SELECT strftime('%Y-W%W', date) as week, category, SUM(amount) as total
      FROM expenses WHERE date >= ? AND date <= ?
      GROUP BY week, category ORDER BY week ASC, total DESC`,
-    [startDate, endDate]
+    [startDate, endDate],
   );
 };
 
 // Get daily spending totals for a date range (used for trend charts)
-export const getDailyTotals = async (startDate: string, endDate: string): Promise<{ date: string; total: number }[]> => {
+export const getDailyTotals = async (
+  startDate: string,
+  endDate: string,
+): Promise<{ date: string; total: number }[]> => {
   const database = await getDatabase();
   return database.getAllAsync<{ date: string; total: number }>(
     `SELECT date, SUM(amount) as total
      FROM expenses WHERE date >= ? AND date <= ?
      GROUP BY date ORDER BY date ASC`,
-    [startDate, endDate]
+    [startDate, endDate],
   );
 };
 
@@ -999,7 +1169,7 @@ export const getTotalExpenses = async (startDate: string, endDate: string): Prom
   const database = await getDatabase();
   const result = await database.getFirstAsync<{ total: number }>(
     'SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE date >= ? AND date <= ?',
-    [startDate, endDate]
+    [startDate, endDate],
   );
   return result?.total || 0;
 };
@@ -1011,28 +1181,58 @@ export const getMonthlyTotals = async (year: number): Promise<{ month: number; t
     `SELECT CAST(strftime('%m', date) AS INTEGER) as month, SUM(amount) as total
      FROM expenses WHERE strftime('%Y', date) = ?
      GROUP BY month ORDER BY month ASC`,
-    [year.toString()]
+    [year.toString()],
   );
 };
 
 // ==================== DATA EXPORT ====================
 
 // Export all data as a JSON object for backup purposes
-export const exportAllData = async (): Promise<{ expenses: Expense[]; categories: Category[]; wallets: Wallet[]; budgets: Budget[]; income: Income[]; transfers: Transfer[]; savingsGoals: SavingsGoal[]; templates: ExpenseTemplate[] }> => {
+export const exportAllData = async (): Promise<{
+  expenses: Expense[];
+  categories: Category[];
+  wallets: Wallet[];
+  budgets: Budget[];
+  income: Income[];
+  transfers: Transfer[];
+  savingsGoals: SavingsGoal[];
+  templates: ExpenseTemplate[];
+}> => {
   const database = await getDatabase();
-  const expenses = (await database.getAllAsync<RawExpenseRow>('SELECT * FROM expenses ORDER BY date DESC')).map(parseExpenseRow);
+  const expenses = (await database.getAllAsync<RawExpenseRow>('SELECT * FROM expenses ORDER BY date DESC')).map(
+    parseExpenseRow,
+  );
   const categories = await database.getAllAsync<RawCategoryRow>('SELECT * FROM categories ORDER BY "order" ASC');
-  const walletRows = await database.getAllAsync<RawWalletRow>('SELECT * FROM wallets ORDER BY isDefault DESC, name ASC');
+  const walletRows = await database.getAllAsync<RawWalletRow>(
+    'SELECT * FROM wallets ORDER BY isDefault DESC, name ASC',
+  );
   const wallets: Wallet[] = [];
   for (const row of walletRows) {
     wallets.push(await parseWalletRow(row));
   }
   const budgets = await database.getAllAsync<Budget>('SELECT * FROM budgets');
-  const income = (await database.getAllAsync<RawIncomeRow>('SELECT * FROM income ORDER BY date DESC')).map(parseIncomeRow);
+  const income = (await database.getAllAsync<RawIncomeRow>('SELECT * FROM income ORDER BY date DESC')).map(
+    parseIncomeRow,
+  );
   const transfers = await database.getAllAsync<Transfer>('SELECT * FROM transfers ORDER BY date DESC');
   const savingsGoals = await database.getAllAsync<SavingsGoal>('SELECT * FROM savings_goals ORDER BY createdAt DESC');
-  const templates = await database.getAllAsync<ExpenseTemplate>('SELECT * FROM expense_templates ORDER BY usageCount DESC');
-  return { expenses, categories: categories.map((c: RawCategoryRow) => ({ ...c, isDefault: c.isDefault === 1, budget: c.budget ?? undefined })), wallets, budgets, income, transfers, savingsGoals, templates };
+  const templates = await database.getAllAsync<ExpenseTemplate>(
+    'SELECT * FROM expense_templates ORDER BY usageCount DESC',
+  );
+  return {
+    expenses,
+    categories: categories.map((c: RawCategoryRow) => ({
+      ...c,
+      isDefault: c.isDefault === 1,
+      budget: c.budget ?? undefined,
+    })),
+    wallets,
+    budgets,
+    income,
+    transfers,
+    savingsGoals,
+    templates,
+  };
 };
 
 // ==================== DATABASE RESET FUNCTIONS ====================
@@ -1055,7 +1255,9 @@ export const clearAllData = async (): Promise<void> => {
     DELETE FROM user_streaks;
   `);
   // Re-seed streak row after clear
-  await database.runAsync('INSERT OR IGNORE INTO user_streaks (id, currentStreak, longestStreak, totalDaysActive) VALUES (1, 0, 0, 0)');
+  await database.runAsync(
+    'INSERT OR IGNORE INTO user_streaks (id, currentStreak, longestStreak, totalDaysActive) VALUES (1, 0, 0, 0)',
+  );
 };
 
 // Drop all tables and reinitialize the database from scratch
@@ -1118,7 +1320,8 @@ const parseIncomeRow = (row: RawIncomeRow): Income => ({
 export const getReceiptsByExpense = async (expenseId: string): Promise<Receipt[]> => {
   const database = await getDatabase();
   const rows = await database.getAllAsync<Receipt>(
-    'SELECT * FROM receipts WHERE expenseId = ? ORDER BY createdAt DESC', [expenseId]
+    'SELECT * FROM receipts WHERE expenseId = ? ORDER BY createdAt DESC',
+    [expenseId],
   );
   return rows;
 };
@@ -1128,10 +1331,13 @@ export const addReceipt = async (receipt: Omit<Receipt, 'id' | 'createdAt'>): Pr
   const database = await getDatabase();
   const id = generateId();
   const now = new Date().toISOString();
-  await database.runAsync(
-    'INSERT INTO receipts (id, expenseId, uri, thumbnailUri, createdAt) VALUES (?, ?, ?, ?, ?)',
-    [id, receipt.expenseId, receipt.uri, receipt.thumbnailUri || null, now]
-  );
+  await database.runAsync('INSERT INTO receipts (id, expenseId, uri, thumbnailUri, createdAt) VALUES (?, ?, ?, ?, ?)', [
+    id,
+    receipt.expenseId,
+    receipt.uri,
+    receipt.thumbnailUri || null,
+    now,
+  ]);
   return { id, ...receipt, createdAt: now };
 };
 
@@ -1156,13 +1362,15 @@ export const getAllSavingsGoals = async (): Promise<SavingsGoal[]> => {
 };
 
 // Create a new savings goal
-export const addSavingsGoal = async (goal: Omit<SavingsGoal, 'id' | 'createdAt' | 'updatedAt'>): Promise<SavingsGoal> => {
+export const addSavingsGoal = async (
+  goal: Omit<SavingsGoal, 'id' | 'createdAt' | 'updatedAt'>,
+): Promise<SavingsGoal> => {
   const database = await getDatabase();
   const id = generateId();
   const now = new Date().toISOString();
   await database.runAsync(
     'INSERT INTO savings_goals (id, name, targetAmount, currentAmount, deadline, icon, color, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [id, goal.name, goal.targetAmount, goal.currentAmount || 0, goal.deadline || null, goal.icon, goal.color, now, now]
+    [id, goal.name, goal.targetAmount, goal.currentAmount || 0, goal.deadline || null, goal.icon, goal.color, now, now],
   );
   return { id, ...goal, currentAmount: goal.currentAmount || 0, createdAt: now, updatedAt: now };
 };
@@ -1174,13 +1382,32 @@ export const updateSavingsGoal = async (id: string, updates: Partial<SavingsGoal
   const fields: string[] = [];
   const values: BindValue[] = [];
   // Build dynamic SET clause from provided updates
-  if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
-  if (updates.targetAmount !== undefined) { fields.push('targetAmount = ?'); values.push(updates.targetAmount); }
-  if (updates.currentAmount !== undefined) { fields.push('currentAmount = ?'); values.push(updates.currentAmount); }
-  if (updates.deadline !== undefined) { fields.push('deadline = ?'); values.push(updates.deadline); }
-  if (updates.icon !== undefined) { fields.push('icon = ?'); values.push(updates.icon); }
-  if (updates.color !== undefined) { fields.push('color = ?'); values.push(updates.color); }
-  fields.push('updatedAt = ?'); values.push(now);
+  if (updates.name !== undefined) {
+    fields.push('name = ?');
+    values.push(updates.name);
+  }
+  if (updates.targetAmount !== undefined) {
+    fields.push('targetAmount = ?');
+    values.push(updates.targetAmount);
+  }
+  if (updates.currentAmount !== undefined) {
+    fields.push('currentAmount = ?');
+    values.push(updates.currentAmount);
+  }
+  if (updates.deadline !== undefined) {
+    fields.push('deadline = ?');
+    values.push(updates.deadline);
+  }
+  if (updates.icon !== undefined) {
+    fields.push('icon = ?');
+    values.push(updates.icon);
+  }
+  if (updates.color !== undefined) {
+    fields.push('color = ?');
+    values.push(updates.color);
+  }
+  fields.push('updatedAt = ?');
+  values.push(now);
   values.push(id);
   await database.runAsync(`UPDATE savings_goals SET ${fields.join(', ')} WHERE id = ?`, values);
 };
@@ -1196,17 +1423,31 @@ export const deleteSavingsGoal = async (id: string): Promise<void> => {
 // Fetch all templates sorted by most used first
 export const getAllExpenseTemplates = async (): Promise<ExpenseTemplate[]> => {
   const database = await getDatabase();
-  return database.getAllAsync<ExpenseTemplate>('SELECT * FROM expense_templates ORDER BY usageCount DESC, createdAt DESC');
+  return database.getAllAsync<ExpenseTemplate>(
+    'SELECT * FROM expense_templates ORDER BY usageCount DESC, createdAt DESC',
+  );
 };
 
 // Create a new expense template
-export const addExpenseTemplate = async (template: Omit<ExpenseTemplate, 'id' | 'usageCount' | 'createdAt'>): Promise<ExpenseTemplate> => {
+export const addExpenseTemplate = async (
+  template: Omit<ExpenseTemplate, 'id' | 'usageCount' | 'createdAt'>,
+): Promise<ExpenseTemplate> => {
   const database = await getDatabase();
   const id = generateId();
   const now = new Date().toISOString();
   await database.runAsync(
     'INSERT INTO expense_templates (id, name, amount, category, notes, walletId, icon, color, usageCount, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)',
-    [id, template.name, template.amount, template.category, template.notes || null, template.walletId || null, template.icon, template.color, now]
+    [
+      id,
+      template.name,
+      template.amount,
+      template.category,
+      template.notes || null,
+      template.walletId || null,
+      template.icon,
+      template.color,
+      now,
+    ],
   );
   return { id, ...template, usageCount: 0, createdAt: now };
 };
@@ -1226,7 +1467,12 @@ export const deleteExpenseTemplate = async (id: string): Promise<void> => {
 // ==================== STREAK & GAMIFICATION OPERATIONS ====================
 
 // Get the current user streak data
-export const getUserStreak = async (): Promise<{ currentStreak: number; longestStreak: number; lastActiveDate: string | null; totalDaysActive: number }> => {
+export const getUserStreak = async (): Promise<{
+  currentStreak: number;
+  longestStreak: number;
+  lastActiveDate: string | null;
+  totalDaysActive: number;
+}> => {
   const database = await getDatabase();
   const row = await database.getFirstAsync<RawUserStreakRow>('SELECT * FROM user_streaks WHERE id = 1');
   return {
@@ -1238,7 +1484,9 @@ export const getUserStreak = async (): Promise<{ currentStreak: number; longestS
 };
 
 // Update the user streak after logging activity (expense or income)
-export const updateUserStreak = async (today: string): Promise<{ currentStreak: number; longestStreak: number; totalDaysActive: number }> => {
+export const updateUserStreak = async (
+  today: string,
+): Promise<{ currentStreak: number; longestStreak: number; totalDaysActive: number }> => {
   const database = await getDatabase();
   const row = await database.getFirstAsync<RawUserStreakRow>('SELECT * FROM user_streaks WHERE id = 1');
   let current = row?.currentStreak || 0;
@@ -1266,34 +1514,47 @@ export const updateUserStreak = async (today: string): Promise<{ currentStreak: 
 
   await database.runAsync(
     'UPDATE user_streaks SET currentStreak = ?, longestStreak = ?, lastActiveDate = ?, totalDaysActive = ? WHERE id = 1',
-    [current, longest, today, totalDays]
+    [current, longest, today, totalDays],
   );
   return { currentStreak: current, longestStreak: longest, totalDaysActive: totalDays };
 };
 
 // Get all earned badges
-export const getAllBadges = async (): Promise<{ id: string; name: string; description: string; icon: string; earnedAt: string | null }[]> => {
+export const getAllBadges = async (): Promise<
+  { id: string; name: string; description: string; icon: string; earnedAt: string | null }[]
+> => {
   const database = await getDatabase();
   return database.getAllAsync('SELECT * FROM badges ORDER BY earnedAt DESC');
 };
 
 // Award a badge if not already earned
-export const awardBadge = async (badge: { id: string; name: string; description: string; icon: string }): Promise<boolean> => {
+export const awardBadge = async (badge: {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+}): Promise<boolean> => {
   const database = await getDatabase();
   const exists = await database.getFirstAsync<{ id: string }>('SELECT id FROM badges WHERE id = ?', [badge.id]);
   if (exists) return false; // Badge already earned
   const now = new Date().toISOString();
-  await database.runAsync(
-    'INSERT INTO badges (id, name, description, icon, earnedAt) VALUES (?, ?, ?, ?, ?)',
-    [badge.id, badge.name, badge.description, badge.icon, now]
-  );
+  await database.runAsync('INSERT INTO badges (id, name, description, icon, earnedAt) VALUES (?, ?, ?, ?, ?)', [
+    badge.id,
+    badge.name,
+    badge.description,
+    badge.icon,
+    now,
+  ]);
   return true; // Newly awarded
 };
 
 // ==================== CALENDAR / DAILY EXPENSE MAP ====================
 
 // Get daily expense totals for a full month (for heatmap display)
-export const getDailyExpenseTotals = async (year: number, month: number): Promise<{ date: string; total: number }[]> => {
+export const getDailyExpenseTotals = async (
+  year: number,
+  month: number,
+): Promise<{ date: string; total: number }[]> => {
   const database = await getDatabase();
   // Build date range for the given month
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
@@ -1302,6 +1563,6 @@ export const getDailyExpenseTotals = async (year: number, month: number): Promis
   const endDate = `${endYear}-${String(endMonth).padStart(2, '0')}-01`;
   return database.getAllAsync<{ date: string; total: number }>(
     'SELECT date, SUM(amount) as total FROM expenses WHERE date >= ? AND date < ? GROUP BY date ORDER BY date',
-    [startDate, endDate]
+    [startDate, endDate],
   );
 };

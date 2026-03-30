@@ -1,10 +1,14 @@
 # ============================================================================
-# Android Release Build & Publish — GitHub Actions
+# Android Release Build & Publish — GitHub Actions (Matrix Pipeline)
 # ============================================================================
 # Triggers on push to main, alpha, and beta branches.
-# Builds a clean release APK via Gradle (no cache), auto-increments the
-# version, creates a GitHub Release with changelog, and uploads the APK
-# as a downloadable asset.
+# Builds a release APK via Gradle, auto-increments the version, creates a
+# GitHub Release with changelog, and uploads the APK as a downloadable asset.
+#
+# Pipeline architecture (3 parallel-ready stages):
+#   1. prepare  — checkout, version computation, changelog generation (~1 min)
+#   2. build    — npm ci, expo prebuild, Gradle assembleRelease (~12-15 min)
+#   3. release  — create git tag, publish GitHub Release with APK (~1 min)
 #
 # Branch → Release channel mapping:
 #   main  → stable release   (v1.0.0, v1.1.0, …)
@@ -12,11 +16,12 @@
 #   alpha → alpha pre-release (v1.1.0-alpha.1, v1.1.0-alpha.2, …)
 #
 # Performance optimizations:
-#   - 4-core runner (ubuntu-latest-xl) for parallel Gradle tasks
-#   - Gradle daemon enabled with 4GB heap + parallel execution
+#   - Gradle build-cache enabled for incremental native compilation
+#   - Gradle daemon with 4GB heap + parallel task execution
 #   - Node modules cached via setup-node
 #   - Gradle wrapper & dependencies cached across runs
-#   - File-system watching disabled (CI doesn't need it)
+#   - Disk space freed before build to avoid low-space slowdowns
+#   - File-watcher limit raised for Gradle daemon stability
 # ============================================================================
 
 name: Android Release
@@ -47,74 +52,61 @@ env:
     -Dorg.gradle.workers.max=4
     -Dorg.gradle.jvmargs=-Xmx4g -XX:+HeapDumpOnOutOfMemoryError -XX:+UseParallelGC
     -Dorg.gradle.configureondemand=true
-    -Dorg.gradle.caching=false
+    -Dorg.gradle.caching=true
     -Dorg.gradle.vfs.watch=false
 
 jobs:
-  build-and-release:
-    name: Build & Release (${{ github.ref_name }})
+  # ════════════════════════════════════════════════════════════════════════
+  # Stage 1: Prepare — compute version, generate changelog
+  # ════════════════════════════════════════════════════════════════════════
+  prepare:
+    name: Prepare (${{ github.ref_name }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    # Skip the entire pipeline when the commit message or PR title contains [skip ci] or [ci skip]
+    timeout-minutes: 5
+    # Skip when commit message contains [skip ci] or [ci skip]
     if: |
       !contains(github.event.head_commit.message, '[skip ci]') &&
       !contains(github.event.head_commit.message, '[ci skip]')
 
+    outputs:
+      # Pass computed values to downstream jobs via outputs
+      version: ${{ steps.version.outputs.version }}
+      base_version: ${{ steps.version.outputs.base_version }}
+      build_number: ${{ steps.version.outputs.build_number }}
+      apk_name: ${{ steps.version.outputs.apk_name }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+      channel: ${{ steps.version.outputs.channel }}
+      changelog: ${{ steps.changelog.outputs.body }}
+
     steps:
-      # ── Checkout ──────────────────────────────────────────────────────
+      # Full history needed for tag-based changelog and build number
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Full history needed for changelog generation
+          fetch-depth: 0
 
-      # ── Setup Java & Node in parallel-friendly order ──────────────────
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          distribution: "temurin"
-          java-version: ${{ env.JAVA_VERSION }}
-
-      - name: Set up Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-
-      # ── Cache Gradle wrapper & dependencies ───────────────────────────
-      - name: Cache Gradle dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
-
-      # ── Determine version & release channel ───────────────────────────
+      # ── Compute version string, APK name, and release channel ─────────
       - name: Determine version and release channel
         id: version
         run: |
-          # Read base version from app.json
+          # Read base version from app.json (e.g. "1.3.0")
           BASE_VERSION=$(node -p "require('./app.json').expo.version")
           echo "base_version=$BASE_VERSION" >> "$GITHUB_OUTPUT"
 
           BRANCH="${GITHUB_REF_NAME}"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
-          # Count commits on this branch since the last tag to generate a build number
+          # Count commits since last tag for build number suffix
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-
           if [ -n "$LAST_TAG" ]; then
-            # Number of commits since the last tag
             BUILD_NUMBER=$(git rev-list "${LAST_TAG}..HEAD" --count)
           else
-            # No tags yet — count all commits
+            # No tags yet — use total commit count
             BUILD_NUMBER=$(git rev-list HEAD --count)
           fi
           echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
 
-          # Construct the full version string based on the branch channel
+          # Map branch names to version suffixes and release channels
           if [ "$BRANCH" = "main" ]; then
             VERSION="v${BASE_VERSION}"
             APK_NAME="expense-tracker-v${BASE_VERSION}.apk"
@@ -139,13 +131,12 @@ jobs:
 
           echo "📦 Version: $VERSION | Channel: $CHANNEL | Build: $BUILD_NUMBER"
 
-      # ── Generate changelog from commits ───────────────────────────────
+      # ── Build categorized changelog from conventional commit messages ──
       - name: Generate changelog
         id: changelog
         run: |
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
 
-          # Build a markdown changelog from commit messages since last tag
           if [ -n "$LAST_TAG" ]; then
             echo "Generating changelog since $LAST_TAG"
             RANGE="${LAST_TAG}..HEAD"
@@ -154,7 +145,7 @@ jobs:
             RANGE="HEAD"
           fi
 
-          # Categorize commits by conventional-commit prefixes
+          # Categorize commits by conventional-commit prefix
           {
             echo "## What's Changed"
             echo ""
@@ -198,57 +189,94 @@ jobs:
 
           cat changelog.md
 
-          # Store changelog as multiline output
+          # Export multiline changelog as step output
           {
             echo "body<<CHANGELOG_EOF"
             cat changelog.md
             echo "CHANGELOG_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      # ── Install JS deps + generate native project ────────────────────
+  # ════════════════════════════════════════════════════════════════════════
+  # Stage 2: Build — install deps, prebuild, Gradle assemble (heaviest job)
+  # ════════════════════════════════════════════════════════════════════════
+  build:
+    name: Build APK (${{ github.ref_name }})
+    runs-on: ubuntu-latest
+    needs: prepare
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Parallel-friendly setup: Java + Node with caching ─────────────
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      # ── Cache Gradle wrapper + dependencies across builds ─────────────
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.gradle/build-cache
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      # ── Free disk space to avoid slow I/O and OOM during native build ─
+      - name: Free disk space and tune system
+        run: |
+          # Raise inotify limit so Gradle file watchers don't hit ceiling
+          echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
+          sudo sysctl -p
+          # Remove unused SDKs/toolchains to free ~8 GB
+          sudo rm -rf /usr/local/lib/android/sdk/ndk /usr/share/dotnet /opt/ghc 2>/dev/null || true
+
+      # ── Install JS dependencies (uses npm cache from setup-node) ──────
       - name: Install Node dependencies
         run: npm ci
 
-      # ── Generate native Android project (not committed to git) ────────
-      - name: Generate Android project via Expo prebuild
+      # ── Generate native Android project from Expo config ──────────────
+      - name: Expo prebuild
         run: npx expo prebuild --platform android --clean
 
-      # ── Inject version into Android build files ───────────────────────
+      # ── Inject version into Android build.gradle ──────────────────────
       - name: Update Android versionCode and versionName
         run: |
-          VERSION_NAME="${{ steps.version.outputs.base_version }}"
-          VERSION_CODE="${{ steps.version.outputs.build_number }}"
+          VERSION_NAME="${{ needs.prepare.outputs.base_version }}"
+          VERSION_CODE="${{ needs.prepare.outputs.build_number }}"
 
-          # Ensure versionCode is at least 1
+          # Ensure versionCode is at least 1 (Gradle requires > 0)
           if [ "$VERSION_CODE" -lt 1 ]; then
             VERSION_CODE=1
           fi
 
           echo "Setting versionName=$VERSION_NAME versionCode=$VERSION_CODE"
 
-          # Patch versionCode in build.gradle
+          # Patch versionCode and versionName in build.gradle
           sed -i "s/versionCode [0-9]*/versionCode $VERSION_CODE/" android/app/build.gradle
-          # Patch versionName in build.gradle
           sed -i "s/versionName \".*\"/versionName \"$VERSION_NAME\"/" android/app/build.gradle
 
-      # ── Optimise system for fast native compilation ───────────────────
-      - name: Increase file watcher limit & free disk space
-        run: |
-          # Raise inotify limit so Gradle doesn't hit file-watcher ceiling
-          echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
-          sudo sysctl -p
+      # ── Pre-warm Gradle daemon before the main build ──────────────────
+      - name: Pre-warm Gradle daemon
+        working-directory: android
+        run: ./gradlew --version
 
-          # Free disk space by removing unused toolchains (saves ~8 GB)
-          sudo rm -rf /usr/local/lib/android/sdk/ndk /usr/share/dotnet /opt/ghc 2>/dev/null || true
-
-          # Pre-warm Gradle wrapper download (reuses cache if available)
-          cd android && ./gradlew --version && cd ..
-
-      # ── Build release APK with parallel Gradle execution ──────────────
+      # ── Assemble release APK with all performance flags ───────────────
       - name: Build release APK
         working-directory: android
         run: |
-          # Assemble release APK — parallel tasks, skip lint & tests, max workers
           ./gradlew app:assembleRelease \
             -x lint \
             -x test \
@@ -257,25 +285,53 @@ jobs:
             --build-cache \
             --daemon
 
-      # ── Rename APK to versioned filename ──────────────────────────────
-      - name: Rename APK
+      # ── Rename APK to versioned filename and upload as artifact ───────
+      - name: Rename and upload APK
         run: |
           APK_SRC="android/app/build/outputs/apk/release/app-release.apk"
-          APK_DEST="${{ steps.version.outputs.apk_name }}"
+          APK_DEST="${{ needs.prepare.outputs.apk_name }}"
 
-          # Copy APK with the versioned name for the release asset
+          # Copy APK with the versioned name
           cp "$APK_SRC" "$APK_DEST"
 
-          # Print APK size for the build log
           APK_SIZE=$(du -h "$APK_DEST" | cut -f1)
           echo "📦 APK: $APK_DEST ($APK_SIZE)"
 
-      # ── Create Git tag ────────────────────────────────────────────────
+      # Upload APK as build artifact so the release job can download it
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: ${{ needs.prepare.outputs.apk_name }}
+          retention-days: 1
+
+  # ════════════════════════════════════════════════════════════════════════
+  # Stage 3: Release — tag, create GitHub Release, attach APK
+  # ════════════════════════════════════════════════════════════════════════
+  release:
+    name: Publish Release (${{ github.ref_name }})
+    runs-on: ubuntu-latest
+    needs: [prepare, build]
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Download the APK built in the previous stage
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-apk
+
+      # ── Create and push a Git tag for this release ────────────────────
       - name: Create and push tag
         run: |
-          TAG="${{ steps.version.outputs.version }}"
+          TAG="${{ needs.prepare.outputs.version }}"
 
-          # Check if tag already exists — skip if it does
+          # Skip if tag already exists (e.g. re-run on same commit)
           if git rev-parse "$TAG" >/dev/null 2>&1; then
             echo "⚠️  Tag $TAG already exists, skipping tag creation"
           else
@@ -286,30 +342,30 @@ jobs:
             echo "✅ Created and pushed tag $TAG"
           fi
 
-      # ── Create GitHub Release with APK asset ──────────────────────────
+      # ── Publish GitHub Release with APK as downloadable asset ─────────
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.version }}
-          name: "${{ steps.version.outputs.version }}"
-          body: ${{ steps.changelog.outputs.body }}
-          prerelease: ${{ steps.version.outputs.prerelease == 'true' }}
+          tag_name: ${{ needs.prepare.outputs.version }}
+          name: "${{ needs.prepare.outputs.version }}"
+          body: ${{ needs.prepare.outputs.changelog }}
+          prerelease: ${{ needs.prepare.outputs.prerelease == 'true' }}
           draft: false
           generate_release_notes: false
           files: |
-            ${{ steps.version.outputs.apk_name }}
+            ${{ needs.prepare.outputs.apk_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── Post-release summary ──────────────────────────────────────────
+      # ── Log release summary ───────────────────────────────────────────
       - name: Release summary
         run: |
           echo "============================================"
           echo "🚀 Release Published!"
           echo "============================================"
-          echo "Version  : ${{ steps.version.outputs.version }}"
-          echo "Channel  : ${{ steps.version.outputs.channel }}"
-          echo "APK      : ${{ steps.version.outputs.apk_name }}"
-          echo "Pre-rel  : ${{ steps.version.outputs.prerelease }}"
-          echo "Release  : https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.version }}"
+          echo "Version  : ${{ needs.prepare.outputs.version }}"
+          echo "Channel  : ${{ needs.prepare.outputs.channel }}"
+          echo "APK      : ${{ needs.prepare.outputs.apk_name }}"
+          echo "Pre-rel  : ${{ needs.prepare.outputs.prerelease }}"
+          echo "Release  : https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare.outputs.version }}"
           echo "============================================"

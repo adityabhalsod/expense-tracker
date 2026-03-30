@@ -28,7 +28,7 @@ const ExpenseDetailScreen = () => {
   const expenses = useAppStore(selectExpenses);
   const categories = useAppStore(selectCategories);
   const deleteExpense = useAppStore((s) => s.deleteExpense);
-  const expense = expenses.find(e => e.id === expenseId);
+  const expense = expenses.find((e) => e.id === expenseId);
 
   // Receipt photos attached to this expense
   const [receipts, setReceipts] = useState<Receipt[]>([]);
@@ -39,38 +39,39 @@ const ExpenseDetailScreen = () => {
       if (expenseId) {
         db.getReceiptsByExpense(expenseId).then(setReceipts);
       }
-    }, [expenseId])
+    }, [expenseId]),
   );
 
   // Handle missing expense (edge case if deleted elsewhere)
   if (!expense) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center' },
+        ]}
+      >
         <Text style={{ color: theme.colors.textSecondary }}>{t.expenseDetail.notFound}</Text>
       </View>
     );
   }
 
   // Get category details for icon and color display
-  const category = categories.find(c => c.name === expense.category);
+  const category = categories.find((c) => c.name === expense.category);
 
   // Confirm and execute expense deletion
   const handleDelete = () => {
-    Alert.alert(
-      t.expenseDetail.deleteTitle,
-      t.expenseDetail.deleteMsg,
-      [
-        { text: t.common.cancel, style: 'cancel' },
-        {
-          text: t.common.delete,
-          style: 'destructive',
-          onPress: async () => {
-            await deleteExpense(expense.id); // Delete from database and restore wallet
-            navigation.goBack(); // Return to previous screen
-          },
+    Alert.alert(t.expenseDetail.deleteTitle, t.expenseDetail.deleteMsg, [
+      { text: t.common.cancel, style: 'cancel' },
+      {
+        text: t.common.delete,
+        style: 'destructive',
+        onPress: async () => {
+          await deleteExpense(expense.id); // Delete from database and restore wallet
+          navigation.goBack(); // Return to previous screen
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -148,11 +149,7 @@ const ExpenseDetailScreen = () => {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.receiptScroll}>
             {receipts.map((receipt) => (
               <View key={receipt.id} style={[styles.receiptThumb, { backgroundColor: theme.colors.inputBackground }]}>
-                <Image
-                  source={{ uri: receipt.uri }}
-                  style={styles.receiptImage}
-                  resizeMode="cover"
-                />
+                <Image source={{ uri: receipt.uri }} style={styles.receiptImage} resizeMode="cover" />
               </View>
             ))}
           </ScrollView>

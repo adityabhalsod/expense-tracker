@@ -2,9 +2,7 @@
 // Follows the same design pattern as AllExpensesScreen for consistency
 
 import React, { useState, useMemo, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
@@ -35,7 +33,7 @@ const IncomeListScreen = () => {
     useCallback(() => {
       loadIncome(100);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    }, []),
   );
 
   // Pull-to-refresh handler
@@ -47,36 +45,32 @@ const IncomeListScreen = () => {
 
   // Get icon and color for an income source
   const getSourceInfo = useCallback((source: string) => {
-    const src = INCOME_SOURCES.find(s => s.value === source);
+    const src = INCOME_SOURCES.find((s) => s.value === source);
     return { icon: src?.icon || 'cash', color: src?.color || '#10B981', label: src?.label || source };
   }, []);
 
   // Find wallet name by ID
-  const getWalletName = useCallback((walletId: string) => {
-    const wallet = wallets.find(w => w.id === walletId);
-    return wallet?.nickname || wallet?.name || 'Unknown';
-  }, [wallets]);
+  const getWalletName = useCallback(
+    (walletId: string) => {
+      const wallet = wallets.find((w) => w.id === walletId);
+      return wallet?.nickname || wallet?.name || 'Unknown';
+    },
+    [wallets],
+  );
 
   // Calculate total income across all records
-  const totalIncome = useMemo(
-    () => income.reduce((sum, i) => sum + i.amount, 0),
-    [income]
-  );
+  const totalIncome = useMemo(() => income.reduce((sum, i) => sum + i.amount, 0), [income]);
 
   // Confirm and delete an income record
   const handleDelete = (id: string) => {
-    Alert.alert(
-      t.income.deleteTitle,
-      t.income.deleteMsg,
-      [
-        { text: t.common.cancel, style: 'cancel' },
-        {
-          text: t.common.delete,
-          style: 'destructive',
-          onPress: () => deleteIncome(id),
-        },
-      ],
-    );
+    Alert.alert(t.income.deleteTitle, t.income.deleteMsg, [
+      { text: t.common.cancel, style: 'cancel' },
+      {
+        text: t.common.delete,
+        style: 'destructive',
+        onPress: () => deleteIncome(id),
+      },
+    ]);
   };
 
   // Render a single income row
