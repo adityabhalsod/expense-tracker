@@ -252,14 +252,6 @@ const ExpensesScreen = () => {
           />
         }
       />
-
-      {/* Floating add button */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-        onPress={() => navigation.navigate('AddExpense', {})}
-      >
-        <MaterialCommunityIcons name="plus" size={28} color="#FFFFFF" />
-      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -320,21 +312,6 @@ const styles = StyleSheet.create({
   expenseCategory: { fontSize: 15, fontWeight: '600' },
   expenseDate: { fontSize: 12, marginTop: 2 },
   expenseAmount: { fontSize: 15, fontWeight: '700' },
-  fab: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-  },
 });
 
 export default ExpensesScreen;

@@ -10,6 +10,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { useTheme } from '../theme';
 import { useLanguage } from '../i18n';
 import { RootStackParamList, TabParamList } from '../types';
+import ModernTabBar from '../components/navigation/ModernTabBar';
 
 // Tab screens loaded eagerly (always visible)
 import HomeScreen from '../screens/HomeScreen';
@@ -41,6 +42,9 @@ const CalendarHeatmapScreen = React.lazy(() => import('../screens/CalendarHeatma
 const StreaksScreen = React.lazy(() => import('../screens/StreaksScreen'));
 const MonthlyInsightsScreen = React.lazy(() => import('../screens/MonthlyInsightsScreen'));
 const OnboardingScreen = React.lazy(() => import('../screens/OnboardingScreen'));
+// Feature screens — Phase 3
+const DebtsScreen = React.lazy(() => import('../screens/DebtsScreen'));
+const BillsScreen = React.lazy(() => import('../screens/BillsScreen'));
 
 // Minimal fallback spinner shown while a lazy screen loads
 const LazyFallback = () => (
@@ -99,27 +103,11 @@ const TabNavigator = () => {
 
   return (
     <Tab.Navigator
+      tabBar={(props) => <ModernTabBar {...props} />} // Custom docked bar with centre create button
       screenOptions={{
         headerShown: false, // Hide default header (screens manage their own)
-        tabBarStyle: {
-          backgroundColor: theme.colors.tabBar, // Theme-aware tab bar background
-          borderTopColor: theme.colors.border, // Subtle top border
-          borderTopWidth: 0.5,
-          height: 60, // Comfortable touch target height
-          paddingBottom: 8,
-          paddingTop: 4,
-          elevation: 8, // Android shadow
-          shadowColor: theme.colors.shadow,
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 1,
-          shadowRadius: 8,
-        },
         tabBarActiveTintColor: theme.colors.primary, // Active tab icon color
         tabBarInactiveTintColor: theme.colors.tabBarInactive, // Inactive tab icon color
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-        },
       }}
     >
       {/* Home dashboard tab */}
@@ -185,11 +173,12 @@ const AppNavigator = ({ initialRoute = 'MainTabs' }: { initialRoute?: string }) 
         initialRouteName={initialRoute as any}
         screenOptions={{
           headerStyle: {
-            backgroundColor: theme.colors.surface, // Theme-aware header background
+            backgroundColor: theme.colors.background, // Seamless header that blends into the screen
           },
+          headerShadowVisible: false, // Flat, modern header without a divider line
           headerTintColor: theme.colors.text, // Header text and back button color
           headerTitleStyle: {
-            fontWeight: '600',
+            fontWeight: '700',
             fontSize: 18,
           },
           contentStyle: {
@@ -284,6 +273,10 @@ const AppNavigator = ({ initialRoute = 'MainTabs' }: { initialRoute?: string }) 
           component={withSuspense(MonthlyInsightsScreen)}
           options={{ title: t.insights.title }}
         />
+        {/* Lend & borrow tracker */}
+        <Stack.Screen name="Debts" component={withSuspense(DebtsScreen)} options={{ title: t.debts.title }} />
+        {/* Bills & subscriptions overview */}
+        <Stack.Screen name="Bills" component={withSuspense(BillsScreen)} options={{ title: t.bills.title }} />
         {/* Onboarding walkthrough — headerless full-screen */}
         <Stack.Screen name="Onboarding" component={withSuspense(OnboardingScreen)} options={{ headerShown: false }} />
         {/*

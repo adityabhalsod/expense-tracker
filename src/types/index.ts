@@ -128,6 +128,39 @@ export interface ExpenseTemplate {
   createdAt: string; // Timestamp of template creation
 }
 
+// Direction of a personal debt: money you lent out vs money you borrowed
+export type DebtType = 'lent' | 'borrowed';
+
+// Personal IOU between the user and another person (friend, family, colleague)
+export interface Debt {
+  id: string; // Unique identifier
+  type: DebtType; // 'lent' = they owe you, 'borrowed' = you owe them
+  person: string; // Name of the counterparty
+  amount: number; // Original principal amount
+  paidAmount: number; // Amount repaid so far
+  currency: string; // Currency code
+  date: string; // ISO date the debt was created
+  dueDate?: string; // Optional ISO due date for repayment
+  notes?: string; // Optional memo
+  isSettled: boolean; // Fully repaid / closed
+  createdAt: string; // Timestamp of record creation
+  updatedAt: string; // Timestamp of last modification
+}
+
+// A bill/subscription derived from a recurring expense, with its next due date
+export interface UpcomingBill {
+  key: string; // Stable pattern key (category + amount + wallet + frequency)
+  name: string; // Display name (notes or category)
+  category: string; // Category name
+  amount: number; // Amount per occurrence
+  currency: string; // Currency code
+  frequency: RecurringFrequency; // Recurrence frequency
+  nextDate: string; // ISO date of the next expected charge
+  daysUntil: number; // Whole days from today until nextDate
+  monthlyCost: number; // Amount normalised to a per-month cost
+  walletId: string; // Wallet charged
+}
+
 // User streak data for gamification tracking
 export interface UserStreak {
   currentStreak: number; // Current consecutive days with logged activity
@@ -262,6 +295,8 @@ export type RootStackParamList = {
   CalendarHeatmap: undefined; // Calendar heatmap view screen
   Streaks: undefined; // Streaks & gamification screen
   Onboarding: undefined; // Onboarding walkthrough (first launch)
+  Debts: undefined; // Lend & borrow tracker
+  Bills: undefined; // Upcoming bills & subscriptions overview
 };
 
 // Bottom tab navigator parameter types

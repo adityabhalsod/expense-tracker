@@ -63,6 +63,11 @@ Expense Tracker helps you take control of your money. Track every rupee, dollar,
 | 📊 | **Advanced Data Viz** | Stacked bar charts for weekly category breakdown + custom SVG spending flow diagrams |
 | 🔒 | **PIN & Biometric Lock** | Protect your data with a 4–6 digit PIN or fingerprint/Face ID |
 | 🔐 | **End-to-End Encryption** | AES-256-GCM encryption with PBKDF2 key derivation, hardware-backed key storage via Secure Store |
+| 🤝 | **Lend & Borrow** | Track money you lent or borrowed, record partial repayments, due dates with overdue alerts, settle/reopen |
+| 🧾 | **Bills & Subscriptions** | Every recurring expense with its next due date, monthly and yearly commitment totals |
+| 🔮 | **Month-end Forecast** | Projected spend at your current pace plus known bills, daily average, and a "safe to spend per day" figure |
+| 🎨 | **Accent Themes** | Six accent palettes (Indigo, Emerald, Ocean, Sunset, Rose, Graphite) with gradient hero cards |
+| 🙈 | **Privacy Mode** | One tap on the dashboard eye icon masks balances and amounts |
 | 🌙 | **Dark Mode** | Automatic (follows system) or manual toggle |
 | 🌐 | **Multi-Language** | English, हिन्दी (Hindi), ગુજરાતી (Gujarati) |
 | ☁️ | **Cloud Backup** | Export and back up all financial data with one tap sensitive data encrypted at rest |
@@ -226,7 +231,8 @@ expense-tracker/
 ├── App.tsx                  # Root component with providers
 ├── src/
 │   ├── components/          # Reusable UI components
-│   │   ├── common/          #   Card, Button, EmptyState
+│   │   ├── common/          #   Card, Button, EmptyState, GradientCard, ProgressBar, SectionHeader, IconBadge
+│   │   ├── navigation/      #   ModernTabBar (docked tab bar with centre create button)
 │   │   └── PinLockScreen    #   Security lock gate
 │   ├── constants/           # App constants, default categories, currencies, income sources
 │   ├── database/            # SQLite service (all CRUD operations, 11 tables)
@@ -257,8 +263,10 @@ expense-tracker/
 │   │   ├── ExportReportScreen   #   Multi-format export (JSON/CSV/Excel/PDF)
 │   │   ├── SecurityScreen       #   PIN and biometric settings
 │   │   ├── CloudBackupScreen    #   Data backup and restore
+│   │   ├── DebtsScreen          #   Lend & borrow tracker with repayments
+│   │   ├── BillsScreen          #   Upcoming bills & subscriptions
 │   │   └── WalletSetupScreen    #   Create/edit wallet (payment source)
-│   ├── services/            # Recurring expenses, notifications, weekly digest
+│   ├── services/            # Recurring expenses, notifications, weekly digest, forecast & bills insights
 │   ├── store/               # Zustand global state (granular selectors)
 │   ├── theme/               # Light and dark theme definitions
 │   ├── types/               # TypeScript interfaces
