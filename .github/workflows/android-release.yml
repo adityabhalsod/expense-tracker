@@ -74,6 +74,8 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       base_version: ${{ steps.version.outputs.base_version }}
       build_number: ${{ steps.version.outputs.build_number }}
+      version_code: ${{ steps.version.outputs.version_code }}
+      skip: ${{ steps.version.outputs.skip }}
       apk_name: ${{ steps.version.outputs.apk_name }}
       prerelease: ${{ steps.version.outputs.prerelease }}
       channel: ${{ steps.version.outputs.channel }}
@@ -107,6 +109,11 @@ jobs:
           fi
           echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
 
+          # Android versionCode must never go down, or phones refuse to install
+          # the update over the previous APK. Total commit count only grows.
+          VERSION_CODE=$(git rev-list HEAD --count)
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+
           # Map branch names to version suffixes and release channels
           if [ "$BRANCH" = "main" ]; then
             VERSION="v${BASE_VERSION}"
@@ -130,7 +137,16 @@ jobs:
           echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
           echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
 
-          echo "📦 Version: $VERSION | Channel: $CHANNEL | Build: $BUILD_NUMBER"
+          # If this version was already released, don't rebuild or overwrite it.
+          # Bump "version" in app.json to publish a new release.
+          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$VERSION is already released. Bump the version in app.json to publish a new release."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "📦 Version: $VERSION | Channel: $CHANNEL | Build: $BUILD_NUMBER | versionCode: $VERSION_CODE"
 
       # ── Build categorized changelog from conventional commit messages ──
       - name: Generate changelog
@@ -204,6 +220,7 @@ jobs:
     name: Build APK (${{ github.ref_name }})
     runs-on: ubuntu-latest
     needs: prepare
+    if: needs.prepare.outputs.skip != 'true'
     timeout-minutes: 45
 
     steps:
@@ -263,7 +280,7 @@ jobs:
       - name: Update Android versionCode and versionName
         run: |
           VERSION_NAME="${{ needs.prepare.outputs.base_version }}"
-          VERSION_CODE="${{ needs.prepare.outputs.build_number }}"
+          VERSION_CODE="${{ needs.prepare.outputs.version_code }}"
 
           # Ensure versionCode is at least 1 (Gradle requires > 0)
           if [ "$VERSION_CODE" -lt 1 ]; then
@@ -322,6 +339,7 @@ jobs:
     name: Publish Release (${{ github.ref_name }})
     runs-on: ubuntu-latest
     needs: [prepare, build]
+    if: needs.prepare.outputs.skip != 'true'
     timeout-minutes: 5
 
     steps:
