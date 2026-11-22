@@ -22,12 +22,14 @@ const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, subtitle, actionLa
   return (
     <View style={styles.container}>
       {/* Large icon to visually indicate empty state */}
-      <MaterialCommunityIcons
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        name={icon as any}
-        size={80}
-        color={theme.colors.textTertiary}
-      />
+      <View style={[styles.iconWrap, { backgroundColor: theme.colors.chipBackground }]}>
+        <MaterialCommunityIcons
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          name={icon as any}
+          size={44}
+          color={theme.colors.primary}
+        />
+      </View>
       {/* Main empty state message */}
       <Text style={[styles.title, { color: theme.colors.text }]}>{title}</Text>
       {/* Optional description below the title */}
@@ -50,10 +52,17 @@ const styles = StyleSheet.create({
     padding: 32,
     minHeight: 300, // Minimum height so it's visible
   },
+  iconWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 32, // Soft squircle behind the illustration icon
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   title: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginTop: 16,
+    fontSize: 19,
+    fontWeight: '700',
+    marginTop: 20,
     textAlign: 'center',
   },
   subtitle: {

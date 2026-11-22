@@ -12,6 +12,7 @@ import {
   Transfer,
   SavingsGoal,
   ExpenseTemplate,
+  Debt,
 } from '../types';
 import * as db from '../database';
 import { DEFAULT_SETTINGS } from '../constants';
@@ -33,6 +34,7 @@ interface AppStore {
   transfers: Transfer[]; // All loaded transfer records
   savingsGoals: SavingsGoal[]; // All savings goals
   expenseTemplates: ExpenseTemplate[]; // All expense templates/favorites
+  debts: Debt[]; // Lend & borrow records
   streak: { currentStreak: number; longestStreak: number; totalDaysActive: number }; // Gamification data
   settings: AppSettings; // App configuration
   isLoading: boolean; // Global loading indicator
@@ -93,6 +95,13 @@ interface AppStore {
   useExpenseTemplate: (id: string) => Promise<void>; // Increment usage count
   deleteExpenseTemplate: (id: string) => Promise<void>; // Remove template
 
+  // Debt (lend & borrow) actions
+  loadDebts: () => Promise<void>; // Fetch all debts
+  addDebt: (debt: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Debt>; // Create a debt
+  updateDebt: (id: string, updates: Partial<Debt>) => Promise<void>; // Modify a debt
+  recordDebtPayment: (id: string, amount: number) => Promise<void>; // Log a partial/full repayment
+  deleteDebt: (id: string) => Promise<void>; // Remove a debt
+
   // Streak actions
   loadStreak: () => Promise<void>; // Fetch current streak data
   recordActivity: () => Promise<void>; // Log today's activity for streak tracking
@@ -118,6 +127,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   transfers: [],
   savingsGoals: [],
   expenseTemplates: [],
+  debts: [],
   streak: { currentStreak: 0, longestStreak: 0, totalDaysActive: 0 },
   settings: DEFAULT_SETTINGS as AppSettings, // Start with default settings
   isLoading: true,
@@ -138,6 +148,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         get().loadTransfers(50), // Load first 50 transfers
         get().loadSavingsGoals(), // Load all savings goals
         get().loadExpenseTemplates(), // Load all expense templates
+        get().loadDebts(), // Load lend & borrow records
         get().loadStreak(), // Load gamification streak data
       ]);
       // Load budgets for current month after wallets are loaded
@@ -418,6 +429,42 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => ({ savingsGoals: state.savingsGoals.filter((g) => g.id !== id) }));
   },
 
+  // ==================== DEBT (LEND & BORROW) ACTIONS ====================
+
+  // Fetch all debts from the database
+  loadDebts: async () => {
+    const debts = await db.getAllDebts();
+    set({ debts });
+  },
+
+  // Create a new debt record
+  addDebt: async (debt) => {
+    const newDebt = await db.addDebt(debt);
+    await get().loadDebts(); // Reload to keep server-side ordering
+    return newDebt;
+  },
+
+  // Update an existing debt
+  updateDebt: async (id, updates) => {
+    await db.updateDebt(id, updates);
+    await get().loadDebts();
+  },
+
+  // Record a repayment; automatically settles the debt once fully repaid
+  recordDebtPayment: async (id, amount) => {
+    const debt = get().debts.find((d) => d.id === id);
+    if (!debt || amount <= 0) return;
+    const paidAmount = Math.min(debt.amount, debt.paidAmount + amount);
+    await db.updateDebt(id, { paidAmount, isSettled: paidAmount >= debt.amount - 0.005 });
+    await get().loadDebts();
+  },
+
+  // Delete a debt by ID
+  deleteDebt: async (id) => {
+    await db.deleteDebt(id);
+    set((state) => ({ debts: state.debts.filter((d) => d.id !== id) }));
+  },
+
   // ==================== EXPENSE TEMPLATE ACTIONS ====================
 
   // Fetch all templates sorted by usage
@@ -511,6 +558,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
       budgets: [],
       income: [],
       transfers: [],
+      savingsGoals: [],
+      expenseTemplates: [],
+      debts: [],
     });
   },
 
@@ -530,6 +580,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       transfers: [],
       savingsGoals: [],
       expenseTemplates: [],
+      debts: [],
       streak: { currentStreak: 0, longestStreak: 0, totalDaysActive: 0 },
       settings: DEFAULT_SETTINGS as AppSettings,
     });
@@ -549,6 +600,7 @@ export const selectIncome = (state: AppStore) => state.income;
 export const selectTransfers = (state: AppStore) => state.transfers;
 export const selectSavingsGoals = (state: AppStore) => state.savingsGoals;
 export const selectExpenseTemplates = (state: AppStore) => state.expenseTemplates;
+export const selectDebts = (state: AppStore) => state.debts;
 export const selectStreak = (state: AppStore) => state.streak;
 export const selectSettings = (state: AppStore) => state.settings;
 export const selectIsLoading = (state: AppStore) => state.isLoading;

@@ -2,7 +2,18 @@
 // Uses expo-sqlite for local storage on the device
 
 import * as SQLite from 'expo-sqlite';
-import { Expense, Category, Wallet, Budget, Income, Transfer, Receipt, SavingsGoal, ExpenseTemplate } from '../types';
+import {
+  Expense,
+  Category,
+  Wallet,
+  Budget,
+  Income,
+  Transfer,
+  Receipt,
+  SavingsGoal,
+  ExpenseTemplate,
+  Debt,
+} from '../types';
 import { DEFAULT_CATEGORIES } from '../constants';
 import * as Crypto from 'expo-crypto';
 import { encryptData, decryptData } from '../utils/encryption';
@@ -69,6 +80,22 @@ interface RawIncomeRow {
   currency: string;
   isRecurring: number;
   recurringFrequency: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Raw debt row from SQLite (isSettled stored as 0/1 integer)
+interface RawDebtRow {
+  id: string;
+  type: string;
+  person: string;
+  amount: number;
+  paidAmount: number;
+  currency: string;
+  date: string;
+  dueDate: string | null;
+  notes: string | null;
+  isSettled: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -285,6 +312,24 @@ const initializeDatabase = async (database: SQLite.SQLiteDatabase): Promise<void
     );
   `);
 
+  // Create debts table for the lend & borrow tracker
+  await database.execAsync(`
+    CREATE TABLE IF NOT EXISTS debts (
+      id TEXT PRIMARY KEY NOT NULL,
+      type TEXT NOT NULL,
+      person TEXT NOT NULL,
+      amount REAL NOT NULL,
+      paidAmount REAL NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'INR',
+      date TEXT NOT NULL,
+      dueDate TEXT,
+      notes TEXT,
+      isSettled INTEGER NOT NULL DEFAULT 0,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL
+    );
+  `);
+
   // Seed initial streak row if it doesn't exist
   const streakRow = await database.getFirstAsync<{ id: number }>('SELECT id FROM user_streaks WHERE id = 1');
   if (!streakRow) {
@@ -390,6 +435,7 @@ const initializeDatabase = async (database: SQLite.SQLiteDatabase): Promise<void
     CREATE INDEX IF NOT EXISTS idx_receipts_expense ON receipts(expenseId);
     CREATE INDEX IF NOT EXISTS idx_goals_deadline ON savings_goals(deadline);
     CREATE INDEX IF NOT EXISTS idx_templates_usage ON expense_templates(usageCount DESC);
+    CREATE INDEX IF NOT EXISTS idx_debts_settled ON debts(isSettled, dueDate);
   `);
 
   // Seed default categories if the categories table is empty
@@ -1197,6 +1243,7 @@ export const exportAllData = async (): Promise<{
   transfers: Transfer[];
   savingsGoals: SavingsGoal[];
   templates: ExpenseTemplate[];
+  debts: Debt[];
 }> => {
   const database = await getDatabase();
   const expenses = (await database.getAllAsync<RawExpenseRow>('SELECT * FROM expenses ORDER BY date DESC')).map(
@@ -1219,6 +1266,7 @@ export const exportAllData = async (): Promise<{
   const templates = await database.getAllAsync<ExpenseTemplate>(
     'SELECT * FROM expense_templates ORDER BY usageCount DESC',
   );
+  const debts = await getAllDebts();
   return {
     expenses,
     categories: categories.map((c: RawCategoryRow) => ({
@@ -1232,6 +1280,7 @@ export const exportAllData = async (): Promise<{
     transfers,
     savingsGoals,
     templates,
+    debts,
   };
 };
 
@@ -1251,6 +1300,7 @@ export const clearAllData = async (): Promise<void> => {
     DELETE FROM wallets;
     DELETE FROM savings_goals;
     DELETE FROM expense_templates;
+    DELETE FROM debts;
     DELETE FROM badges;
     DELETE FROM user_streaks;
   `);
@@ -1270,6 +1320,7 @@ export const resetDatabase = async (): Promise<void> => {
     DROP TABLE IF EXISTS badges;
     DROP TABLE IF EXISTS user_streaks;
     DROP TABLE IF EXISTS expense_templates;
+    DROP TABLE IF EXISTS debts;
     DROP TABLE IF EXISTS savings_goals;
     DROP TABLE IF EXISTS expenses;
     DROP TABLE IF EXISTS budgets;
@@ -1565,4 +1616,90 @@ export const getDailyExpenseTotals = async (
     'SELECT date, SUM(amount) as total FROM expenses WHERE date >= ? AND date < ? GROUP BY date ORDER BY date',
     [startDate, endDate],
   );
+};
+
+// ==================== DEBT (LEND & BORROW) OPERATIONS ====================
+
+// Convert a raw debt row into a typed Debt
+const parseDebtRow = (row: RawDebtRow): Debt => ({
+  ...row,
+  type: row.type === 'borrowed' ? 'borrowed' : 'lent',
+  dueDate: row.dueDate ?? undefined,
+  notes: row.notes ?? undefined,
+  isSettled: row.isSettled === 1,
+});
+
+// Fetch all debts: open ones first (soonest due first), then settled ones
+export const getAllDebts = async (): Promise<Debt[]> => {
+  const database = await getDatabase();
+  const rows = await database.getAllAsync<RawDebtRow>(
+    `SELECT * FROM debts
+     ORDER BY isSettled ASC, CASE WHEN dueDate IS NULL THEN 1 ELSE 0 END, dueDate ASC, date DESC`,
+  );
+  return rows.map(parseDebtRow);
+};
+
+// Create a new debt record
+export const addDebt = async (debt: Omit<Debt, 'id' | 'createdAt' | 'updatedAt'>): Promise<Debt> => {
+  const database = await getDatabase();
+  const id = generateId();
+  const now = new Date().toISOString();
+  await database.runAsync(
+    `INSERT INTO debts (id, type, person, amount, paidAmount, currency, date, dueDate, notes, isSettled, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      debt.type,
+      debt.person,
+      debt.amount,
+      debt.paidAmount || 0,
+      debt.currency,
+      debt.date,
+      debt.dueDate || null,
+      debt.notes || null,
+      debt.isSettled ? 1 : 0,
+      now,
+      now,
+    ],
+  );
+  return { id, ...debt, paidAmount: debt.paidAmount || 0, createdAt: now, updatedAt: now };
+};
+
+// Update an existing debt with any subset of fields
+export const updateDebt = async (id: string, updates: Partial<Debt>): Promise<void> => {
+  const database = await getDatabase();
+  const fields: string[] = [];
+  const values: BindValue[] = [];
+  const columns: (keyof Debt)[] = ['type', 'person', 'amount', 'paidAmount', 'currency', 'date', 'dueDate', 'notes'];
+  for (const col of columns) {
+    if (updates[col] !== undefined) {
+      fields.push(`${col} = ?`);
+      const raw = updates[col] as string | number | null;
+      // Empty strings for optional text columns are stored as NULL (e.g. a cleared due date)
+      values.push(raw === '' && (col === 'dueDate' || col === 'notes') ? null : (raw ?? null));
+    }
+  }
+  if (updates.isSettled !== undefined) {
+    fields.push('isSettled = ?');
+    values.push(updates.isSettled ? 1 : 0);
+  }
+  fields.push('updatedAt = ?');
+  values.push(new Date().toISOString());
+  values.push(id);
+  await database.runAsync(`UPDATE debts SET ${fields.join(', ')} WHERE id = ?`, values);
+};
+
+// Delete a debt by ID
+export const deleteDebt = async (id: string): Promise<void> => {
+  const database = await getDatabase();
+  await database.runAsync('DELETE FROM debts WHERE id = ?', [id]);
+};
+
+// Fetch every recurring expense (newest first) — used to derive upcoming bills & subscriptions
+export const getRecurringExpenses = async (): Promise<Expense[]> => {
+  const database = await getDatabase();
+  const rows = await database.getAllAsync<RawExpenseRow>(
+    'SELECT * FROM expenses WHERE isRecurring = 1 AND recurringFrequency IS NOT NULL ORDER BY date DESC',
+  );
+  return rows.map(parseExpenseRow);
 };

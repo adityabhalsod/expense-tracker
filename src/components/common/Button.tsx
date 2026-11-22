@@ -2,7 +2,7 @@
 // Supports primary, secondary, outline, and text styles
 
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
+import { Pressable, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle, StyleProp } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
 
@@ -14,7 +14,7 @@ interface ButtonProps {
   loading?: boolean; // Show loading spinner instead of text
   disabled?: boolean; // Disable interaction
   icon?: React.ReactNode; // Optional leading icon element
-  style?: ViewStyle; // Custom container styles
+  style?: StyleProp<ViewStyle>; // Custom container styles
   textStyle?: TextStyle; // Custom text styles
   fullWidth?: boolean; // Stretch to fill parent width
 }
@@ -41,7 +41,7 @@ const Button: React.FC<ButtonProps> = ({
       case 'primary':
         return theme.colors.primary;
       case 'secondary':
-        return theme.colors.primaryLight;
+        return theme.colors.chipBackground; // Soft tinted fill
       case 'outline':
         return 'transparent'; // No background for outline
       case 'text':
@@ -58,7 +58,7 @@ const Button: React.FC<ButtonProps> = ({
     if (disabled) return theme.colors.textTertiary;
     switch (variant) {
       case 'primary':
-        return '#FFFFFF'; // White text on solid backgrounds
+        return theme.colors.onPrimary; // Contrast text on solid backgrounds
       case 'secondary':
         return theme.colors.primary;
       case 'outline':
@@ -97,8 +97,8 @@ const Button: React.FC<ButtonProps> = ({
   };
 
   return (
-    <TouchableOpacity
-      style={[
+    <Pressable
+      style={({ pressed }) => [
         styles.button,
         getPadding(),
         {
@@ -109,10 +109,10 @@ const Button: React.FC<ButtonProps> = ({
         },
         fullWidth && styles.fullWidth, // Expand to full width if specified
         style,
+        pressed && styles.pressed, // Subtle press feedback
       ]}
       onPress={onPress}
       disabled={disabled || loading} // Block presses when loading or disabled
-      activeOpacity={0.7} // Slight dim on press for feedback
     >
       {loading ? (
         // Show spinner during loading state
@@ -128,13 +128,13 @@ const Button: React.FC<ButtonProps> = ({
           <Text style={[styles.text, { color: getTextColor(), fontSize: getFontSize() }, textStyle]}>{title}</Text>
         </>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: 12, // Rounded corners for modern feel
+    borderRadius: 14, // Rounded corners for modern feel
     flexDirection: 'row', // Layout icon and text horizontally
     alignItems: 'center',
     justifyContent: 'center',
@@ -142,6 +142,10 @@ const styles = StyleSheet.create({
   },
   text: {
     fontWeight: '600', // Semi-bold for button labels
+  },
+  pressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.98 }],
   },
   fullWidth: {
     width: '100%', // Stretch to parent width

@@ -1,20 +1,28 @@
-// Home dashboard screen showing wallet summary, recent expenses, and quick actions
-// Serves as the main entry point after app launch with modern shortcut widgets
+// Home dashboard screen: balance hero, month-end forecast, shortcuts, upcoming bills, debts and recent activity
+// Serves as the main entry point after app launch
 // Supports multi-select mode for batch-deleting recent expenses
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme';
-import { useAppStore, selectExpenses, selectWallets, selectCategories, selectIncome } from '../store';
+import { useAppStore, selectExpenses, selectWallets, selectCategories, selectDebts, selectSettings } from '../store';
 import Card from '../components/common/Card';
+import GradientCard from '../components/common/GradientCard';
+import IconBadge from '../components/common/IconBadge';
+import ProgressBar from '../components/common/ProgressBar';
+import SectionHeader from '../components/common/SectionHeader';
 import { formatCurrency, formatRelativeDate } from '../utils/helpers';
 import { useLanguage } from '../i18n';
+import { UpcomingBill } from '../types';
+import { computeMonthForecast, loadUpcomingBills, MonthForecast } from '../services/financialInsights';
+
+const MASK = '••••••';
 
 const HomeScreen = () => {
-  const { theme } = useTheme();
+  const { theme, hideAmounts, toggleHideAmounts } = useTheme();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
   const { t } = useLanguage();
@@ -23,13 +31,20 @@ const HomeScreen = () => {
   const expenses = useAppStore(selectExpenses);
   const wallets = useAppStore(selectWallets);
   const categories = useAppStore(selectCategories);
-  const income = useAppStore(selectIncome); // Income records for net savings calculation
+  const debts = useAppStore(selectDebts);
+  const settings = useAppStore(selectSettings);
   const initialize = useAppStore((s) => s.initialize);
   const loadExpenses = useAppStore((s) => s.loadExpenses);
   const loadCurrentWallet = useAppStore((s) => s.loadCurrentWallet);
   const loadWallets = useAppStore((s) => s.loadWallets);
   const deleteMultipleExpenses = useAppStore((s) => s.deleteMultipleExpenses);
   const loadIncome = useAppStore((s) => s.loadIncome);
+  const loadDebts = useAppStore((s) => s.loadDebts);
+  const currency = settings.defaultCurrency || 'INR';
+
+  // Derived insights loaded from the database (accurate regardless of the loaded page size)
+  const [forecast, setForecast] = useState<MonthForecast | null>(null);
+  const [bills, setBills] = useState<UpcomingBill[]>([]);
 
   // Multi-select state for batch deleting recent expenses
   const [isSelectMode, setIsSelectMode] = useState(false); // Whether multi-select is active
@@ -52,6 +67,17 @@ const HomeScreen = () => {
     setSelectedIds(new Set());
   }, []);
 
+  // Reload the forecast and upcoming bills
+  const refreshInsights = useCallback(async () => {
+    try {
+      const nextBills = await loadUpcomingBills();
+      setBills(nextBills);
+      setForecast(await computeMonthForecast(nextBills));
+    } catch (e) {
+      console.warn('Failed to compute dashboard insights:', e);
+    }
+  }, []);
+
   // Confirm and batch-delete selected expenses
   const handleBatchDelete = useCallback(() => {
     if (selectedIds.size === 0) return;
@@ -66,11 +92,12 @@ const HomeScreen = () => {
           onPress: async () => {
             await deleteMultipleExpenses([...selectedIds]);
             exitSelectMode(); // Clear selection after deletion
+            refreshInsights();
           },
         },
       ],
     );
-  }, [selectedIds, deleteMultipleExpenses, exitSelectMode, t]);
+  }, [selectedIds, deleteMultipleExpenses, exitSelectMode, refreshInsights, t]);
 
   // Refresh data whenever this screen comes into focus
   useFocusEffect(
@@ -79,15 +106,18 @@ const HomeScreen = () => {
       loadCurrentWallet();
       loadWallets();
       loadIncome(50);
+      loadDebts();
+      refreshInsights();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
 
   // Pull-to-refresh handler reloads all data
-  const [refreshing, setRefreshing] = React.useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => {
     setRefreshing(true);
     await initialize();
+    await refreshInsights();
     setRefreshing(false);
   };
 
@@ -97,34 +127,19 @@ const HomeScreen = () => {
   // Aggregate total balance across all wallets
   const totalBalance = useMemo(() => wallets.reduce((sum, w) => sum + w.currentBalance, 0), [wallets]);
 
-  // Aggregate total initial balance across all wallets
-  const totalInitial = useMemo(() => wallets.reduce((sum, w) => sum + w.initialBalance, 0), [wallets]);
-
-  // Calculate total spent across all wallets
-  const totalSpent = useMemo(() => totalInitial - totalBalance, [totalInitial, totalBalance]);
-
-  // Calculate today's total spending from expenses (memoized)
-  const todayStr = new Date().toISOString().split('T')[0];
-  const todayTotal = useMemo(
-    () => expenses.filter((e) => e.date === todayStr).reduce((sum, e) => sum + e.amount, 0),
-    [expenses, todayStr],
-  );
-
-  // Calculate this month's total income
-  const monthStr = todayStr.substring(0, 7); // "YYYY-MM" prefix for current month filtering
-  const monthlyIncome = useMemo(
-    () => income.filter((i) => i.date.startsWith(monthStr)).reduce((sum, i) => sum + i.amount, 0),
-    [income, monthStr],
-  );
-
-  // Calculate this month's total expenses
-  const monthlyExpenses = useMemo(
-    () => expenses.filter((e) => e.date.startsWith(monthStr)).reduce((sum, e) => sum + e.amount, 0),
-    [expenses, monthStr],
-  );
-
-  // Net savings = monthly income - monthly expenses
-  const netSavings = useMemo(() => monthlyIncome - monthlyExpenses, [monthlyIncome, monthlyExpenses]);
+  // Open debt totals for the lend & borrow strip
+  const debtTotals = useMemo(() => {
+    let owedToYou = 0;
+    let youOwe = 0;
+    let open = 0;
+    for (const d of debts) {
+      if (d.isSettled) continue;
+      open++;
+      if (d.type === 'lent') owedToYou += d.amount - d.paidAmount;
+      else youOwe += d.amount - d.paidAmount;
+    }
+    return { owedToYou, youOwe, open };
+  }, [debts]);
 
   // Find icon and color for a category name from the categories list (memoized)
   const getCategoryInfo = useCallback(
@@ -135,6 +150,12 @@ const HomeScreen = () => {
     [categories],
   );
 
+  // Format money, respecting privacy mode
+  const money = useCallback(
+    (amount: number, code: string = currency) => (hideAmounts ? MASK : formatCurrency(amount, code)),
+    [hideAmounts, currency],
+  );
+
   // Get time-based greeting using translations
   const getLocalizedGreeting = () => {
     const hour = new Date().getHours();
@@ -143,398 +164,450 @@ const HomeScreen = () => {
     return t.greetings.evening;
   };
 
+  // Month figures
+  const spent = forecast?.spentSoFar ?? 0;
+  const earned = forecast?.incomeSoFar ?? 0;
+  const saved = earned - spent;
+  const reference = forecast ? (forecast.budgetTotal > 0 ? forecast.budgetTotal : forecast.incomeSoFar) : 0;
+  const spendRatio = reference > 0 ? spent / reference : 0;
+  const lastMonth = forecast?.lastMonthTotal ?? 0;
+  // Compare against the same share of last month's total to keep the delta fair mid-month
+  const lastMonthPace =
+    forecast && lastMonth > 0 ? (lastMonth * forecast.daysElapsed) / (forecast.daysElapsed + forecast.daysLeft - 1) : 0;
+  const deltaPct = lastMonthPace > 0 ? Math.round(((spent - lastMonthPace) / lastMonthPace) * 100) : null;
+  const ratioColor =
+    spendRatio >= 1 ? theme.colors.error : spendRatio >= 0.8 ? theme.colors.warning : theme.colors.success;
+
+  // Shortcut tiles (horizontal scroller)
+  const shortcuts: { key: string; label: string; icon: string; color: string; onPress: () => void }[] = [
+    {
+      key: 'budgets',
+      label: t.home.budgets,
+      icon: 'target',
+      color: '#EF4444',
+      onPress: () => navigation.navigate('BudgetSetup'),
+    },
+    {
+      key: 'bills',
+      label: t.bills.shortTitle,
+      icon: 'calendar-sync',
+      color: '#0EA5E9',
+      onPress: () => navigation.navigate('Bills'),
+    },
+    {
+      key: 'debts',
+      label: t.debts.title,
+      icon: 'handshake',
+      color: '#F59E0B',
+      onPress: () => navigation.navigate('Debts'),
+    },
+    {
+      key: 'goals',
+      label: t.savingsGoals.title,
+      icon: 'piggy-bank',
+      color: '#10B981',
+      onPress: () => navigation.navigate('SavingsGoals'),
+    },
+    {
+      key: 'insights',
+      label: t.insights.title,
+      icon: 'lightbulb-on',
+      color: '#6366F1',
+      onPress: () => navigation.navigate('MonthlyInsights'),
+    },
+    {
+      key: 'templates',
+      label: t.templates.title,
+      icon: 'lightning-bolt',
+      color: '#8B5CF6',
+      onPress: () => navigation.navigate('ExpenseTemplates'),
+    },
+    {
+      key: 'income',
+      label: t.homeIncome.incomeHistory,
+      icon: 'cash-multiple',
+      color: '#14B8A6',
+      onPress: () => navigation.navigate('IncomeList'),
+    },
+    {
+      key: 'calendar',
+      label: t.calendarHeatmap.title,
+      icon: 'calendar-month',
+      color: '#06B6D4',
+      onPress: () => navigation.navigate('CalendarHeatmap'),
+    },
+    {
+      key: 'streaks',
+      label: t.streaks.title,
+      icon: 'fire',
+      color: '#F97316',
+      onPress: () => navigation.navigate('Streaks'),
+    },
+    {
+      key: 'export',
+      label: t.home.export,
+      icon: 'tray-arrow-down',
+      color: '#64748B',
+      onPress: () => navigation.navigate('ExportReport'),
+    },
+  ];
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />
         }
       >
-        {/* Header with greeting and search button */}
+        {/* Header with greeting and actions */}
         <View style={styles.header}>
-          <View>
-            <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>{getLocalizedGreeting()}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>{getLocalizedGreeting()} 👋</Text>
             <Text style={[styles.title, { color: theme.colors.text }]}>{t.home.dashboard}</Text>
           </View>
-          {/* Search icon navigates to the search screen */}
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Search')}
-            style={[styles.searchButton, { backgroundColor: theme.colors.surfaceVariant }]}
+          <Pressable
+            onPress={toggleHideAmounts}
+            accessibilityLabel={hideAmounts ? t.dashboard.showAmounts : t.dashboard.hideAmounts}
+            style={[styles.headerButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
           >
-            <MaterialCommunityIcons name="magnify" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+            <MaterialCommunityIcons
+              name={hideAmounts ? 'eye-off-outline' : 'eye-outline'}
+              size={22}
+              color={theme.colors.text}
+            />
+          </Pressable>
+          <Pressable
+            onPress={() => navigation.navigate('Search')}
+            accessibilityLabel={t.search.title}
+            style={[styles.headerButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+          >
+            <MaterialCommunityIcons name="magnify" size={22} color={theme.colors.text} />
+          </Pressable>
         </View>
 
-        {/* Multi-wallet aggregate balance card */}
-        <View style={styles.walletCard}>
-          <View style={[styles.walletGradient, { backgroundColor: theme.colors.primary }]}>
-            {wallets.length > 0 ? (
-              <>
-                {/* Aggregate starting balance */}
-                <View style={styles.walletRow}>
-                  <Text style={styles.walletLabel}>{t.home.startingBalance}</Text>
-                  <Text style={styles.walletAmount}>{formatCurrency(totalInitial)}</Text>
+        {/* Balance hero */}
+        <GradientCard style={styles.hero}>
+          {wallets.length > 0 ? (
+            <>
+              <Text style={styles.heroLabel}>{t.dashboard.totalBalance}</Text>
+              <Text style={styles.heroBalance} numberOfLines={1} adjustsFontSizeToFit>
+                {money(totalBalance)}
+              </Text>
+              <Text style={styles.heroSub}>{t.dashboard.acrossWallets.replace('{n}', String(wallets.length))}</Text>
+
+              {/* Month in / out chips */}
+              <View style={styles.heroStats}>
+                <View style={styles.heroStat}>
+                  <View style={[styles.heroStatIcon, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                    <MaterialCommunityIcons name="arrow-bottom-left" size={16} color="#D1FAE5" />
+                  </View>
+                  <View>
+                    <Text style={styles.heroStatLabel}>{t.dashboard.earned}</Text>
+                    <Text style={styles.heroStatValue}>{money(earned)}</Text>
+                  </View>
                 </View>
-                {/* Total remaining balance across all wallets (large emphasis) */}
-                <View style={styles.walletMainBalance}>
-                  <Text style={styles.walletBalanceLabel}>{t.home.remainingBalance}</Text>
-                  <Text style={styles.walletBalance}>{formatCurrency(totalBalance)}</Text>
+                <View style={styles.heroStat}>
+                  <View style={[styles.heroStatIcon, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                    <MaterialCommunityIcons name="arrow-top-right" size={16} color="#FEE2E2" />
+                  </View>
+                  <View>
+                    <Text style={styles.heroStatLabel}>{t.dashboard.spent}</Text>
+                    <Text style={styles.heroStatValue}>{money(spent)}</Text>
+                  </View>
                 </View>
-                {/* Aggregate total spent */}
-                <View style={styles.walletRow}>
-                  <Text style={styles.walletLabel}>{t.home.totalSpent}</Text>
-                  <Text style={styles.walletSpent}>{formatCurrency(totalSpent)}</Text>
-                </View>
-                {/* Mini wallet previews showing individual wallet balances */}
-                {wallets.length > 1 && (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.miniWallets}>
-                    {wallets.map((w) => (
-                      <View key={w.id} style={[styles.miniWallet, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        <MaterialCommunityIcons name={w.iconName as any} size={16} color="#FFF" />
-                        <Text style={styles.miniWalletName} numberOfLines={1}>
-                          {w.nickname || w.name}
-                        </Text>
-                        <Text style={styles.miniWalletBal}>{formatCurrency(w.currentBalance, w.currency)}</Text>
-                      </View>
-                    ))}
-                  </ScrollView>
-                )}
-              </>
-            ) : (
-              // Prompt user to set up their wallet if none exists
-              <TouchableOpacity onPress={() => navigation.navigate('WalletSetup')} style={styles.walletSetup}>
-                <MaterialCommunityIcons name="wallet-plus" size={40} color="rgba(255,255,255,0.9)" />
-                <Text style={styles.walletSetupText}>{t.home.setupWallet}</Text>
-                <Text style={styles.walletSetupSubtext}>{t.home.addSalaryHint}</Text>
-              </TouchableOpacity>
+              </View>
+
+              {/* Mini wallet previews */}
+              {wallets.length > 1 && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.miniWallets}>
+                  {wallets.map((w) => (
+                    <View key={w.id} style={styles.miniWallet}>
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      <MaterialCommunityIcons name={w.iconName as any} size={14} color="#FFF" />
+                      <Text style={styles.miniWalletName} numberOfLines={1}>
+                        {w.nickname || w.name}
+                      </Text>
+                      <Text style={styles.miniWalletBal}>{money(w.currentBalance, w.currency)}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+            </>
+          ) : (
+            // Prompt user to set up their wallet if none exists
+            <Pressable onPress={() => navigation.navigate('WalletSetup')} style={styles.walletSetup}>
+              <View style={styles.walletSetupIcon}>
+                <MaterialCommunityIcons name="wallet-plus" size={32} color="#FFFFFF" />
+              </View>
+              <Text style={styles.walletSetupText}>{t.home.setupWallet}</Text>
+              <Text style={styles.walletSetupSubtext}>{t.home.addSalaryHint}</Text>
+            </Pressable>
+          )}
+        </GradientCard>
+
+        {/* This month + forecast */}
+        <Card style={styles.monthCard}>
+          <View style={styles.monthHeader}>
+            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t.dashboard.thisMonth}</Text>
+            {forecast && (
+              <View style={[styles.pill, { backgroundColor: theme.colors.surfaceVariant }]}>
+                <Text style={[styles.pillText, { color: theme.colors.textSecondary }]}>
+                  {t.dashboard.daysLeft.replace('{n}', String(forecast.daysLeft))}
+                </Text>
+              </View>
             )}
           </View>
-        </View>
 
-        {/* Shortcut widgets — quick actions with modern icon cards */}
-        <View style={styles.widgetRow}>
-          {/* Quick Add Expense shortcut widget */}
-          <TouchableOpacity
-            style={[styles.widget, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            onPress={() => navigation.navigate('AddExpense', {})}
-          >
-            <View style={[styles.widgetIcon, { backgroundColor: '#FEE2E2' }]}>
-              <MaterialCommunityIcons name="arrow-up-circle" size={32} color="#EF4444" />
+          <View style={styles.monthRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.monthSpent, { color: theme.colors.text }]}>{money(spent)}</Text>
+              <Text style={[styles.muted, { color: theme.colors.textSecondary }]}>
+                {reference > 0 ? `/ ${money(reference)}` : t.dashboard.spent}
+              </Text>
             </View>
-            <Text style={[styles.widgetTitle, { color: theme.colors.text }]}>{t.home.addExpense}</Text>
-            <Text style={[styles.widgetSubtitle, { color: theme.colors.textTertiary }]}>{'Quick entry'}</Text>
-          </TouchableOpacity>
-
-          {/* Quick Payment Received shortcut widget */}
-          <TouchableOpacity
-            style={[styles.widget, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            onPress={() => navigation.navigate('AddIncome', {})}
-          >
-            <View style={[styles.widgetIcon, { backgroundColor: '#DCFCE7' }]}>
-              <MaterialCommunityIcons name="arrow-down-circle" size={32} color="#22C55E" />
-            </View>
-            <Text style={[styles.widgetTitle, { color: theme.colors.text }]}>{t.homeIncome.addIncome}</Text>
-            <Text style={[styles.widgetSubtitle, { color: theme.colors.textTertiary }]}>{'Record earnings'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Quick action buttons grid */}
-        <View style={styles.quickActions}>
-          {/* Analytics button */}
-          <TouchableOpacity
-            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            onPress={() => navigation.navigate('MainTabs', { screen: 'Analytics' })}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#FEF3C7' }]}>
-              <MaterialCommunityIcons name="chart-line" size={24} color="#F59E0B" />
-            </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.home.analytics}</Text>
-          </TouchableOpacity>
-
-          {/* Transfer between wallets button — requires at least 2 wallets */}
-          <TouchableOpacity
-            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            onPress={() => {
-              if (wallets.length < 2) {
-                Alert.alert(t.transfer.noWallet, t.transfer.noWalletMsg);
-                return;
-              }
-              navigation.navigate('Transfer');
-            }}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#DBEAFE' }]}>
-              <MaterialCommunityIcons name="bank-transfer" size={24} color="#3B82F6" />
-            </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.homeIncome.transfer}</Text>
-          </TouchableOpacity>
-
-          {/* Income history button */}
-          <TouchableOpacity
-            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            onPress={() => navigation.navigate('IncomeList')}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#ECFDF5' }]}>
-              <MaterialCommunityIcons name="cash-multiple" size={24} color="#10B981" />
-            </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.homeIncome.incomeHistory}</Text>
-          </TouchableOpacity>
-
-          {/* Budget button */}
-          <TouchableOpacity
-            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            onPress={() => navigation.navigate('BudgetSetup')}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#FEE2E2' }]}>
-              <MaterialCommunityIcons name="target" size={24} color="#EF4444" />
-            </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.home.budgets}</Text>
-          </TouchableOpacity>
-
-          {/* Export button */}
-          <TouchableOpacity
-            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            onPress={() => navigation.navigate('ExportReport')}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#F3F4F6' }]}>
-              <MaterialCommunityIcons name="download" size={24} color="#6B7280" />
-            </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.home.export}</Text>
-          </TouchableOpacity>
-
-          {/* Wallets button */}
-          <TouchableOpacity
-            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            onPress={() => navigation.navigate('MainTabs', { screen: 'Wallet' })}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#EEF2FF' }]}>
-              <MaterialCommunityIcons name="wallet" size={24} color={theme.colors.primary} />
-            </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.tabs.wallet}</Text>
-          </TouchableOpacity>
-
-          {/* Savings Goals button */}
-          <TouchableOpacity
-            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            onPress={() => navigation.navigate('SavingsGoals')}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#D1FAE5' }]}>
-              <MaterialCommunityIcons name="piggy-bank" size={24} color="#10B981" />
-            </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.savingsGoals.title}</Text>
-          </TouchableOpacity>
-
-          {/* Templates button */}
-          <TouchableOpacity
-            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            onPress={() => navigation.navigate('ExpenseTemplates')}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#EDE9FE' }]}>
-              <MaterialCommunityIcons name="lightning-bolt" size={24} color="#8B5CF6" />
-            </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.templates.title}</Text>
-          </TouchableOpacity>
-
-          {/* Calendar Heatmap button */}
-          <TouchableOpacity
-            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            onPress={() => navigation.navigate('CalendarHeatmap')}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#CFFAFE' }]}>
-              <MaterialCommunityIcons name="calendar-month" size={24} color="#06B6D4" />
-            </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.calendarHeatmap.title}</Text>
-          </TouchableOpacity>
-
-          {/* Streaks button */}
-          <TouchableOpacity
-            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            onPress={() => navigation.navigate('Streaks')}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#FEF3C7' }]}>
-              <MaterialCommunityIcons name="fire" size={24} color="#F59E0B" />
-            </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.streaks.title}</Text>
-          </TouchableOpacity>
-
-          {/* Insights button */}
-          <TouchableOpacity
-            style={[styles.quickAction, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-            onPress={() => navigation.navigate('MonthlyInsights')}
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: '#DBEAFE' }]}>
-              <MaterialCommunityIcons name="lightbulb-on" size={24} color="#3B82F6" />
-            </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{t.insights.title}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Net savings summary card for current month */}
-        <Card style={styles.todayCard}>
-          <View style={styles.todayHeader}>
-            <MaterialCommunityIcons name="chart-bar" size={20} color={theme.colors.primary} />
-            <Text style={[styles.todayTitle, { color: theme.colors.text }]}>{t.homeIncome.netSavings}</Text>
+            {deltaPct !== null && (
+              <View
+                style={[
+                  styles.deltaPill,
+                  { backgroundColor: (deltaPct > 0 ? theme.colors.error : theme.colors.success) + '1A' },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name={deltaPct > 0 ? 'trending-up' : 'trending-down'}
+                  size={16}
+                  color={deltaPct > 0 ? theme.colors.error : theme.colors.success}
+                />
+                <Text style={[styles.deltaText, { color: deltaPct > 0 ? theme.colors.error : theme.colors.success }]}>
+                  {Math.abs(deltaPct)}%
+                </Text>
+                <Text style={[styles.deltaCaption, { color: theme.colors.textSecondary }]}>
+                  {t.dashboard.vsLastMonth}
+                </Text>
+              </View>
+            )}
           </View>
-          <View style={styles.savingsRow}>
-            <View style={styles.savingsItem}>
-              <Text style={[styles.savingsLabel, { color: theme.colors.textSecondary }]}>
-                {t.homeIncome.totalIncome}
-              </Text>
-              <Text style={[styles.savingsAmount, { color: theme.colors.income || '#10B981' }]}>
-                +{formatCurrency(monthlyIncome)}
-              </Text>
-            </View>
-            <View style={[styles.savingsDivider, { backgroundColor: theme.colors.border }]} />
-            <View style={styles.savingsItem}>
-              <Text style={[styles.savingsLabel, { color: theme.colors.textSecondary }]}>{t.home.totalSpent}</Text>
-              <Text style={[styles.savingsAmount, { color: theme.colors.expense }]}>
-                -{formatCurrency(monthlyExpenses)}
+
+          {reference > 0 && <ProgressBar progress={spendRatio} color={ratioColor} style={{ marginTop: 12 }} />}
+
+          <View style={[styles.forecastGrid, { borderTopColor: theme.colors.border }]}>
+            <View style={styles.forecastItem}>
+              <Text style={[styles.forecastLabel, { color: theme.colors.textSecondary }]}>{t.dashboard.projected}</Text>
+              <Text style={[styles.forecastValue, { color: theme.colors.text }]}>
+                {money(forecast?.projected ?? 0)}
               </Text>
             </View>
-            <View style={[styles.savingsDivider, { backgroundColor: theme.colors.border }]} />
-            <View style={styles.savingsItem}>
-              <Text style={[styles.savingsLabel, { color: theme.colors.textSecondary }]}>
-                {t.homeIncome.netSavings}
+            <View style={styles.forecastItem}>
+              <Text style={[styles.forecastLabel, { color: theme.colors.textSecondary }]}>{t.dashboard.dailyAvg}</Text>
+              <Text style={[styles.forecastValue, { color: theme.colors.text }]}>
+                {money(forecast?.dailyAverage ?? 0)}
+              </Text>
+            </View>
+            <View style={styles.forecastItem}>
+              <Text style={[styles.forecastLabel, { color: theme.colors.textSecondary }]}>
+                {forecast?.safeToSpendPerDay != null ? t.dashboard.safeToSpend : t.dashboard.saved}
               </Text>
               <Text
                 style={[
-                  styles.savingsAmount,
-                  { color: netSavings >= 0 ? theme.colors.income || '#10B981' : theme.colors.expense },
+                  styles.forecastValue,
+                  {
+                    color:
+                      forecast?.safeToSpendPerDay != null
+                        ? theme.colors.success
+                        : saved >= 0
+                          ? theme.colors.income
+                          : theme.colors.expense,
+                  },
                 ]}
               >
-                {netSavings >= 0 ? '+' : ''}
-                {formatCurrency(netSavings)}
+                {forecast?.safeToSpendPerDay != null
+                  ? `${money(forecast.safeToSpendPerDay)}${hideAmounts ? '' : t.dashboard.perDay}`
+                  : money(saved)}
               </Text>
             </View>
           </View>
         </Card>
 
-        {/* Today's spending summary card */}
-        <Card style={styles.todayCard}>
-          <View style={styles.todayHeader}>
-            <MaterialCommunityIcons name="calendar-today" size={20} color={theme.colors.primary} />
-            <Text style={[styles.todayTitle, { color: theme.colors.text }]}>{t.home.todaysSpending}</Text>
-          </View>
-          <Text style={[styles.todayAmount, { color: theme.colors.expense }]}>{formatCurrency(todayTotal)}</Text>
-        </Card>
+        {/* Shortcuts */}
+        <SectionHeader title={t.dashboard.quickActions} />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.shortcuts}>
+          {shortcuts.map((s) => (
+            <Pressable
+              key={s.key}
+              onPress={s.onPress}
+              style={({ pressed }) => [styles.shortcut, pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] }]}
+            >
+              <View
+                style={[
+                  styles.shortcutIcon,
+                  { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+                ]}
+              >
+                <IconBadge icon={s.icon} color={s.color} size={40} />
+              </View>
+              <Text style={[styles.shortcutLabel, { color: theme.colors.text }]} numberOfLines={2}>
+                {s.label}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+
+        {/* Lend & borrow strip */}
+        {debtTotals.open > 0 && (
+          <Card onPress={() => navigation.navigate('Debts')} style={styles.debtCard}>
+            <IconBadge icon="handshake" color={theme.colors.warning} />
+            <View style={{ flex: 1, flexDirection: 'row' }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.forecastLabel, { color: theme.colors.textSecondary }]}>
+                  {t.dashboard.peopleOweYou}
+                </Text>
+                <Text style={[styles.forecastValue, { color: theme.colors.income }]}>
+                  {money(debtTotals.owedToYou)}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.forecastLabel, { color: theme.colors.textSecondary }]}>{t.dashboard.youOwe}</Text>
+                <Text style={[styles.forecastValue, { color: theme.colors.expense }]}>{money(debtTotals.youOwe)}</Text>
+              </View>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textTertiary} />
+          </Card>
+        )}
+
+        {/* Upcoming bills */}
+        {bills.length > 0 && (
+          <>
+            <SectionHeader
+              title={t.dashboard.upcomingBills}
+              actionLabel={t.dashboard.seeAll}
+              onAction={() => navigation.navigate('Bills')}
+            />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.billsRow}>
+              {bills.slice(0, 6).map((b) => {
+                const info = getCategoryInfo(b.category);
+                const urgent = b.daysUntil <= 2;
+                return (
+                  <Pressable
+                    key={b.key}
+                    onPress={() => navigation.navigate('Bills')}
+                    style={[
+                      styles.billTile,
+                      { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+                    ]}
+                  >
+                    <IconBadge icon={info.icon} color={info.color} size={36} />
+                    <Text style={[styles.billName, { color: theme.colors.text }]} numberOfLines={1}>
+                      {b.name}
+                    </Text>
+                    <Text style={[styles.billAmount, { color: theme.colors.text }]}>{money(b.amount, b.currency)}</Text>
+                    <Text
+                      style={[styles.billDue, { color: urgent ? theme.colors.warning : theme.colors.textSecondary }]}
+                    >
+                      {b.daysUntil <= 0
+                        ? t.bills.dueToday
+                        : b.daysUntil === 1
+                          ? t.bills.dueTomorrow
+                          : t.bills.inDays.replace('{n}', String(b.daysUntil))}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </>
+        )}
 
         {/* Recent expenses list section */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t.home.recentExpenses}</Text>
-          {/* Show delete controls in select mode, otherwise show View All */}
-          {isSelectMode ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: '600', fontSize: 13 }}>
-                {selectedIds.size} selected
-              </Text>
-              <TouchableOpacity onPress={handleBatchDelete}>
-                <MaterialCommunityIcons name="delete" size={22} color={theme.colors.expense} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={exitSelectMode}>
-                <MaterialCommunityIcons name="close" size={22} color={theme.colors.text} />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity onPress={() => navigation.navigate('AllExpenses')}>
-              <Text style={[styles.viewAll, { color: theme.colors.primary }]}>{t.home.viewAll}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        <SectionHeader
+          title={t.home.recentExpenses}
+          right={
+            isSelectMode ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Text style={{ color: theme.colors.text, fontWeight: '600', fontSize: 13 }}>
+                  {selectedIds.size} selected
+                </Text>
+                <Pressable onPress={handleBatchDelete} hitSlop={8}>
+                  <MaterialCommunityIcons name="delete" size={22} color={theme.colors.expense} />
+                </Pressable>
+                <Pressable onPress={exitSelectMode} hitSlop={8}>
+                  <MaterialCommunityIcons name="close" size={22} color={theme.colors.text} />
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable onPress={() => navigation.navigate('AllExpenses')} hitSlop={8}>
+                <Text style={[styles.viewAll, { color: theme.colors.primary }]}>{t.home.viewAll}</Text>
+              </Pressable>
+            )
+          }
+        />
 
         {recentExpenses.length > 0 ? (
-          // Render each recent expense as a touchable card row with multi-select support
-          recentExpenses.map((expense) => {
-            const catInfo = getCategoryInfo(expense.category);
-            const isSelected = selectedIds.has(expense.id); // Check if this expense is selected
-            return (
-              <TouchableOpacity
-                key={expense.id}
-                onPress={() => {
-                  if (isSelectMode) {
-                    toggleSelection(expense.id); // Toggle selection in multi-select mode
-                  } else {
-                    navigation.navigate('ExpenseDetail', { expenseId: expense.id });
-                  }
-                }}
-                onLongPress={() => {
-                  if (!isSelectMode) {
-                    setIsSelectMode(true); // Enter select mode on long press
-                    setSelectedIds(new Set([expense.id])); // Pre-select the long-pressed item
-                  }
-                }}
-              >
-                <Card
-                  style={{
-                    ...styles.expenseCard,
-                    ...(isSelected
-                      ? {
-                          backgroundColor: theme.colors.primary + '10',
-                          borderColor: theme.colors.primary,
-                          borderWidth: 1,
-                        }
-                      : {}),
+          <Card style={styles.listCard}>
+            {recentExpenses.map((expense, index) => {
+              const catInfo = getCategoryInfo(expense.category);
+              const isSelected = selectedIds.has(expense.id); // Check if this expense is selected
+              return (
+                <Pressable
+                  key={expense.id}
+                  onPress={() => {
+                    if (isSelectMode) {
+                      toggleSelection(expense.id); // Toggle selection in multi-select mode
+                    } else {
+                      navigation.navigate('ExpenseDetail', { expenseId: expense.id });
+                    }
                   }}
+                  onLongPress={() => {
+                    if (!isSelectMode) {
+                      setIsSelectMode(true); // Enter select mode on long press
+                      setSelectedIds(new Set([expense.id])); // Pre-select the long-pressed item
+                    }
+                  }}
+                  style={({ pressed }) => [
+                    styles.expenseRow,
+                    index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.colors.border },
+                    (pressed || isSelected) && { backgroundColor: theme.colors.primary + '0F' },
+                  ]}
                 >
-                  <View style={styles.expenseRow}>
-                    {/* Checkbox shown only in multi-select mode */}
-                    {isSelectMode && (
-                      <MaterialCommunityIcons
-                        name={isSelected ? 'checkbox-marked' : 'checkbox-blank-outline'}
-                        size={22}
-                        color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
-                        style={{ marginRight: 8 }}
-                      />
-                    )}
-                    {/* Category icon circle */}
-                    <View style={[styles.expenseIcon, { backgroundColor: catInfo.color + '20' }]}>
-                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                      <MaterialCommunityIcons name={catInfo.icon as any} size={24} color={catInfo.color} />
-                    </View>
-                    {/* Expense details (category name and date) */}
-                    <View style={styles.expenseInfo}>
-                      <Text style={[styles.expenseCategory, { color: theme.colors.text }]}>{expense.category}</Text>
-                      <Text style={[styles.expenseDate, { color: theme.colors.textSecondary }]}>
-                        {formatRelativeDate(expense.date)}
-                      </Text>
-                    </View>
-                    {/* Expense amount */}
-                    <Text style={[styles.expenseAmount, { color: theme.colors.expense }]}>
-                      -{formatCurrency(expense.amount, expense.currency)}
+                  {/* Checkbox shown only in multi-select mode */}
+                  {isSelectMode && (
+                    <MaterialCommunityIcons
+                      name={isSelected ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
+                      size={22}
+                      color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
+                      style={{ marginRight: 10 }}
+                    />
+                  )}
+                  <IconBadge icon={catInfo.icon} color={catInfo.color} size={42} />
+                  <View style={styles.expenseInfo}>
+                    <Text style={[styles.expenseCategory, { color: theme.colors.text }]} numberOfLines={1}>
+                      {expense.notes
+                        ? expense.notes.replace(/^\[Recurring\]\s*/, '') || expense.category
+                        : expense.category}
+                    </Text>
+                    <Text style={[styles.expenseDate, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+                      {expense.notes ? `${expense.category} · ` : ''}
+                      {formatRelativeDate(expense.date)}
+                      {expense.isRecurring ? ' · ↻' : ''}
                     </Text>
                   </View>
-                  {/* Notes preview if available */}
-                  {expense.notes ? (
-                    <Text style={[styles.expenseNotes, { color: theme.colors.textTertiary }]} numberOfLines={1}>
-                      {expense.notes}
-                    </Text>
-                  ) : null}
-                </Card>
-              </TouchableOpacity>
-            );
-          })
+                  <Text style={[styles.expenseAmount, { color: theme.colors.expense }]}>
+                    {hideAmounts ? MASK : `-${formatCurrency(expense.amount, expense.currency)}`}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </Card>
         ) : (
           // Empty state when no expenses exist yet
           <Card>
             <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="receipt" size={48} color={theme.colors.textTertiary} />
-              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>{t.home.noExpenses}</Text>
+              <IconBadge icon="receipt-text-outline" color={theme.colors.primary} size={64} />
+              <Text style={[styles.emptyText, { color: theme.colors.text }]}>{t.home.noExpenses}</Text>
               <Text style={[styles.emptySubtext, { color: theme.colors.textTertiary }]}>{t.home.tapToAdd}</Text>
             </View>
           </Card>
         )}
-
-        {/* Bottom spacer for scroll clearance above tab bar */}
-        <View style={{ height: 100 }} />
       </ScrollView>
-
-      {/* Floating action button for quick expense addition */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-        onPress={() => navigation.navigate('AddExpense', {})}
-      >
-        <MaterialCommunityIcons name="plus" size={28} color="#FFFFFF" />
-      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -542,156 +615,127 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    flexDirection: 'row', // Horizontal layout for greeting and search
-    justifyContent: 'space-between',
+    flexDirection: 'row', // Greeting on the left, actions on the right
     alignItems: 'center',
+    gap: 10,
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 16,
   },
   greeting: { fontSize: 14, fontWeight: '500' },
-  title: { fontSize: 28, fontWeight: '700', marginTop: 2 },
-  searchButton: {
+  title: { fontSize: 28, fontWeight: '800', marginTop: 2, letterSpacing: -0.6 },
+  headerButton: {
     width: 44,
     height: 44,
-    borderRadius: 22, // Perfect circle
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  walletCard: { marginHorizontal: 16, marginBottom: 16, borderRadius: 20, overflow: 'hidden' },
-  walletGradient: { padding: 24, borderRadius: 20 },
-  walletRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  walletLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 13 },
-  walletAmount: { color: 'rgba(255,255,255,0.9)', fontSize: 15, fontWeight: '600' },
-  walletMainBalance: { marginVertical: 16, alignItems: 'center' },
-  walletBalanceLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginBottom: 4 },
-  walletBalance: { color: '#FFFFFF', fontSize: 36, fontWeight: '700' },
-  walletSpent: { color: '#FFB4B4', fontSize: 15, fontWeight: '600' },
-  walletSetup: { alignItems: 'center', paddingVertical: 20 },
-  walletSetupText: { color: '#FFFFFF', fontSize: 18, fontWeight: '600', marginTop: 12 },
-  walletSetupSubtext: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 4 },
-  // Mini wallet previews inside the main card
-  miniWallets: { marginTop: 12, flexDirection: 'row' },
+  // Balance hero
+  hero: { marginHorizontal: 16, marginBottom: 10 },
+  heroLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '600' },
+  heroBalance: { color: '#FFFFFF', fontSize: 38, fontWeight: '800', letterSpacing: -1, marginTop: 4 },
+  heroSub: { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 2 },
+  heroStats: { flexDirection: 'row', gap: 10, marginTop: 18 },
+  heroStat: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 10,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  heroStatIcon: { width: 32, height: 32, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  heroStatLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '600' },
+  heroStatValue: { color: '#FFFFFF', fontSize: 15, fontWeight: '800', marginTop: 1 },
+  miniWallets: { marginTop: 14, flexDirection: 'row' },
   miniWallet: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 12,
+    borderRadius: 14,
     marginRight: 8,
-    alignItems: 'center',
-    minWidth: 80,
+    minWidth: 92,
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
-  miniWalletName: { color: 'rgba(255,255,255,0.8)', fontSize: 10, marginTop: 2 },
-  miniWalletBal: { color: '#FFF', fontSize: 12, fontWeight: '700', marginTop: 2 },
-  // Shortcut widgets
-  widgetRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 12,
-    marginBottom: 12,
-  },
-  widget: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 20,
-    borderWidth: 0.5,
-    alignItems: 'center',
-    gap: 6,
-  },
-  widgetIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+  miniWalletName: { color: 'rgba(255,255,255,0.8)', fontSize: 11, marginTop: 4 },
+  miniWalletBal: { color: '#FFF', fontSize: 13, fontWeight: '700', marginTop: 1 },
+  walletSetup: { alignItems: 'center', paddingVertical: 16 },
+  walletSetupIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
   },
-  widgetTitle: { fontSize: 13, fontWeight: '700', textAlign: 'center' },
-  widgetSubtitle: { fontSize: 11, textAlign: 'center' },
-  // Quick action buttons
-  quickActions: {
-    flexDirection: 'row', // Horizontal grid of action buttons
-    flexWrap: 'wrap',
-    paddingHorizontal: 12,
-    marginBottom: 8,
-  },
-  quickAction: {
-    width: '31%', // ~3 columns with margin for 6-item grid
-    margin: '1%',
-    padding: 12,
-    borderRadius: 16,
+  walletSetupText: { color: '#FFFFFF', fontSize: 18, fontWeight: '700', marginTop: 12 },
+  walletSetupSubtext: { color: 'rgba(255,255,255,0.75)', fontSize: 14, marginTop: 4, textAlign: 'center' },
+  // Month card
+  monthCard: { padding: 18 },
+  monthHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardTitle: { fontSize: 16, fontWeight: '700' },
+  pill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+  pillText: { fontSize: 11, fontWeight: '700' },
+  monthRow: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 10 },
+  monthSpent: { fontSize: 28, fontWeight: '800', letterSpacing: -0.6 },
+  muted: { fontSize: 13, marginTop: 2 },
+  deltaPill: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 0.5,
-  },
-  quickActionIcon: {
-    width: 44,
-    height: 44,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 12,
+  },
+  deltaText: { fontSize: 13, fontWeight: '800' },
+  deltaCaption: { fontSize: 11 },
+  forecastGrid: {
+    flexDirection: 'row',
+    marginTop: 16,
+    paddingTop: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  forecastItem: { flex: 1 },
+  forecastLabel: { fontSize: 11, fontWeight: '600', marginBottom: 4 },
+  forecastValue: { fontSize: 15, fontWeight: '800' },
+  // Shortcuts
+  shortcuts: { paddingHorizontal: 14, gap: 4 },
+  shortcut: { width: 76, alignItems: 'center' },
+  shortcutIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
   },
-  quickActionText: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
-  todayCard: { marginBottom: 8 },
-  todayHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  todayTitle: { fontSize: 15, fontWeight: '600' },
-  todayAmount: { fontSize: 28, fontWeight: '700' },
-  // Net savings card row styles
-  savingsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  savingsItem: { flex: 1, alignItems: 'center' },
-  savingsLabel: { fontSize: 11, fontWeight: '500', marginBottom: 4 },
-  savingsAmount: { fontSize: 16, fontWeight: '700' },
-  savingsDivider: { width: 1, height: 36, marginHorizontal: 4 },
-  sectionHeader: {
-    flexDirection: 'row', // Title and "View All" on the same line
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  sectionTitle: { fontSize: 18, fontWeight: '700' },
+  shortcutLabel: { fontSize: 11, fontWeight: '600', textAlign: 'center', marginTop: 6, lineHeight: 14 },
+  // Debts strip
+  debtCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16 },
+  // Bills
+  billsRow: { paddingHorizontal: 16, gap: 10 },
+  billTile: { width: 136, padding: 14, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth },
+  billName: { fontSize: 13, fontWeight: '700', marginTop: 10 },
+  billAmount: { fontSize: 16, fontWeight: '800', marginTop: 2 },
+  billDue: { fontSize: 11, fontWeight: '700', marginTop: 4 },
+  // Recent list
   viewAll: { fontSize: 14, fontWeight: '600' },
-  expenseCard: { paddingVertical: 12 },
+  listCard: { padding: 0, overflow: 'hidden' },
   expenseRow: {
     flexDirection: 'row', // Icon, info, and amount in a row
     alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  expenseIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  expenseInfo: { flex: 1 },
+  expenseInfo: { flex: 1, marginLeft: 12 },
   expenseCategory: { fontSize: 15, fontWeight: '600' },
   expenseDate: { fontSize: 12, marginTop: 2 },
-  expenseAmount: { fontSize: 16, fontWeight: '700' },
-  expenseNotes: { fontSize: 12, marginTop: 6, marginLeft: 56 },
-  emptyState: { alignItems: 'center', paddingVertical: 32 },
-  emptyText: { fontSize: 16, fontWeight: '600', marginTop: 12 },
+  expenseAmount: { fontSize: 15, fontWeight: '700' },
+  emptyState: { alignItems: 'center', paddingVertical: 28 },
+  emptyText: { fontSize: 16, fontWeight: '700', marginTop: 14 },
   emptySubtext: { fontSize: 13, marginTop: 4 },
-  fab: {
-    position: 'absolute', // Floating above content
-    bottom: 20,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28, // Circular FAB
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 6, // Android shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-  },
 });
 
 export default HomeScreen;

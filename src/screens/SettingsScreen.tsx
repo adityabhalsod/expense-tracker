@@ -6,7 +6,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Modal, Fl
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useTheme } from '../theme';
+import { useTheme, ACCENTS } from '../theme';
 import { useAppStore, selectSettings } from '../store';
 import { CURRENCIES } from '../constants';
 import { useLanguage, LANGUAGES } from '../i18n';
@@ -14,7 +14,7 @@ import Constants from 'expo-constants'; // Provides access to app.json config at
 import { manualCheckForUpdate } from '../services/updateChecker';
 
 const SettingsScreen = () => {
-  const { theme, themeMode, setThemeMode, isDark } = useTheme();
+  const { theme, themeMode, setThemeMode, isDark, accent, setAccent, hideAmounts, toggleHideAmounts } = useTheme();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const navigation = useNavigation<any>();
   const settings = useAppStore(selectSettings); // Only subscribe to settings slice
@@ -70,26 +70,6 @@ const SettingsScreen = () => {
     ]);
   };
 
-  // Toggle between light, dark, and system theme modes
-  const cycleTheme = () => {
-    const modes = ['light', 'dark', 'system'] as const;
-    const currentIndex = modes.indexOf(themeMode);
-    const nextMode = modes[(currentIndex + 1) % modes.length]; // Cycle to next mode
-    setThemeMode(nextMode);
-  };
-
-  // Get display label for the current theme mode
-  const getThemeLabel = () => {
-    switch (themeMode) {
-      case 'light':
-        return t.settings.light;
-      case 'dark':
-        return t.settings.dark;
-      case 'system':
-        return t.settings.system;
-    }
-  };
-
   // Get display label for the current language
   const getLanguageLabel = () => {
     const lang = LANGUAGES.find((l) => l.code === language);
@@ -121,8 +101,10 @@ const SettingsScreen = () => {
       disabled={!onPress && !rightElement} // Disable if no action
     >
       <View style={styles.rowLeft}>
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <MaterialCommunityIcons name={icon as any} size={22} color={theme.colors.primary} />
+        <View style={[styles.rowIcon, { backgroundColor: theme.colors.chipBackground }]}>
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <MaterialCommunityIcons name={icon as any} size={19} color={theme.colors.primary} />
+        </View>
         <Text style={[styles.rowLabel, { color: theme.colors.text }]}>{label}</Text>
       </View>
       <View style={styles.rowRight}>
@@ -144,16 +126,76 @@ const SettingsScreen = () => {
         {/* Appearance section */}
         <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>{t.settings.appearance}</Text>
         <View style={[styles.section, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <SettingsRow icon="theme-light-dark" label={t.settings.theme} value={getThemeLabel()} onPress={cycleTheme} />
+          {/* Theme mode segmented control */}
+          <View style={[styles.row, { borderBottomColor: theme.colors.border }]}>
+            <View style={styles.rowLeft}>
+              <View style={[styles.rowIcon, { backgroundColor: theme.colors.chipBackground }]}>
+                <MaterialCommunityIcons name="theme-light-dark" size={19} color={theme.colors.primary} />
+              </View>
+              <Text style={[styles.rowLabel, { color: theme.colors.text }]}>{t.settings.theme}</Text>
+            </View>
+            <View style={[styles.segment, { backgroundColor: theme.colors.surfaceVariant }]}>
+              {(['light', 'dark', 'system'] as const).map((mode) => {
+                const active = themeMode === mode;
+                return (
+                  <TouchableOpacity
+                    key={mode}
+                    onPress={() => setThemeMode(mode)}
+                    style={[styles.segmentItem, active && { backgroundColor: theme.colors.surface }]}
+                    accessibilityState={{ selected: active }}
+                  >
+                    <MaterialCommunityIcons
+                      name={mode === 'light' ? 'white-balance-sunny' : mode === 'dark' ? 'weather-night' : 'cellphone'}
+                      size={16}
+                      color={active ? theme.colors.primary : theme.colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+          {/* Accent colour swatches */}
+          <View style={[styles.accentBlock, { borderBottomColor: theme.colors.border }]}>
+            <View style={styles.rowLeft}>
+              <View style={[styles.rowIcon, { backgroundColor: theme.colors.chipBackground }]}>
+                <MaterialCommunityIcons name="palette-outline" size={19} color={theme.colors.primary} />
+              </View>
+              <Text style={[styles.rowLabel, { color: theme.colors.text }]}>{t.appearance.accentColor}</Text>
+              <Text style={[styles.rowValue, { color: theme.colors.textSecondary, marginLeft: 'auto' }]}>
+                {ACCENTS.find((a) => a.name === accent)?.label}
+              </Text>
+            </View>
+            <View style={styles.swatches}>
+              {ACCENTS.map((a) => {
+                const tone = isDark ? a.dark : a.light;
+                const active = a.name === accent;
+                return (
+                  <TouchableOpacity
+                    key={a.name}
+                    onPress={() => setAccent(a.name)}
+                    accessibilityLabel={a.label}
+                    accessibilityState={{ selected: active }}
+                    style={[styles.swatchRing, { borderColor: active ? tone.primary : 'transparent' }]}
+                  >
+                    <View style={[styles.swatch, { backgroundColor: tone.gradient[0] }]}>
+                      <View style={[styles.swatchHalf, { backgroundColor: tone.gradient[1] }]} />
+                      {active && <MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+          {/* Privacy mode */}
           <SettingsRow
-            icon="brightness-6"
-            label={t.settings.darkMode}
+            icon={hideAmounts ? 'eye-off-outline' : 'eye-outline'}
+            label={t.appearance.privacyMode}
             rightElement={
               <Switch
-                value={isDark}
-                onValueChange={(val) => setThemeMode(val ? 'dark' : 'light')} // Direct toggle
-                trackColor={{ false: theme.colors.border, true: theme.colors.primary + '40' }}
-                thumbColor={isDark ? theme.colors.primary : '#f4f3f4'}
+                value={hideAmounts}
+                onValueChange={toggleHideAmounts}
+                trackColor={{ false: theme.colors.border, true: theme.colors.primary + '60' }}
+                thumbColor={hideAmounts ? theme.colors.primary : '#f4f3f4'}
               />
             }
           />
@@ -180,6 +222,8 @@ const SettingsScreen = () => {
             onPress={() => navigation.navigate('CategoryManagement')}
           />
           <SettingsRow icon="target" label={t.settings.budgets} onPress={() => navigation.navigate('BudgetSetup')} />
+          <SettingsRow icon="calendar-sync" label={t.bills.title} onPress={() => navigation.navigate('Bills')} />
+          <SettingsRow icon="handshake-outline" label={t.debts.title} onPress={() => navigation.navigate('Debts')} />
         </View>
 
         {/* Data management section */}
@@ -371,7 +415,7 @@ const SettingsScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
-  title: { fontSize: 28, fontWeight: '700' },
+  title: { fontSize: 28, fontWeight: '800', letterSpacing: -0.6 },
   sectionTitle: {
     fontSize: 12,
     fontWeight: '600', // Bold section headers
@@ -382,8 +426,8 @@ const styles = StyleSheet.create({
   },
   section: {
     marginHorizontal: 16,
-    borderRadius: 14,
-    borderWidth: 0.5,
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden', // Clip children to rounded corners
   },
   row: {
@@ -391,10 +435,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 0.5,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  rowIcon: { width: 34, height: 34, borderRadius: 11, justifyContent: 'center', alignItems: 'center' },
+  segment: { flexDirection: 'row', padding: 3, borderRadius: 12 },
+  segmentItem: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 9 },
+  accentBlock: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12, marginLeft: 46 },
+  swatchRing: { padding: 3, borderRadius: 20, borderWidth: 2 },
+  swatch: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  swatchHalf: { position: 'absolute', right: 0, top: 0, bottom: 0, width: '50%' },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rowLabel: { fontSize: 15, fontWeight: '500' },
   rowValue: { fontSize: 14 },
